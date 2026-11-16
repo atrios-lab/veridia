@@ -47,3 +47,22 @@ test("a suspensão da plataforma vale acima do botão do Tabelião e pode voltar
   assert.equal(await aiBlockedWith(db, OFFICE), null);
   assert.equal((await getAiPlatformWith(db, OFFICE)).noteReview, "desligada");
 });
+
+test("mudar só a análise das notas mantém a IA como estava", async () => {
+  const office = "cartorio-ia-parcial";
+  await setAiPlatformWith(
+    db,
+    office,
+    { aiAllowed: false, reason: "teto" },
+    "conta-mestre",
+  );
+  await setAiPlatformWith(
+    db,
+    office,
+    { noteReview: "base", reason: "" },
+    "conta-mestre",
+  );
+  const policy = await getAiPlatformWith(db, office);
+  assert.equal(policy.aiAllowed, false);
+  assert.equal(policy.noteReview, "base");
+});

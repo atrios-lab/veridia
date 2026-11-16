@@ -8,6 +8,8 @@ import {
   learnWithoutAi,
   maskNames,
   noteItems,
+  platformChange,
+  scopeTargets,
   unfoundedItems,
 } from "./revisao-base.ts";
 
@@ -97,4 +99,59 @@ test("sem decisão da plataforma, tudo fica como foi entregue", () => {
     noteReview: "ia",
   });
   assert.doesNotMatch(AI_SUSPENDED, /Átrios/);
+});
+
+test("a quem aplicar: esta serventia, todas ou as escolhidas", () => {
+  const all = ["a", "b", "c"];
+  assert.deepEqual(scopeTargets("todas", { all, chosen: [] }), {
+    targets: ["a", "b", "c"],
+  });
+  assert.deepEqual(scopeTargets("esta", { current: "b", all, chosen: [] }), {
+    targets: ["b"],
+  });
+  assert.ok("error" in scopeTargets("esta", { all, chosen: [] }));
+  assert.deepEqual(
+    scopeTargets("escolher", { all, chosen: ["c", "x", "c", "a"] }),
+    { targets: ["c", "a"] },
+  );
+  assert.ok("error" in scopeTargets("escolher", { all, chosen: ["x"] }));
+});
+
+test("o que alterar: só o marcado muda", () => {
+  assert.deepEqual(
+    platformChange({
+      changeAi: true,
+      ai: "suspensa",
+      changeNotes: false,
+      notes: "",
+    }),
+    { change: { aiAllowed: false } },
+  );
+  assert.deepEqual(
+    platformChange({
+      changeAi: false,
+      ai: "",
+      changeNotes: true,
+      notes: "desligada",
+    }),
+    { change: { noteReview: "desligada" } },
+  );
+  assert.ok(
+    "error" in
+      platformChange({
+        changeAi: false,
+        ai: "",
+        changeNotes: false,
+        notes: "",
+      }),
+  );
+  assert.ok(
+    "error" in
+      platformChange({
+        changeAi: false,
+        ai: "",
+        changeNotes: true,
+        notes: "outra",
+      }),
+  );
 });

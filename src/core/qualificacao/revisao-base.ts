@@ -285,3 +285,60 @@ export function baseSummary(
   }
   return parts.join(" ");
 }
+
+/**
+ * To whom the Átrios account applies a change (decision of 16/11/2026):
+ * the office of the portal it is on, every office, or the ones it picked.
+ */
+export type PlatformScope = "esta" | "todas" | "escolher";
+export const isPlatformScope = (value: string): value is PlatformScope =>
+  value === "esta" || value === "todas" || value === "escolher";
+
+export function scopeTargets(
+  scope: PlatformScope,
+  input: {
+    current?: string;
+    all: readonly string[];
+    chosen: readonly string[];
+  },
+): { targets: string[] } | { error: string } {
+  const known = new Set(input.all);
+  if (scope === "todas") return { targets: [...input.all] };
+  if (scope === "esta") {
+    return input.current && known.has(input.current)
+      ? { targets: [input.current] }
+      : { error: "Este portal não é de uma serventia: escolha na lista." };
+  }
+  const targets = [...new Set(input.chosen)].filter((s) => known.has(s));
+  return targets.length
+    ? { targets }
+    : { error: "Marque ao menos uma serventia na lista." };
+}
+
+/** What is changed: the AI switch, the notes' mode, or both. */
+export function platformChange(input: {
+  changeAi: boolean;
+  ai: string;
+  changeNotes: boolean;
+  notes: string;
+}):
+  | { change: { aiAllowed?: boolean; noteReview?: NoteReviewMode } }
+  | { error: string } {
+  if (!input.changeAi && !input.changeNotes) {
+    return { error: "Marque o que deseja alterar." };
+  }
+  if (input.changeAi && input.ai !== "liberada" && input.ai !== "suspensa") {
+    return { error: "Escolha liberar ou suspender a IA." };
+  }
+  if (input.changeNotes && !isNoteReviewMode(input.notes)) {
+    return { error: "Escolha como as notas são analisadas." };
+  }
+  return {
+    change: {
+      ...(input.changeAi ? { aiAllowed: input.ai === "liberada" } : {}),
+      ...(input.changeNotes
+        ? { noteReview: input.notes as NoteReviewMode }
+        : {}),
+    },
+  };
+}

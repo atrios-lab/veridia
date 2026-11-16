@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import { NOTE_REVIEW_MODES } from "@/core/qualificacao/revisao-base.ts";
 import { TENANTS } from "@/core/tenant/resolve.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { aiConfigured, getAiPolicyWith } from "@/lib/ai.ts";
 import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { PlatformForm } from "./platform-form.tsx";
 
@@ -28,22 +28,42 @@ export default async function AiPlatformPage() {
   const tenants = Object.values(TENANTS).sort((a, b) =>
     a.name.localeCompare(b.name, "pt-BR"),
   );
-  const rows = await Promise.all(
-    tenants.map(async (tenant) => ({
-      tenant,
-      office: await getAiPolicyWith(db, tenant.slug).catch(() => ({
-        enabled: false,
-      })),
-      platform: await getAiPlatformWith(db, tenant.slug),
-    })),
-  );
+  const [rows, current] = await Promise.all([
+    Promise.all(
+      tenants.map(async (tenant) => {
+        const [office, platform] = await Promise.all([
+          getAiPolicyWith(db, tenant.slug).catch(() => ({ enabled: false })),
+          getAiPlatformWith(db, tenant.slug),
+        ]);
+        return {
+          slug: tenant.slug,
+          name: tenant.name,
+          aiAllowed: platform.aiAllowed,
+          noteReview: platform.noteReview,
+          officeEnabled: office.enabled,
+          ...(platform.changedAt
+            ? {
+                changedLabel: `Alterado em ${formatOfficeDateTime(new Date(platform.changedAt))}`,
+              }
+            : {}),
+          ...(platform.reason ? { reason: platform.reason } : {}),
+        };
+      }),
+    ),
+    // The office of the portal this account is on: "Só esta serventia".
+    getTenant().catch(() => null),
+  ]);
+  const here =
+    current && TENANTS[current.slug]
+      ? { slug: current.slug, name: current.name }
+      : undefined;
 
   return (
     <>
       <AdminPageHeader
         maxWidth={1000}
         title="Assistente Virtual"
-        description="Por serventia: liberar ou suspender a IA e escolher como as notas anexadas às exigências são analisadas. Vale na hora e pode ser mudado a qualquer momento."
+        description="Liberar ou suspender a IA e escolher como as notas anexadas às exigências são analisadas: só nesta serventia, em todas ou nas que você escolher. Vale na hora e pode ser mudado a qualquer momento."
       />
       <main className="flex max-w-[1000px] flex-col gap-4 px-4 pt-6 pb-8 md:px-8">
         <section className="rounded-xl border bg-card p-5 text-sm leading-relaxed text-muted-foreground shadow-xs">
@@ -56,7 +76,9 @@ export default async function AiPlatformPage() {
             três modos: com IA (mais completa, gasta crédito), só pela base
             jurídica (instantânea, sem crédito) ou desligada (anexa como antes).
             Nos três, a serventia continua aprendendo os modelos de exigência;
-            sem IA, pelo próprio texto das notas e sem gastar crédito.
+            sem IA, pelo próprio texto das notas e sem gastar crédito. Só o que
+            você marcar em &quot;O que alterar&quot; muda; o resto fica como
+            está.
           </p>
           {!aiConfigured() && (
             <p className="mt-2 font-medium text-warning-text">
@@ -65,37 +87,7 @@ export default async function AiPlatformPage() {
             </p>
           )}
         </section>
-        {rows.map(({ tenant, office, platform }) => (
-          <section
-            key={tenant.slug}
-            className="flex flex-col gap-4 rounded-xl border bg-card p-5 shadow-xs"
-          >
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-base font-semibold text-foreground">
-                {tenant.name}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                Botão do Tabelião: IA {office.enabled ? "ligada" : "desligada"}
-                {" · "}
-                {platform.aiAllowed ? "Liberada" : "Suspensa"} ·{" "}
-                {NOTE_REVIEW_MODES[platform.noteReview].label}
-                {platform.changedAt
-                  ? ` · alterado em ${formatOfficeDateTime(new Date(platform.changedAt))}`
-                  : ""}
-              </span>
-            </div>
-            {platform.reason && (
-              <p className="text-xs text-muted-foreground">
-                Último motivo: {platform.reason}
-              </p>
-            )}
-            <PlatformForm
-              slug={tenant.slug}
-              aiAllowed={platform.aiAllowed}
-              noteReview={platform.noteReview}
-            />
-          </section>
-        ))}
+        <PlatformForm offices={rows} {...(here ? { current: here } : {})} />
       </main>
     </>
   );

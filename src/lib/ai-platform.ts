@@ -32,17 +32,23 @@ export async function getAiPlatformWith(
   return aiPlatformFrom(row?.published);
 }
 
+/**
+ * Changes what was asked and keeps the rest (decision of 16/11/2026: "ou
+ * selecionar o que deseja desativar"): only the AI switch, only the notes'
+ * mode, or both.
+ */
 export async function setAiPlatformWith(
   database: Database,
   tenantSlug: string,
-  input: { aiAllowed: boolean; noteReview: NoteReviewMode; reason: string },
+  input: { aiAllowed?: boolean; noteReview?: NoteReviewMode; reason: string },
   actorId: string,
   now = new Date(),
-): Promise<void> {
+): Promise<AiPlatformPolicy> {
+  const current = await getAiPlatformWith(database, tenantSlug);
   const reason = input.reason.trim().slice(0, 300);
   const published: AiPlatformPolicy = {
-    aiAllowed: input.aiAllowed,
-    noteReview: input.noteReview,
+    aiAllowed: input.aiAllowed ?? current.aiAllowed,
+    noteReview: input.noteReview ?? current.noteReview,
     changedAt: now.toISOString(),
     changedBy: actorId,
     ...(reason ? { reason } : {}),
@@ -65,7 +71,8 @@ export async function setAiPlatformWith(
     actorId,
     action: "ai.platform",
     targetType: "tenant",
-    targetId: `${tenantSlug} · IA ${input.aiAllowed ? "liberada" : "suspensa"} · análise das notas: ${input.noteReview}`,
+    targetId: `${tenantSlug} · IA ${published.aiAllowed ? "liberada" : "suspensa"} · análise das notas: ${published.noteReview}`,
     ...(reason ? { reason } : {}),
   });
+  return published;
 }
