@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
+import { DemoHeldEmails } from "@/app/admin/_components/demo-held-emails.tsx";
 import {
   ATTRIBUTION_NAMES,
   actVariantName,
@@ -916,6 +917,11 @@ export default async function ServiceRequestDetailPage({
                 </ul>
               </div>
             )}
+
+            <DemoHeldEmails
+              tenant={tenant}
+              related={{ kind: "request", protocol: request.protocolNumber }}
+            />
 
             <div className="rounded-xl border bg-card p-4">
               <h4 className="text-base font-semibold text-foreground">

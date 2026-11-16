@@ -1,5 +1,9 @@
 import "server-only";
 import { after } from "next/server";
+import {
+  type DemoAware,
+  isOutboundAllowed,
+} from "@/core/tenant/demo-office.ts";
 import { indexNowPayload } from "./indexnow.ts";
 
 /**
@@ -16,7 +20,14 @@ import { indexNowPayload } from "./indexnow.ts";
  * breaks a citizen's publish if it is ever called from somewhere that has
  * none.
  */
-export function notifyIndexNow(origin: string, paths: string[]): void {
+export function notifyIndexNow(
+  tenant: DemoAware,
+  origin: string,
+  paths: string[],
+): void {
+  // The demonstration office's pages are made up and typed by course
+  // participants: no search engine is told about them.
+  if (!isOutboundAllowed(tenant)) return;
   try {
     after(async () => {
       try {

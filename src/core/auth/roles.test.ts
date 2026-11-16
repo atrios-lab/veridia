@@ -178,6 +178,83 @@ test("a learner's home is the training", () => {
   assert.equal(homeFor("superadmin"), null);
 });
 
+test("a learner's home is the overview in the demonstration office", () => {
+  assert.equal(homeFor("learner", { demo: true }), null);
+  assert.equal(homeFor("learner", { demo: false }), "/admin/ajuda");
+  assert.equal(homeFor("staff", { demo: true }), null);
+});
+
+test("outside the demonstration office a learner keeps panel access alone", async () => {
+  const { effectivePermissions } = await import("./roles.ts");
+  assert.deepEqual(effectivePermissions("learner"), ["admin.access"]);
+  assert.deepEqual(effectivePermissions("learner", {}, { demo: false }), [
+    "admin.access",
+  ]);
+});
+
+test("in the demonstration office a learner works the desk, short of the closed list", async () => {
+  const {
+    effectivePermissions,
+    DEMO_CLOSED_PERMISSIONS,
+    DEMO_OPEN_PERMISSIONS,
+  } = await import("./roles.ts");
+  const granted = effectivePermissions("learner", {}, { demo: true });
+  assert.ok(can("learner", "admin.access", granted));
+  for (const permission of DEMO_OPEN_PERMISSIONS) {
+    assert.ok(can("learner", permission, granted), permission);
+  }
+  for (const permission of [
+    ...DEMO_CLOSED_PERMISSIONS,
+    ...PLATFORM_PERMISSIONS,
+  ]) {
+    assert.equal(can("learner", permission, granted), false, permission);
+  }
+  // What the change set out to close, named one by one.
+  for (const permission of [
+    "user.manage",
+    "audit.manage",
+    "access.manage",
+    "messages.use",
+    "billing.edit",
+    "signer.use",
+    "rcpn.import",
+    "dpo.assist",
+  ] as const) {
+    assert.equal(can("learner", permission, granted), false, permission);
+  }
+});
+
+test("every office permission is decided for the demonstration office", async () => {
+  const { DEMO_CLOSED_PERMISSIONS, DEMO_OPEN_PERMISSIONS } = await import(
+    "./roles.ts"
+  );
+  const open = new Set<string>(DEMO_OPEN_PERMISSIONS);
+  const closed = new Set<string>(DEMO_CLOSED_PERMISSIONS);
+  for (const permission of OFFICE_PERMISSIONS) {
+    if (permission === "admin.access") continue;
+    assert.ok(
+      open.has(permission) !== closed.has(permission),
+      `${permission}: put it in DEMO_OPEN_PERMISSIONS or DEMO_CLOSED_PERMISSIONS (roles.ts), exactly one`,
+    );
+  }
+});
+
+test("the messenger got its own line and every office position kept it", async () => {
+  const { effectivePermissions } = await import("./roles.ts");
+  for (const role of [
+    "admin",
+    "substituto-legal",
+    "substituto",
+    "staff",
+    "auxiliar",
+    "contador",
+    "rh",
+    "superadmin",
+  ]) {
+    assert.ok(can(role, "messages.use", effectivePermissions(role)), role);
+  }
+});
+
 test("everyone who works for an office has the desk; a learner does not", () => {
   for (const role of ["admin", "staff", "superadmin"]) {
     assert.ok(can(role, "desk.access"), role);

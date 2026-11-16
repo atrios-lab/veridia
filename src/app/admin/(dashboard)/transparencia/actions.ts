@@ -216,7 +216,7 @@ export async function publishDocumentAction(
     if (!doc) return { status: "error", message: "Documento não encontrado." };
     if (canPublish(doc.status as DocumentStatus)) {
       await publishDocument(tenant.slug, id, session.user.id);
-      notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
+      notifyIndexNow(tenant, await getSiteOrigin(), ["/transparencia"]);
     }
   } catch (error) {
     console.error("transparencia.publish", error);
@@ -458,7 +458,7 @@ async function publish(
     });
   }
   revalidate();
-  notifyIndexNow(await getSiteOrigin(), ["/transparencia"]);
+  notifyIndexNow(tenant, await getSiteOrigin(), ["/transparencia"]);
 }
 
 export async function publishBulletinAction(

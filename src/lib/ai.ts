@@ -10,6 +10,8 @@ import {
 } from "@/core/conhecimento/base.ts";
 import type { ReviewResult } from "@/core/qualificacao/revisao.ts";
 import { AI_SUSPENDED } from "@/core/qualificacao/revisao-base.ts";
+import { isOutboundAllowed } from "@/core/tenant/demo-office.ts";
+import { TENANTS } from "@/core/tenant/resolve.ts";
 import type { Database } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { getAiPlatformWith } from "./ai-platform.ts";
@@ -121,6 +123,10 @@ export async function aiBlockedWith(
   database: Database,
   tenantSlug: string,
 ): Promise<string | null> {
+  // The demonstration office never reaches the model, whatever its
+  // switches say: its records are made up or typed by course participants,
+  // and every call is credit (change painel-livre-para-alunos).
+  if (!isOutboundAllowed(TENANTS[tenantSlug] ?? {})) return AI_SUSPENDED;
   if (!aiConfigured()) {
     return "O Assistente Virtual ainda não tem a chave de acesso configurada no ambiente.";
   }

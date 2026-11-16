@@ -34,8 +34,8 @@ O usuário decidiu em 16/11/2026: o painel fica livre para o aluno mexer, num ca
 ```
 src/core/auth/roles.ts
 
-DEMO_LEARNER_PERMISSIONS = OFFICE_PERMISSIONS menos DEMO_CLOSED
-DEMO_CLOSED = [
+DEMO_OPEN_PERMISSIONS = [ "desk.access", "requests.manage", ... ]   -- escrita à mão
+DEMO_CLOSED_PERMISSIONS = [
   "user.manage", "audit.manage", "access.manage",    // pessoas e acesso
   "messages.use",                                    // mensagens entre alunos
   "billing.edit",                                    // chave Pix
@@ -47,10 +47,10 @@ DEMO_CLOSED = [
 ]
 
 effectivePermissions("learner", configured, tenant) =
-  tenant.demo ? ["admin.access", ...DEMO_LEARNER_PERMISSIONS] : ["admin.access"]
+  tenant.demo ? ["admin.access", ...DEMO_OPEN_PERMISSIONS] : ["admin.access"]
 ```
 
-- **A lista é o contrário de uma lista de liberadas, de propósito.** Uma ferramenta nova nasce com permissão própria derivada de outra, e o aluno passa a usá-la. Isso é o "painel livre". Uma permissão nova que exponha pessoas ou credenciais precisa ser posta em `DEMO_CLOSED`. Um teste falha se uma permissão de `OFFICE_PERMISSIONS` não estiver classificada numa lista de "aberta ao aluno, revisado" ou em `DEMO_CLOSED`. Assim, quem cria a permissão é obrigado a decidir.
+- **Duas listas escritas à mão, sem subtração** (decidido na implementação). Uma permissão de escritório nova não entra em nenhuma das duas por conta própria, e um teste falha até que ela esteja em exatamente uma: aberta ao aluno ou fechada. Assim, quem cria a permissão é obrigado a decidir, e o "painel livre" continua livre sem que nada novo exponha pessoas ou credenciais por descuido.
 - **As permissões de plataforma** (`PLATFORM_PERMISSIONS`) nunca entram.
 - **`tenant.demo` é exigido**, e a sessão (`src/lib/session.ts`) passa o tenant. Um aluno só existe no tenant de cursos, mas a regra não depende disso: fora do `demo`, o aluno volta a ter só `admin.access`.
 - **O teste de `turmas-do-curso-por-link`** "learner só tem `admin.access`" passa a valer fora do `demo`. Um teste novo cobre a lista dentro dele.
@@ -62,7 +62,8 @@ effectivePermissions("learner", configured, tenant) =
 - **Mensagens internas** usa `desk.access`, como a Visão geral. Ganha a permissão própria `messages.use`, derivada de `desk.access` em `DERIVED_FROM`: todo papel de escritório continua com ela, e o aluno não. Ela entra em `GRANTABLE_LABELS` como "Mensagens internas", seguindo a convenção de uma linha por ferramenta (decisão de 11/11/2026).
 - **Cobrança** abre com `content.edit`. A página continua abrindo para o aluno, mas o formulário da chave Pix e a action dele exigem `billing.edit`, que o aluno não tem. Na implementação, conferir que a action da chave Pix checa `billing.edit` e, se só checar `content.edit`, corrigir. Isso também fecha uma brecha para os papéis de escritório.
 - **Perfis e permissões** e **Assistente Virtual** já usam `user.manage`, e **duas etapas** e **horário de acesso** já usam `access.manage`: ficam fechados sem mudança.
-- Um teste percorre `ADMIN_NAV` com as permissões do aluno e confere a lista de itens que aparecem contra uma lista esperada, escrita no teste.
+- Um teste percorre `ADMIN_NAV` com as permissões do aluno e confere que os itens fechados (Mensagens, Atendimento, DPO, Usuários, base jurídica, assinador e as telas da Átrios) não aparecem, e que os principais da mesa aparecem.
+- **Auditoria** não pede permissão no menu, mas quem não tem `audit.manage` vê ali só as notificações endereçadas a si. Para o aluno, isso não mostra ninguém.
 
 ### 3. E-mail: caixa de saída de demonstração
 
@@ -77,7 +78,8 @@ sendEmail(email):
 
 demo_outbox
   id uuid pk, tenant_slug text, to text, subject text, text text,
-  related_kind text null, related_id uuid null,   -- pedido, agendamento...
+  related_kind text null,                         -- "request" ou "appointment"
+  related_protocol text null,                     -- o protocolo do registro
   created_at timestamptz
   index (tenant_slug, created_at)
 ```
@@ -93,11 +95,11 @@ demo_outbox
 
 ### 4. IA desligada
 
-O tenant de cursos é configurado como "desligada" pelo controle de IA por serventia, no plano de migração. As permissões de IA (`dpo.assist`, `knowledge.manage`, `qualificacao.validate`) também ficam fora, então o aluno não vê os botões. Mesmo com o controle ligado por engano, o aluno não chega à IA. A qualificação continua usável no modo sem IA, do jeito que já funciona com a IA desligada.
+`aiBlockedWith` (`src/lib/ai.ts`), a checagem por onde passa toda chamada à IA, inclusive a do DPO, recusa o tenant `demo` antes de olhar os interruptores (decidido na implementação). Assim, nenhum passo manual em produção é necessário, e nem o interruptor da Átrios nem o do Tabelião ligam a IA ali. As permissões de IA (`dpo.assist`, `knowledge.manage`, `qualificacao.validate`) também ficam fora, então o aluno não vê os botões. A qualificação continua usável no modo sem IA, do jeito que já funciona com a IA desligada.
 
 ### 5. Saídas para sistemas externos
 
-Na implementação, conferir cada ferramenta aberta ao aluno. Toda chamada a sistema externo (prefeitura, CENSEC, Receita, IndexNow, Justiça Aberta, Postmark fora do `sendEmail`) é pulada no tenant `demo`. A decisão fica numa função pura, `isOutboundAllowed(tenant)`, chamada antes de cada envio. O que hoje só gera arquivo para download continua igual.
+A decisão fica numa função pura, `isOutboundAllowed(tenant)` (`src/core/tenant/demo-office.ts`). O levantamento da implementação achou só duas chamadas que saem da plataforma por conta do cartório: o Postmark, que já passa só por `sendEmail`, e o IndexNow. Prefeitura, CENSEC, Receita e Justiça Aberta só geram arquivo para download. A consulta de selo ao TJ é uma leitura pública, que não envia nada em nome do cartório, e continua igual.
 
 O IndexNow avisa buscadores de páginas novas do site. No tenant de cursos ele fica desligado, porque as páginas do site de demonstração não devem ser indexadas.
 
@@ -116,6 +118,8 @@ O seed roda no banco local e no Homolog pelo agente. Em produção, quem roda é
 ```
 resetDemoOfficeWith(db, store, slug)
   - recusa qualquer slug fora de FICTIONAL_SLUGS e qualquer tenant sem demo
+  - inclui as alterações de configuração feitas pelos alunos (tenant_content,
+    tenant_branding), menos a chave de IA da plataforma
   - numa transação, DELETE ... WHERE tenant_slug = slug em DEMO_RESET_TABLES,
     lista fechada e escrita à mão, na ordem das chaves estrangeiras
   - apaga do store os arquivos dessas linhas
@@ -146,7 +150,7 @@ resetDemoOfficeWith(db, store, slug)
 **PR 1, painel livre (só adições):**
 1. Migração com `CREATE TABLE demo_outbox` e índice. Nada é apagado nem alterado, e `pnpm check:destructive` passa sem exceção.
 2. Aplicar no banco local de teste e no Homolog, rodar o seed do tenant de cursos e testar em `curso.localhost`.
-3. Antes do merge, o usuário aplica a migração em produção à mão, roda o seed do tenant de cursos e desliga a IA dele no controle por serventia.
+3. Antes do merge, o usuário aplica a migração em produção à mão e roda o seed do tenant de cursos.
 4. Merge.
 
 Rollback: reverter o código. A tabela nova fica sem efeito.

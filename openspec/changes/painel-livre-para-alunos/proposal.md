@@ -16,7 +16,7 @@ O aluno de turma já vê o site público do Cartório Vale do Silício, o lado d
   - importação de arquivos do RCPN e das atribuições;
   - base de conhecimento e Assistente Virtual.
 - **Nenhum e-mail sai do cartório de demonstração** (decisão do usuário em 16/11/2026). O que o sistema mandaria ao requerente ou à serventia fica guardado numa caixa de saída de demonstração. O painel mostra o texto com o aviso "Demonstração: e-mail não enviado". Os e-mails da conta do aluno (esqueci a senha, código de acesso) continuam saindo, porque sem eles o aluno não entra.
-- **IA desligada no tenant de demonstração.** Fica desligada pelo controle por serventia que a Átrios já tem, sem gastar crédito.
+- **IA desligada no tenant de demonstração.** A checagem central da IA recusa o tenant de demonstração, sem gastar crédito e sem depender de interruptor.
 - **Seed mais completo.** `scripts/seed-demo-data.ts` passa a criar também no tenant de cursos o escritório que cria no Serra Verde: pedidos em vários estados, requerimentos LGPD, manifestações de ouvidoria e agendamentos.
 - **Limpeza pelo botão, em PR separada e revisada (⚠️ apaga dados do banco).** Só quando a Átrios clica num botão na tela de Turmas, uma rotina apaga o que os alunos mexeram no tenant de cursos e roda o seed de novo. Ela vale só para esse tenant e para uma lista fechada de tabelas. Contas, turmas, progresso, avaliações e certificados nunca são tocados. Pela regra do projeto, essa parte vai numa PR própria, aberta com o aviso no título e deixada para outra pessoa revisar e fazer o merge.
 - **Início do aluno.** `/admin` mostra ao aluno a Visão geral, como a qualquer funcionário. O cadastro pelo link continua levando direto ao curso.

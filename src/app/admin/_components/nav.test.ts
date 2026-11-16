@@ -188,3 +188,43 @@ test("Registro Civil: o menu marca a aba aberta (nascimentos, casamentos, óbito
     "/admin/rcpn/livros",
   );
 });
+
+// A course participant in the demonstration office (change
+// painel-livre-para-alunos) works the desk, but the items that would show
+// the other participants, lock the office, take a real credential or spend
+// AI credit stay out of their menu. The routes refuse on their own; this
+// keeps the menu from offering what the route will refuse.
+test("a participant in the demonstration office sees the desk and none of the closed items", async () => {
+  const { can, effectivePermissions } = await import("@/core/auth/roles.ts");
+  const granted = effectivePermissions("learner", {}, { demo: true });
+  const offered = ADMIN_NAV.filter(
+    (item) => !item.permission || can("learner", item.permission, granted),
+  ).map((item) => item.href);
+  for (const href of [
+    "/admin",
+    "/admin/pedidos",
+    "/admin/lgpd",
+    "/admin/ouvidoria",
+    "/admin/agenda",
+    "/admin/rcpn",
+    "/admin/publicacoes",
+    "/admin/transparencia",
+    "/admin/configuracoes",
+    "/admin/ajuda",
+  ]) {
+    assert.ok(offered.includes(href), href);
+  }
+  for (const href of [
+    "/admin/mensagens",
+    "/admin/atendimento",
+    "/admin/dpo",
+    "/admin/usuarios",
+    "/admin/utilitarios/base-juridica",
+    "/admin/utilitarios/assinador",
+    "/admin/atrios/liberacao-de-acesso",
+    "/admin/atrios/assistente-dpo",
+    "/admin/atrios/assistente-virtual",
+  ]) {
+    assert.equal(offered.includes(href), false, href);
+  }
+});

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
+import { DemoHeldEmails } from "@/app/admin/_components/demo-held-emails.tsx";
 import { can } from "@/core/auth/roles.ts";
 import { approvalStatus } from "@/core/dpo/alinhamento.ts";
 import { REQUEST_FILE_RETENTION_DAYS } from "@/core/request/attachment-retention.ts";
@@ -342,6 +343,11 @@ export default async function DataRightsDetailPage({
                 cargo de {tenant.dpo.name}.
               </p>
             </div>
+
+            <DemoHeldEmails
+              tenant={tenant}
+              related={{ kind: "request", protocol: request.protocolNumber }}
+            />
 
             <div className="rounded-xl border bg-card p-4">
               <h4 className="text-base font-semibold text-foreground">

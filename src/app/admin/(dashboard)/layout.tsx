@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { closesAt } from "@/core/auth/access-hours.ts";
 import { can } from "@/core/auth/roles.ts";
 import { STATUS_LABELS } from "@/core/messages/rules.ts";
+import { showsDemoPanelNotice } from "@/core/tenant/demo-office.ts";
 import { db } from "@/db/index.ts";
 import { getAccessHours } from "@/lib/access-hours.ts";
 import { sendDueRemindersInBackground } from "@/lib/appointment-reminders.ts";
@@ -37,6 +38,7 @@ import {
   CHAT_SHAKE_TARGET_ID,
   ChatAlerts,
 } from "../_components/chat-alerts.tsx";
+import { DemoPanelBanner } from "../_components/demo-panel-banner.tsx";
 import { GlobalSearchProvider } from "../_components/global-search.tsx";
 import { GuideAlerts } from "../_components/guide-alerts.tsx";
 import { MessengerWatch } from "../_components/messenger-watch.tsx";
@@ -133,7 +135,7 @@ export default async function DashboardLayout({
   ).catch(() => 0);
   // The internal messenger: unread for the badge, the sound choice for
   // the watcher that rings on every screen.
-  const messenger = can(role, "desk.access", granted)
+  const messenger = can(role, "messages.use", granted)
     ? await Promise.all([
         inboxWith(db, session.user.id, new Date()),
         getProfileWith(db, tenant.slug, session.user.id),
@@ -245,6 +247,9 @@ export default async function DashboardLayout({
             {/* The frame, as in shadcn's inset sidebar: the page scrolls in the column above, so the scrollbar runs along the window's right edge, and the frame keeps its margin and border on the right. */}
             <div className="flex min-h-full flex-none flex-col bg-surface md:mt-2 md:mr-2 md:rounded-t-xl md:border md:border-b-0 md:border-sidebar-border md:shadow-sm">
               <AdminTopBar user={user} />
+              {showsDemoPanelNotice(role, tenant) && (
+                <DemoPanelBanner officeName={tenant.name} />
+              )}
               {urgentPending > 0 && <UrgentAuditBanner count={urgentPending} />}
               {lingeringNow.length > 0 && (
                 <LingeringStatusBanner

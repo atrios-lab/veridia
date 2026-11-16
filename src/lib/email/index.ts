@@ -33,6 +33,8 @@ export async function sendInviteEmail(
     tenantName: params.tenant.name,
   });
   await sendEmail({
+    tenant: params.tenant,
+    kind: "account",
     to: params.to,
     fromName: params.tenant.name,
     fromAddress: params.tenant.emailFrom,
@@ -61,6 +63,8 @@ export async function sendPasswordResetEmail(
     recipientName: params.recipientName,
   });
   await sendEmail({
+    tenant: params.tenant,
+    kind: "account",
     to: params.to,
     fromName: params.tenant.name,
     fromAddress: params.tenant.emailFrom,
@@ -93,6 +97,8 @@ export async function sendEmailChangeEmail(
     currentEmail: params.currentEmail,
   });
   await sendEmail({
+    tenant: params.tenant,
+    kind: "account",
     to: params.to,
     fromName: params.tenant.name,
     fromAddress: params.tenant.emailFrom,
@@ -128,6 +134,8 @@ export async function sendEmailChangedNotice(
     newEmail: params.newEmail,
   });
   await sendEmail({
+    tenant: params.tenant,
+    kind: "account",
     to: params.to,
     fromName: params.tenant.name,
     fromAddress: params.tenant.emailFrom,

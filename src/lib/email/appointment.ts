@@ -138,6 +138,11 @@ export async function sendAppointmentBookedEmail(
       return undefined;
     });
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
       to: appointment.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -178,6 +183,11 @@ export async function sendAppointmentCancelledEmail(
   const agendaUrl = `${baseUrl(tenant)}/agendar`;
   try {
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
       to: appointment.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -204,6 +214,11 @@ export async function sendAppointmentSelfCancelledEmail(
   const agendaUrl = `${baseUrl(tenant)}/agendar`;
   try {
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
       to: appointment.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -278,6 +293,11 @@ export async function sendAppointmentReminderEmail(
     });
     const url = `${baseUrl(tenant)}/protocolo`;
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
       to: appointment.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -304,6 +324,8 @@ export async function sendOfficeDaySummaryEmail(
     );
     const url = `${baseUrl(tenant)}/admin/agenda?dia=${day}`;
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
       to: tenant.contacts.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,
@@ -329,6 +351,11 @@ export async function sendOfficeNewAppointmentEmail(
     });
     const url = agendaUrl(tenant, appointment);
     await sendEmail({
+      tenant: tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
       to: tenant.contacts.email,
       fromName: tenant.name,
       fromAddress: tenant.emailFrom,

@@ -2756,3 +2756,43 @@ export const dpoTenantSettings = pgTable("dpo_tenant_settings", {
     .defaultNow(),
   updatedBy: text("updated_by"),
 });
+
+/**
+ * What the demonstration office would have sent and did not (change
+ * painel-livre-para-alunos). In an office with `demo` on, a message of the
+ * office (to the citizen, to the applicant, to the team) lands here instead
+ * of at the provider: the address on it was typed by a course participant
+ * and may belong to someone who never asked for it. The participant reads
+ * the text from the history of the record it is about.
+ *
+ * The text only, not the HTML: it is all the screen shows, and the HTML
+ * would keep the whole layout of the e-mail once per message.
+ */
+export const demoOutbox = pgTable(
+  "demo_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    to: text("to").notNull(),
+    subject: text("subject").notNull(),
+    text: text("text").notNull(),
+    /** The record the message is about, when there is one: "request" (a
+     * service request of any kind: pedido, LGPD, ouvidoria) or
+     * "appointment", and its protocol, unique within the office in each of
+     * the two tables. The protocol, not a foreign key: it is what every
+     * sending path already holds, and what the screens link by. */
+    relatedKind: text("related_kind"),
+    relatedProtocol: text("related_protocol"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("demo_outbox_tenant_created_at").on(t.tenantSlug, t.createdAt),
+    index("demo_outbox_related").on(
+      t.tenantSlug,
+      t.relatedKind,
+      t.relatedProtocol,
+    ),
+  ],
+);
