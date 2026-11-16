@@ -1,6 +1,5 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
 import { createContext, startTransition, useContext, useState } from "react";
 import {
   ATTACHMENT_FOLDER,
@@ -79,6 +78,10 @@ async function uploadOne(file: File, tenantSlug: string) {
   // refuses anything else, because the name the browser knows is the
   // citizen's own and says who they are.
   const pathname = `${ATTACHMENT_FOLDER}/${storedFileName(mimeType, crypto.randomUUID(), tenantSlug)}`;
+  // Loaded on the first upload, not with the page: the provider wraps every
+  // public page from the layout, and the client library is ~24 KiB that
+  // only a citizen sending a file ever runs.
+  const { upload } = await import("@vercel/blob/client");
   const blob = await upload(pathname, file, {
     access: "public",
     contentType: mimeType,

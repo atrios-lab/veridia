@@ -17,7 +17,7 @@ import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { MenuPopover } from "../_components/menu-popover.tsx";
-import { ChatWidget } from "./_components/chat-widget.tsx";
+import { ChatWidget } from "./_components/chat-widget-lazy.tsx";
 import { CookieNotice } from "./_components/cookie-notice.tsx";
 import { DemoBanner, DemoProvider } from "./_components/demo-notice.tsx";
 import { Icon } from "./_components/icon.tsx";
