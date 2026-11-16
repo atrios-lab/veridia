@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { COHORT_STATE_LABELS, lastValidDay } from "@/core/cohorts/cohort.ts";
+import { RN_OFFICES } from "@/core/cohorts/rn-offices.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { coursesOrigin } from "@/core/tenant/courses-tenant.ts";
 import { resolveOrigin } from "@/lib/auth-tokens.ts";
@@ -106,7 +107,7 @@ export default async function CohortsPage() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-4.5">
-          <CohortCreateForm courses={courses} />
+          <CohortCreateForm courses={courses} offices={RN_OFFICES} />
           <DemoResetForm />
         </div>
       </main>
