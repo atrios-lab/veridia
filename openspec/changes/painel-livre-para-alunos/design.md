@@ -84,7 +84,7 @@ demo_outbox
 - **`account`**: esqueci a senha, código de acesso, troca de e-mail. Sem eles o aluno não entra, e o destinatário é a própria conta.
 - **`office`**: todo o resto. Isso inclui as confirmações dos formulários públicos do site de demonstração, que hoje saem para o endereço digitado, que pode ser de um terceiro real.
 - **O HTML não é guardado.** O texto basta para mostrar, e o HTML guardaria o layout do e-mail inteiro por mensagem.
-- **Como o aluno vê.** Uma tela nova, "E-mails de demonstração" (`/admin/demonstracao/emails`), só no tenant `demo` e para quem tem `desk.access`, lista os últimos 100, com link para o registro. No detalhe do registro, onde o histórico diz que um e-mail foi enviado, passa a dizer "Demonstração: e-mail não enviado", com link para o texto.
+- **Como o aluno vê.** Uma tela nova, "E-mails de demonstração" (`/admin/demonstracao/emails`), só no tenant `demo` e para quem tem `desk.access`, lista os últimos 100, com link para o registro. A tela não tem item no menu (decisão do usuário em 16/11/2026): só se chega a ela pelos links do histórico dos registros. No detalhe do registro, onde o histórico diz que um e-mail foi enviado, passa a dizer "Demonstração: e-mail não enviado", com link para o texto.
 - **Lembretes automáticos** (agenda, papel de segurança) passam pelo mesmo `sendEmail` e caem na caixa também.
 
 *Alternativa considerada*: usar `EMAIL_REDIRECT_TO`. Descartada: é por deploy, não por tenant, e mandaria tudo a uma caixa que ninguém lê.
@@ -155,4 +155,3 @@ Rollback: reverter o código. A tabela nova fica sem efeito.
 
 - A limpeza roda sozinha (por exemplo, todo domingo de madrugada, por Vercel Cron) ou só pelo botão da Átrios?
 - O texto da faixa do painel e o aviso de privacidade do cadastro precisam da aprovação do usuário.
-- A tela "E-mails de demonstração" deve ficar no menu, em Operação, ou só ser acessada pelos links do histórico?

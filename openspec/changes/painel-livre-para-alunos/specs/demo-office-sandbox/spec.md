@@ -82,11 +82,15 @@ No tenant com `demo` ligado, toda mensagem do cartório (ao requerente, ao cidad
 
 ### Requirement: Aluno vê o que teria sido enviado
 
-O tenant de demonstração SHALL ter uma tela "E-mails de demonstração" com as mensagens guardadas, da mais recente para a mais antiga, cada uma com link para o registro de origem quando houver. No histórico de um registro, a mensagem guardada SHALL aparecer como "Demonstração: e-mail não enviado". A tela NÃO SHALL existir fora do tenant de demonstração.
+O tenant de demonstração SHALL ter uma tela "E-mails de demonstração" com as mensagens guardadas, da mais recente para a mais antiga, cada uma com link para o registro de origem quando houver. No histórico de um registro, a mensagem guardada SHALL aparecer como "Demonstração: e-mail não enviado". A tela NÃO SHALL ter item no menu: o acesso SHALL ser pelos links do histórico dos registros. A tela NÃO SHALL existir fora do tenant de demonstração.
 
 #### Scenario: Aluno lê o e-mail não enviado
 - **WHEN** um aluno muda o status de um pedido e abre "E-mails de demonstração"
 - **THEN** vê o e-mail que o requerente receberia, com link para o pedido
+
+#### Scenario: Fora do menu
+- **WHEN** um aluno abre o painel do tenant de cursos
+- **THEN** o menu não mostra o item "E-mails de demonstração", e o link do histórico de um pedido leva à mensagem
 
 #### Scenario: Tela inexistente em cartório cliente
 - **WHEN** um usuário de cartório cliente abre o endereço da tela "E-mails de demonstração"

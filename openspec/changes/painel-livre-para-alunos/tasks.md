@@ -4,7 +4,7 @@
 - [x] 1.2 Nenhum e-mail sai do tenant de demonstração; o painel mostra o que teria sido enviado (usuário, 16/11/2026)
 - [ ] 1.3 Usuário decide se a limpeza roda sozinha (e com que frequência) ou só pelo botão
 - [ ] 1.4 Usuário aprova o texto da faixa do painel e o trecho novo do aviso de privacidade do cadastro (o que o aluno digita fica visível aos outros e é apagado na limpeza)
-- [ ] 1.5 Usuário decide se "E-mails de demonstração" fica no menu
+- [x] 1.5 "E-mails de demonstração" fica fora do menu, só pelos links do histórico (usuário, 16/11/2026)
 
 ## 2. Permissões do aluno (PR 1)
 
@@ -21,7 +21,7 @@
 - [ ] 3.2 `OutgoingEmail` com `tenant` e `kind` obrigatórios; `sendEmail` desvia `office` do tenant `demo` para `demo_outbox` numa função `...With(db, ...)`; testes contra PGlite de que não há chamada à rede nesse caso e de que `account` e cartório cliente seguem como hoje
 - [ ] 3.3 Classificar cada chamada de `sendEmail` (o compilador lista todas), incluindo as do Better Auth (`account`) e os lembretes automáticos (`office`)
 - [ ] 3.4 Buscar envios fora de `sendEmail` (`api.postmarkapp.com`, outros `fetch` de envio) e passá-los pela mesma regra
-- [ ] 3.5 Tela "E-mails de demonstração" (`/admin/demonstracao/emails`), 404 fora do `demo`; histórico dos registros com "Demonstração: e-mail não enviado"
+- [ ] 3.5 Tela "E-mails de demonstração" (`/admin/demonstracao/emails`), sem item no menu, 404 fora do `demo`; histórico dos registros com "Demonstração: e-mail não enviado"
 
 ## 4. Saídas externas e IA (PR 1)
 
