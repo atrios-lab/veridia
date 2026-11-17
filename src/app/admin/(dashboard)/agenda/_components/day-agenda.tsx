@@ -149,7 +149,10 @@ function AppointmentRow({
         live && "border-l-4 border-l-primary bg-primary/10",
       )}
     >
-      <div className="grid grid-cols-[76px_1fr] items-center gap-3 @2xl:grid-cols-[76px_1fr_auto]">
+      {/* The actions get a row of their own under the name until there is
+          room for them beside it: five buttons squeezed the name, the
+          status and Detalhes under them. */}
+      <div className="grid grid-cols-[76px_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 @5xl:grid-cols-[76px_minmax(0,1fr)_auto]">
         <span className="font-semibold tabular-nums text-primary">
           {live && (
             // A booked time calls the eye, the free ones stay quiet.
@@ -164,8 +167,8 @@ function AppointmentRow({
           </span>
         </span>
         <span className="min-w-0" title={appointment.email}>
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1 @2xl:flex-nowrap">
-            <span className="min-w-0 font-medium text-foreground @2xl:truncate">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="min-w-0 break-words font-medium text-foreground">
               {appointment.citizenName}
             </span>
             {deskBooked ? (
@@ -190,7 +193,7 @@ function AppointmentRow({
               Detalhes
             </Link>
           </span>
-          <span className="mt-0.5 block text-xs text-muted-foreground @2xl:truncate">
+          <span className="mt-0.5 block break-words text-xs text-muted-foreground">
             {appointment.serviceLabel} · {appointment.mode} ·{" "}
             {appointment.phone}
             {appointment.protocolNumber && (
@@ -204,7 +207,7 @@ function AppointmentRow({
           </span>
         </span>
         {live ? (
-          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
+          <span className="col-start-2 flex flex-wrap gap-1.5 @5xl:col-start-auto @5xl:justify-end">
             <ReceiptLink id={appointment.id} />
             <AttendButton id={appointment.id} />
             <NoShowButton id={appointment.id} />
@@ -218,7 +221,7 @@ function AppointmentRow({
             </Button>
           </span>
         ) : appointment.status === "attended" ? (
-          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
+          <span className="col-start-2 flex flex-wrap gap-1.5 @5xl:col-start-auto @5xl:justify-end">
             <ReceiptLink id={appointment.id} />
             <RevertButton id={appointment.id} />
             <RemoveButton
@@ -227,7 +230,7 @@ function AppointmentRow({
             />
           </span>
         ) : (
-          <span className="col-span-2 flex flex-wrap gap-1.5 @2xl:col-span-1 @2xl:justify-end">
+          <span className="col-start-2 flex flex-wrap gap-1.5 @5xl:col-start-auto @5xl:justify-end">
             {appointment.status === "no_show" && (
               <RevertButton id={appointment.id} />
             )}
