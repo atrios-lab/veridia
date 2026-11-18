@@ -28,6 +28,10 @@ import {
 const PATH = "/admin/configuracoes/equipe";
 const IDLE: TeamState = { status: "idle" };
 
+/** The file chooser: a dashed box with a solid button, so it reads as "click here". */
+const FILE_PICK =
+  "block w-full cursor-pointer rounded-lg border-2 border-dashed border-primary/60 bg-primary/5 p-2.5 text-sm text-muted-foreground transition-colors outline-none hover:border-primary hover:bg-primary/10 focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-ring/50 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90";
+
 function useToast(state: TeamState, onSaved?: () => void) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: only a new state reports
   useEffect(() => {
@@ -194,7 +198,7 @@ export function PersonForm({
               name="photo"
               type="file"
               accept="image/png,image/jpeg,image/webp"
-              className="text-xs"
+              className={FILE_PICK}
             />
             <p className="text-xs text-muted-foreground">
               PNG, JPEG ou WebP, quadrada, até 2 MB.
@@ -232,7 +236,7 @@ export function PersonForm({
               name="portaria"
               type="file"
               accept="application/pdf"
-              className="text-xs"
+              className={FILE_PICK}
               onChange={(e) =>
                 setPortariaChosen(Boolean(e.target.files?.length))
               }
@@ -283,7 +287,7 @@ export function PersonForm({
               name="word"
               type="file"
               accept=".docx,.doc,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              className="text-xs"
+              className={FILE_PICK}
             />
             <p className="text-xs text-muted-foreground">
               Fica só aqui no painel. Nunca vai para o site.
