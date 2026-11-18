@@ -5,6 +5,7 @@ import { can } from "@/core/auth/roles.ts";
 import {
   checkLevels,
   checkTeamFile,
+  DEFAULT_FRAME,
   MAX_LEVELS,
   type StaffInput,
   TEAM_MIME,
@@ -63,6 +64,12 @@ function refresh() {
   revalidatePath("/equipe");
   revalidatePath("/admin", "layout");
 }
+
+/** A whole number from the form, or the fallback when it is not one. */
+const whole = (value: string, fallback: number) => {
+  const n = Number.parseInt(value, 10);
+  return Number.isFinite(n) ? n : fallback;
+};
 
 const KINDS: TeamFileKind[] = ["photo", "portaria", "word"];
 
@@ -125,6 +132,13 @@ export async function savePersonAction(
     showOnSite: formData.get("showOnSite") === "1",
     imageConsent: formData.get("imageConsent") === "1",
     canSign: formData.get("canSign") === "1",
+    frame: {
+      shape: text("frameShape") === "square" ? "square" : "circle",
+      fit: text("frameFit") === "contain" ? "contain" : "cover",
+      x: whole(text("frameX"), DEFAULT_FRAME.x),
+      y: whole(text("frameY"), DEFAULT_FRAME.y),
+      zoom: whole(text("frameZoom"), DEFAULT_FRAME.zoom),
+    },
   };
   const read = await readFiles(formData);
   if (!read.ok) return { status: "error", message: read.message };

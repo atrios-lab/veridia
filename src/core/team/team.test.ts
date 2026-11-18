@@ -3,7 +3,10 @@ import { test } from "node:test";
 import {
   checkLevels,
   checkTeamFile,
+  DEFAULT_FRAME,
   DEFAULT_TEAM_LEVELS,
+  frameFrom,
+  frameImageStyle,
   groupByLevel,
   guessLevel,
   levelsFrom,
@@ -33,6 +36,7 @@ const person = (over: Partial<StaffRecord> = {}): StaffRecord => ({
   hasPortaria: true,
   hasWord: true,
   archived: false,
+  frame: DEFAULT_FRAME,
   ...over,
 });
 
@@ -109,6 +113,7 @@ test("o que o visitante vê: só quem for marcado, foto só com autorização, p
     portariaDate: "2024-05-20",
     photo: true,
     portaria: true,
+    frame: DEFAULT_FRAME,
   });
   // Not marked: nobody sees them.
   assert.equal(publicPerson(person({ showOnSite: false })), null);
@@ -241,4 +246,57 @@ test("o tipo do arquivo vem do conteúdo, e cada campo aceita só o seu", () => 
   const tooBig = checkTeamFile("photo", big, "a.png");
   assert.equal(tooBig.ok, false);
   assert.match(!tooBig.ok ? tooBig.message : "", /até 2 MB/);
+});
+
+test("o enquadramento da foto: padrão, leitura segura e o CSS que o site usa", () => {
+  assert.deepEqual(frameFrom(null), DEFAULT_FRAME);
+  assert.deepEqual(frameFrom({ shape: "triangulo" }), DEFAULT_FRAME);
+  assert.deepEqual(frameFrom({ ...DEFAULT_FRAME, zoom: 999 }), DEFAULT_FRAME);
+  const square = {
+    shape: "square",
+    fit: "cover",
+    x: 30,
+    y: 0,
+    zoom: 200,
+  } as const;
+  assert.deepEqual(frameFrom(square), square);
+
+  // Centred and not zoomed: only the position, no transform.
+  assert.deepEqual(frameImageStyle(DEFAULT_FRAME), {
+    objectFit: "cover",
+    objectPosition: "50% 50%",
+  });
+  // Zoomed: the same point is the origin of the zoom, so it stays in the middle.
+  assert.deepEqual(frameImageStyle(square), {
+    objectFit: "cover",
+    objectPosition: "30% 0%",
+    transform: "scale(2)",
+    transformOrigin: "30% 0%",
+  });
+  // Whole photo: no cutting, no zoom.
+  assert.deepEqual(frameImageStyle({ ...square, fit: "contain" }), {
+    objectFit: "contain",
+    objectPosition: "50% 50%",
+  });
+
+  // The form may leave the frame out; the checked data then has the default.
+  const base = {
+    name: "Ana Exemplo Ribeiro",
+    levelId: "substituto",
+    profession: "",
+    registration: "",
+    portariaDate: "",
+    showOnSite: false,
+    imageConsent: false,
+    canSign: false,
+  };
+  const parsed = StaffInputSchema.safeParse(base);
+  assert.equal(parsed.success && parsed.data.frame.shape, "circle");
+  assert.equal(
+    StaffInputSchema.safeParse({ ...base, frame: { ...square, zoom: 50 } })
+      .success,
+    false,
+  );
+  // The visitor gets the frame with the person.
+  assert.deepEqual(publicPerson(person({ frame: square }))?.frame, square);
 });

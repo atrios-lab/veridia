@@ -4,12 +4,17 @@ import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useId, useState } from "react";
 import { toast } from "sonner";
 import {
+  DEFAULT_FRAME,
+  frameImageStyle,
   LEVEL_LABEL_MAX,
   MAX_LEVELS,
   NAME_MAX,
+  type PhotoFrame,
   PORTARIA_PUBLIC_WARNING,
   SMALL_TEXT_MAX,
   type TeamLevel,
+  ZOOM_MAX,
+  ZOOM_MIN,
 } from "@/core/team/team.ts";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
@@ -59,10 +64,163 @@ export interface PersonView {
   portariaName: string;
   hasWord: boolean;
   wordName: string;
+  frame: PhotoFrame;
 }
 
 const fileUrl = (id: string, kind: "photo" | "portaria" | "word") =>
   `${PATH}/arquivo/${id}/${kind}`;
+
+/** One slider of the frame editor, with its label. */
+function FrameSlider({
+  label,
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+}) {
+  const sliderId = useId();
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label htmlFor={sliderId} className="text-xs font-medium text-foreground">
+        {label}
+      </label>
+      <input
+        id={sliderId}
+        type="range"
+        min={min}
+        max={max}
+        value={value}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-primary disabled:opacity-40"
+      />
+    </div>
+  );
+}
+
+/**
+ * How the photo sits on the site: circle or square, filling the frame or
+ * whole, and which part of the photo stays in the middle. The preview is the
+ * same CSS the site uses.
+ */
+function FrameEditor({
+  src,
+  frame,
+  onChange,
+}: {
+  src: string;
+  frame: PhotoFrame;
+  onChange: (frame: PhotoFrame) => void;
+}) {
+  const fills = frame.fit === "cover";
+  const set = (part: Partial<PhotoFrame>) => onChange({ ...frame, ...part });
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border bg-muted/30 p-3">
+      <p className="text-xs font-semibold text-foreground">
+        Como a foto aparece no site
+      </p>
+      <div className="flex items-start gap-4">
+        <span
+          className={`relative block size-28 shrink-0 overflow-hidden border bg-white ${
+            frame.shape === "square" ? "rounded-xl" : "rounded-full"
+          }`}
+        >
+          {/* biome-ignore lint/performance/noImgElement: a local preview of a private file */}
+          <img
+            src={src}
+            alt="Prévia da foto no site"
+            className="absolute inset-0 size-full"
+            style={frameImageStyle(frame)}
+          />
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={frame.shape === "circle" ? "default" : "outline"}
+              aria-pressed={frame.shape === "circle"}
+              onClick={() => set({ shape: "circle" })}
+            >
+              Círculo
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={frame.shape === "square" ? "default" : "outline"}
+              aria-pressed={frame.shape === "square"}
+              onClick={() => set({ shape: "square" })}
+            >
+              Quadrada
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={fills ? "default" : "outline"}
+              aria-pressed={fills}
+              onClick={() => set({ fit: "cover" })}
+            >
+              Preencher o quadro
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={fills ? "outline" : "default"}
+              aria-pressed={!fills}
+              onClick={() => set({ fit: "contain" })}
+            >
+              Foto inteira
+            </Button>
+          </div>
+        </div>
+      </div>
+      <FrameSlider
+        label="Parte da foto no centro: da esquerda para a direita"
+        value={frame.x}
+        min={0}
+        max={100}
+        disabled={!fills}
+        onChange={(x) => set({ x })}
+      />
+      <FrameSlider
+        label="Parte da foto no centro: de cima para baixo"
+        value={frame.y}
+        min={0}
+        max={100}
+        disabled={!fills}
+        onChange={(y) => set({ y })}
+      />
+      <FrameSlider
+        label="Aproximar"
+        value={frame.zoom}
+        min={ZOOM_MIN}
+        max={ZOOM_MAX}
+        disabled={!fills}
+        onChange={(zoom) => set({ zoom })}
+      />
+      <div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onChange({ ...DEFAULT_FRAME, shape: frame.shape })}
+        >
+          Centralizar a foto
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 /** Registers a person, or changes one: data, files and what the site shows. */
 export function PersonForm({
@@ -78,6 +236,19 @@ export function PersonForm({
   const uid = useId();
   const [showOnSite, setShowOnSite] = useState(person?.showOnSite ?? false);
   const [portariaChosen, setPortariaChosen] = useState(false);
+  const [frame, setFrame] = useState<PhotoFrame>(
+    person?.frame ?? DEFAULT_FRAME,
+  );
+  // The photo just chosen (shown before it is saved), else the saved one.
+  const [chosenPhoto, setChosenPhoto] = useState("");
+  useEffect(
+    () => () => {
+      if (chosenPhoto) URL.revokeObjectURL(chosenPhoto);
+    },
+    [chosenPhoto],
+  );
+  const photoSrc =
+    chosenPhoto || (person?.hasPhoto ? `${fileUrl(person.id, "photo")}` : "");
   const id = (name: string) => `${uid}-${name}`;
   return (
     <>
@@ -87,6 +258,11 @@ export function PersonForm({
         className="flex flex-col gap-4"
       >
         {person && <input type="hidden" name="id" value={person.id} />}
+        <input type="hidden" name="frameShape" value={frame.shape} />
+        <input type="hidden" name="frameFit" value={frame.fit} />
+        <input type="hidden" name="frameX" value={frame.x} />
+        <input type="hidden" name="frameY" value={frame.y} />
+        <input type="hidden" name="frameZoom" value={frame.zoom} />
         <div className="grid gap-3 md:grid-cols-2">
           <label
             htmlFor={id("name")}
@@ -199,9 +375,14 @@ export function PersonForm({
               type="file"
               accept="image/png,image/jpeg,image/webp"
               className={FILE_PICK}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                setChosenPhoto(file ? URL.createObjectURL(file) : "");
+              }}
             />
             <p className="text-xs text-muted-foreground">
-              PNG, JPEG ou WebP, quadrada, até 2 MB.
+              PNG, JPEG ou WebP, até 2 MB. Qualquer proporção: você ajusta o
+              enquadramento abaixo.
             </p>
           </div>
 
@@ -293,6 +474,11 @@ export function PersonForm({
               Fica só aqui no painel. Nunca vai para o site.
             </p>
           </div>
+          {photoSrc && (
+            <div className="md:col-span-3">
+              <FrameEditor src={photoSrc} frame={frame} onChange={setFrame} />
+            </div>
+          )}
         </fieldset>
 
         <fieldset className="flex flex-col gap-2.5">

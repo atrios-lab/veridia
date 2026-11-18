@@ -103,3 +103,31 @@ O link "Nossa equipe" SHALL aparecer no menu Cidadão e no rodapé só quando ho
 #### Scenario: Cartório sem equipe publicada
 - **WHEN** ninguém está marcado para o site
 - **THEN** o menu e o rodapé não têm "Nossa equipe" e `/equipe` mostra que a equipe ainda não foi publicada
+
+### Requirement: Enquadramento da foto escolhido por pessoa
+
+Cada pessoa SHALL ter um enquadramento da foto, guardado só como acréscimo no banco: o formato (círculo ou quadrado de cantos suaves), se a foto preenche o quadro ou aparece inteira, a parte da foto que fica no centro (esquerda a direita e cima a baixo, de 0 a 100) e a aproximação (de 100% a 300%). O padrão SHALL ser o círculo centralizado, sem aproximação. O formulário SHALL mostrar uma prévia feita com o mesmo CSS do site, aceitar foto de qualquer proporção e ter o botão "Centralizar a foto". Valores fora da faixa SHALL ser recusados.
+
+#### Scenario: Foto de corpo inteiro com o rosto no círculo
+- **WHEN** o Tabelião envia uma foto vertical e leva a parte em destaque para cima
+- **THEN** a prévia e o site mostram o rosto dentro do círculo, sem que o arquivo seja alterado
+
+#### Scenario: Imagem quadrada
+- **WHEN** o Tabelião escolhe o formato quadrado
+- **THEN** o site mostra a foto num quadrado de cantos suaves, e a pessoa sem foto mostra as iniciais no mesmo formato
+
+#### Scenario: Valor fora da faixa
+- **WHEN** a aproximação enviada é menor que 100% ou maior que 300%
+- **THEN** o cadastro é recusado e o enquadramento anterior continua
+
+### Requirement: Página da equipe como organograma
+
+A página `/equipe` SHALL mostrar a hierarquia como uma árvore: um tronco central liga os níveis, na ordem do Tabelião, cada nível aparece com o seu nome no tronco e cada pessoa desce de um ramal. Um nível grande SHALL ser dividido em ramais equilibrados (cinco pessoas viram três e duas), para que as linhas nunca fiquem soltas. No celular SHALL ficar só o tronco, com os cartões em coluna ou em duas colunas.
+
+#### Scenario: Hierarquia legível
+- **WHEN** o visitante abre a página com pessoas em vários níveis
+- **THEN** vê o Tabelião no alto e, ligado pelo tronco, cada nível seguinte, com as pessoas de cada nível ligadas ao seu nome por linhas
+
+#### Scenario: Nível com muitas pessoas
+- **WHEN** um nível tem cinco pessoas
+- **THEN** elas aparecem em dois ramais, de três e de duas, sem linha sobrando

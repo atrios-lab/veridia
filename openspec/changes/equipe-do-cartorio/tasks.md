@@ -34,3 +34,8 @@
 
 - [x] 6.1 Bateria do CI e `pnpm build`
 - [x] 6.2 Conferido no navegador, com cartório e pessoas fictícios: cadastro com arquivos, site, rotas de arquivo e retirada
+
+## Enquadramento da foto
+
+- [x] Coluna `photo_frame` (acréscimo), regra pura, formulário com prévia e site usando o mesmo CSS
+- [x] Página `/equipe` em organograma: tronco, ramais e níveis grandes em ramais equilibrados

@@ -346,3 +346,35 @@ test("Quem assina vem da equipe na ordem em que as pessoas entraram, e o que exi
   );
   assert.equal(toRecord(helena).canSign, true);
 });
+
+test("o enquadramento da foto é guardado e chega ao site", async () => {
+  const office = "cartorio-moldura";
+  const id = await createStaffWith(db, office, input(), ACTOR);
+  // Without a choice: the centred circle.
+  let shown = (await publicTeamWith(db, office)).groups[0]?.people[0];
+  assert.equal(shown?.frame.shape, "circle");
+  assert.equal(shown?.frame.zoom, 100);
+  const frame = {
+    shape: "square",
+    fit: "cover",
+    x: 40,
+    y: 10,
+    zoom: 180,
+  } as const;
+  await updateStaffWith(db, office, id, input({ frame }), ACTOR);
+  shown = (await publicTeamWith(db, office)).groups[0]?.people[0];
+  assert.deepEqual(shown?.frame, frame);
+  // A frame out of range is refused and changes nothing.
+  await assert.rejects(
+    updateStaffWith(
+      db,
+      office,
+      id,
+      input({ frame: { ...frame, x: 140 } }),
+      ACTOR,
+    ),
+    TeamError,
+  );
+  const [row] = await listStaffRowsWith(db, office);
+  assert.deepEqual(toRecord(row as NonNullable<typeof row>).frame, frame);
+});

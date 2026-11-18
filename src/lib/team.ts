@@ -2,6 +2,7 @@ import "server-only";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import {
   checkLevels,
+  frameFrom,
   groupByLevel,
   guessLevel,
   levelsFrom,
@@ -10,6 +11,7 @@ import {
   publicPerson,
   type StaffInput,
   StaffInputSchema,
+  type StaffParsed,
   type StaffRecord,
   signersFrom,
   type TeamFileKind,
@@ -48,6 +50,7 @@ export function toRecord(row: StaffRow): StaffRecord {
     hasPortaria: Boolean(row.portariaPath),
     hasWord: Boolean(row.wordPath),
     archived: row.archivedAt !== null,
+    frame: frameFrom(row.photoFrame),
   };
 }
 
@@ -163,7 +166,7 @@ async function ownRow(
   return row;
 }
 
-function parseInput(raw: StaffInput): StaffInput {
+function parseInput(raw: StaffInput): StaffParsed {
   const parsed = StaffInputSchema.safeParse(raw);
   if (!parsed.success) {
     throw new TeamError(parsed.error.issues[0]?.message ?? "Dados inválidos.");
@@ -237,6 +240,7 @@ export async function createStaffWith(
       showOnSite: input.showOnSite,
       imageConsent: input.imageConsent,
       imageConsentAt: input.imageConsent ? now : null,
+      photoFrame: input.frame,
       canSign: input.canSign,
       signerOrder: input.canSign
         ? await nextSignerOrder(database, tenantSlug)
@@ -287,6 +291,7 @@ export async function updateStaffWith(
           ? row.imageConsentAt
           : now
         : null,
+      photoFrame: input.frame,
       canSign: input.canSign,
       // Given once and kept: a person who stops signing and comes back
       // returns to the same place.

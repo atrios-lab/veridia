@@ -129,6 +129,62 @@ export const SMALL_TEXT_MAX = 80;
 
 const IsoDay = /^\d{4}-\d{2}-\d{2}$/;
 
+// The photo's frame ---------------------------------------------------------
+
+export const PHOTO_SHAPES = ["circle", "square"] as const;
+export const PHOTO_FITS = ["cover", "contain"] as const;
+export const ZOOM_MIN = 100;
+export const ZOOM_MAX = 300;
+
+/**
+ * How a person's photo sits in its frame on the site: the shape (circle or
+ * rounded square), "cover" (fills the frame, cutting what overflows) or
+ * "contain" (shows the whole photo), and, when it fills, the point of the
+ * photo kept in the middle (x and y, 0 to 100) and the zoom (100 to 300).
+ */
+export const PhotoFrameSchema = z.object({
+  shape: z.enum(PHOTO_SHAPES),
+  fit: z.enum(PHOTO_FITS),
+  x: z.number().int().min(0).max(100),
+  y: z.number().int().min(0).max(100),
+  zoom: z.number().int().min(ZOOM_MIN).max(ZOOM_MAX),
+});
+export type PhotoFrame = z.infer<typeof PhotoFrameSchema>;
+
+export const DEFAULT_FRAME: PhotoFrame = {
+  shape: "circle",
+  fit: "cover",
+  x: 50,
+  y: 50,
+  zoom: 100,
+};
+
+/** A stored frame, read leniently: anything wrong falls back to the default. */
+export function frameFrom(raw: unknown): PhotoFrame {
+  const parsed = PhotoFrameSchema.safeParse(raw);
+  return parsed.success ? parsed.data : { ...DEFAULT_FRAME };
+}
+
+/** The CSS of the photo inside its frame (shared by the site and the preview). */
+export function frameImageStyle(frame: PhotoFrame): {
+  objectFit: "cover" | "contain";
+  objectPosition: string;
+  transform?: string;
+  transformOrigin?: string;
+} {
+  if (frame.fit === "contain") {
+    return { objectFit: "contain", objectPosition: "50% 50%" };
+  }
+  const origin = `${frame.x}% ${frame.y}%`;
+  return {
+    objectFit: "cover",
+    objectPosition: origin,
+    ...(frame.zoom > ZOOM_MIN
+      ? { transform: `scale(${frame.zoom / 100})`, transformOrigin: origin }
+      : {}),
+  };
+}
+
 /** What the form sends for one person (the files travel apart). */
 export const StaffInputSchema = z.object({
   name: z
@@ -154,8 +210,13 @@ export const StaffInputSchema = z.object({
   showOnSite: z.boolean(),
   imageConsent: z.boolean(),
   canSign: z.boolean(),
+  /** How the photo sits in its frame; the default is the centred circle. */
+  frame: PhotoFrameSchema.default(DEFAULT_FRAME),
 });
-export type StaffInput = z.infer<typeof StaffInputSchema>;
+/** What the form sends (the frame may be left out). */
+export type StaffInput = z.input<typeof StaffInputSchema>;
+/** What the rules read after checking. */
+export type StaffParsed = z.output<typeof StaffInputSchema>;
 
 /** One person as the panel reads it. */
 export interface StaffRecord {
@@ -175,6 +236,7 @@ export interface StaffRecord {
   hasPortaria: boolean;
   hasWord: boolean;
   archived: boolean;
+  frame: PhotoFrame;
 }
 
 /** One person as the visitor sees them. Never carries a file path. */
@@ -188,6 +250,7 @@ export interface PublicPerson {
   portariaDate: string | null;
   photo: boolean;
   portaria: boolean;
+  frame: PhotoFrame;
 }
 
 /** The visitor's view of a person, or null when they do not appear. */
@@ -204,6 +267,7 @@ export function publicPerson(person: StaffRecord): PublicPerson | null {
     portariaDate: person.hasPortaria ? person.portariaDate : null,
     photo: person.hasPhoto && person.imageConsent,
     portaria: person.hasPortaria,
+    frame: person.frame,
   };
 }
 
