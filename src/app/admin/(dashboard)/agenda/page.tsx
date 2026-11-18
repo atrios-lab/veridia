@@ -739,7 +739,11 @@ function DayStrip({
       >
         <ChevronLeft aria-hidden="true" />
       </Link>
-      <div className="grid flex-1 grid-cols-7 gap-2">
+      {/* Seven fixed columns left each card ~40px on a phone and the text
+          ("3 agendados", "hoje") ran over the next card. On a phone the days
+          scroll in one row; from sm up the cards fill the width and wrap to a
+          second row when there is no room for seven. */}
+      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto sm:grid sm:grid-cols-[repeat(auto-fit,minmax(96px,1fr))] sm:overflow-visible">
         {dates.map((date) => {
           const isSelected = date === selected;
           // A holiday reads as closed too, by its own word: it is not a date
@@ -759,7 +763,7 @@ function DayStrip({
               href={`/admin/agenda?agenda=${agenda}&dia=${date}&de=${anchor}`}
               aria-current={isSelected ? "date" : undefined}
               className={cn(
-                "rounded-xl border px-3 py-2.5 transition-colors",
+                "min-w-24 shrink-0 rounded-xl border px-2.5 py-2.5 transition-colors sm:min-w-0",
                 isSelected
                   ? "border-primary bg-primary text-primary-foreground"
                   : closed
@@ -771,7 +775,7 @@ function DayStrip({
             >
               <span
                 className={cn(
-                  "flex items-center gap-1.5 text-xs font-medium",
+                  "flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium",
                   isSelected
                     ? "text-primary-foreground/80"
                     : "text-muted-foreground",
@@ -801,7 +805,7 @@ function DayStrip({
               </span>
               <span
                 className={cn(
-                  "mt-1 flex items-center gap-1 text-xs",
+                  "mt-1 flex flex-wrap items-center gap-x-1 gap-y-0.5 text-xs",
                   closed
                     ? isSelected
                       ? "font-medium text-primary-foreground"
@@ -819,7 +823,7 @@ function DayStrip({
                 ) : occupied > 0 ? (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 font-semibold",
+                      "inline-flex flex-wrap items-center gap-x-1.5 font-semibold",
                       isSelected ? "text-primary-foreground" : "text-primary",
                     )}
                   >
