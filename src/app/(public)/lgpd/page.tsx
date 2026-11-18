@@ -6,7 +6,7 @@ export const generateMetadata = publicMetadata("/lgpd");
 
 export default async function DpoPage() {
   // The officer's name and institutional address are published because LGPD
-  // art. 41 §3 requires it, and they come from the office's configuration:
+  // art. 41 §1 requires it, and they come from the office's configuration:
   // another office serves the same page with its own officer.
   const tenant = await requireSection("dpo-lgpd");
 

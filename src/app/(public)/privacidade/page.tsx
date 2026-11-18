@@ -113,7 +113,7 @@ export default async function PrivacyPolicyPage() {
             Encarregado de Dados (DPO)
           </h2>
           <p>
-            Em atendimento ao art. 41, §3º da LGPD, o Encarregado pelo
+            Em atendimento ao art. 41, § 1º, da LGPD, o Encarregado pelo
             Tratamento de Dados desta serventia é:
           </p>
           <p className="mt-2 rounded-2xl border border-brand-border bg-brand-card px-4 py-3.5">

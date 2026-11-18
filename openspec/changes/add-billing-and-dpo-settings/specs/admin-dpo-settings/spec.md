@@ -9,7 +9,7 @@ Configurações, com Encarregado selecionada.
 
 O formulário SHALL ter dois campos, ambos obrigatórios: nome do Encarregado e e-mail de contato.
 A tela SHALL declarar que o contato aparece publicamente na área LGPD do site por exigência do
-art. 41, §3º da Lei 13.709/2018.
+art. 41, § 1º, da Lei 13.709/2018.
 
 #### Scenario: Aba abre com os valores em vigor
 

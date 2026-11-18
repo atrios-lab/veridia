@@ -281,7 +281,7 @@ export const TenantSchema = z.object({
     name: z.string().min(1),
     status: OwnerStatusSchema,
   }),
-  // Data protection officer. Required by LGPD art. 41 §3: this is an
+  // Data protection officer. Required by LGPD art. 41 §1: this is an
   // institutional channel, never a personal address.
   dpo: z.object({
     name: z.string().min(1, "Informe o nome do encarregado."),

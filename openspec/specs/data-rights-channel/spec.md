@@ -58,7 +58,7 @@ prazos da Lei 6.015/1973.
 
 O nome e o contato institucional do Encarregado (DPO) da serventia SHALL estar publicados na
 página, vindos da configuração da serventia. No celular SHALL ser uma linha compacta acima do
-formulário; no desktop, cartão na coluna lateral com o contato e a referência ao art. 41, §3º
+formulário; no desktop, cartão na coluna lateral com o contato e a referência ao art. 41, § 2º, I,
 da LGPD.
 
 #### Scenario: Serventia distinta, DPO distinto

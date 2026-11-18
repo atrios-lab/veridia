@@ -30,7 +30,7 @@ cartório.
 A política SHALL informar, em linguagem clara: quais dados pessoais são coletados em cada canal
 do site (pedidos de serviço, agendamento, ouvidoria, canal LGPD, chat), a finalidade e a base
 legal do tratamento, os prazos de guarda (incluindo a guarda obrigatória de atos registrais), os
-direitos do titular com link para o canal `/lgpd`, o contato do Encarregado (art. 41, §3º da
+direitos do titular com link para o canal `/lgpd`, o contato do Encarregado (art. 41, § 1º, da
 LGPD) e a seção sobre cookies declarando que o site usa apenas cookies essenciais.
 
 #### Scenario: Direitos do titular apontam para o canal existente

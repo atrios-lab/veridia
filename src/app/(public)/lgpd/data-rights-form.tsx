@@ -400,8 +400,8 @@ export function DataRightsScreen(props: DataRightsScreenProps) {
             </span>
           </div>
           <p className="mt-3 text-[11.5px] leading-relaxed text-brand-faint">
-            Atendimento conforme o art. 41, §3º, da LGPD. Você fala diretamente
-            com a pessoa responsável pelos seus dados.
+            Atendimento conforme o art. 41, § 2º, I, da LGPD. Você fala
+            diretamente com a pessoa responsável pelos seus dados.
           </p>
         </div>
 

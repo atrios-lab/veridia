@@ -59,7 +59,7 @@ export function DpoForm({ tenant }: { tenant: Tenant }) {
       </h2>
       <p className="mt-1 text-sm text-muted-foreground">
         Aparece publicamente na área LGPD do site, por exigência da Lei
-        13.709/2018 (art. 41, §3º). É para este e-mail que o cidadão escreve
+        13.709/2018 (art. 41, § 1º). É para este e-mail que o cidadão escreve
         quando o assunto é dado pessoal.
       </p>
 

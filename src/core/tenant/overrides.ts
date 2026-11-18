@@ -98,7 +98,7 @@ export const OfficeBrandOverrideSchema = OfficeBrandSchema.partial();
 
 /**
  * What an office may change about its Data Protection Officer: the name and
- * institutional e-mail LGPD art. 41 §3 requires it to publish. Same pick
+ * institutional e-mail LGPD art. 41 §1 requires it to publish. Same pick
  * discipline as the other two: nothing else in `Tenant` is reachable through
  * this shape.
  */
