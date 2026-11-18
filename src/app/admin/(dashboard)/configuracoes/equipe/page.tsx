@@ -47,6 +47,7 @@ const viewOf = (row: StaffRow): PersonView => ({
   portariaName: row.portariaName ?? "",
   hasWord: Boolean(row.wordPath),
   wordName: row.wordName ?? "",
+  frame: toRecord(row).frame,
 });
 
 function Avatar({ row }: { row: StaffRow }) {

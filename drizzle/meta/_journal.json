@@ -526,6 +526,13 @@
       "when": 1794975599207,
       "tag": "0074_equipe_do_cartorio",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794980420325,
+      "tag": "0075_enquadramento_da_foto",
+      "breakpoints": true
     }
   ]
 }

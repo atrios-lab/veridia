@@ -2945,6 +2945,8 @@ export const officeStaff = pgTable(
     photoPath: text("photo_path"),
     photoMime: text("photo_mime"),
     photoUpdatedAt: timestamp("photo_updated_at", { withTimezone: true }),
+    /** How the photo sits in its frame (shape, fit, centre, zoom); null = centred circle. */
+    photoFrame: jsonb("photo_frame"),
     /** The portaria's PDF: attaching it is what publishes it. */
     portariaPath: text("portaria_path"),
     portariaName: text("portaria_name"),
