@@ -6,7 +6,7 @@ O nome e o contato institucional do Encarregado (DPO) da serventia SHALL estar p
 página. O valor exibido SHALL ser o que a serventia gravou na aba Encarregado do painel quando
 houver, e o do arquivo de configuração da serventia quando não houver. No celular SHALL ser uma
 linha compacta acima do formulário; no desktop, cartão na coluna lateral com o contato e a
-referência ao art. 41, §3º da LGPD.
+referência ao art. 41, § 2º, I, da LGPD.
 
 #### Scenario: Serventia distinta, DPO distinto
 

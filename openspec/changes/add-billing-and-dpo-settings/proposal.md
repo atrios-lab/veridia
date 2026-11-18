@@ -2,7 +2,7 @@
 
 As abas **Encarregado** e **Cobrança** existem hoje só como rótulos inertes na faixa de
 Configurações. As duas guardam dado que a serventia precisa corrigir sozinha e que hoje só muda
-por deploy: o Encarregado de Dados é publicação obrigatória por lei (art. 41, §3º da Lei
+por deploy: o Encarregado de Dados é publicação obrigatória por lei (art. 41, § 1º, da Lei
 13.709/2018) e troca quando a pessoa troca; a chave Pix é por onde entra o dinheiro do cidadão e
 não existe no sistema em canto nenhum. Sem elas, "arrumar a casa" no painel ainda depende do
 suporte.
