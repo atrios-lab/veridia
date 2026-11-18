@@ -15,6 +15,7 @@ import { serviceRequests, taxGuides, tenantContent } from "@/db/schema.ts";
 import { OFFICE_GUIDES_KEY } from "@/lib/office-config.ts";
 import { recordAuditWith } from "./audit.ts";
 import { nextNumberWith } from "./document-numbering.ts";
+import { teamSignersWith } from "./team.ts";
 
 export type TaxGuideRow = typeof taxGuides.$inferSelect;
 
@@ -51,7 +52,37 @@ function storedOf(row: TaxGuideRow): StoredGuide | undefined {
  * from its own registration (municipality, state) until it saves. A row that
  * fails the schema reads as the defaults rather than an error.
  */
-export async function getGuideSettings(tenant: Tenant): Promise<GuideSettings> {
+export async function getGuideSettings(
+  tenant: Tenant,
+  options: { legacySigners?: boolean } = {},
+): Promise<GuideSettings> {
+  const settings = await readGuideSettings(tenant);
+  if (options.legacySigners) return settings;
+  // Once the team has people marked "Pode assinar", the list of who signs
+  // comes from it (change equipe-do-cartorio), in the order they took.
+  try {
+    const fromTeam = await teamSignersWith(db, tenant.slug);
+    if (fromTeam.length) return { ...settings, signers: fromTeam };
+  } catch {
+    // The team being unreadable leaves the saved list, never a broken screen.
+  }
+  return settings;
+}
+
+/** The list saved in "Quem assina" before the team fed it (what the import reads). */
+export async function getLegacySigners(
+  tenant: Tenant,
+): Promise<{ name: string; title: string; note: string }[]> {
+  return (await getGuideSettings(tenant, { legacySigners: true })).signers.map(
+    (signer) => ({
+      name: signer.name,
+      title: signer.title,
+      note: signer.note ?? "",
+    }),
+  );
+}
+
+async function readGuideSettings(tenant: Tenant): Promise<GuideSettings> {
   try {
     const [row] = await db
       .select({ published: tenantContent.published })

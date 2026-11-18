@@ -75,6 +75,12 @@ export const PAGE_META: Record<string, PageMeta> = {
       "Sites oficiais onde você pede certidões e resolve serviços de " +
       `cartório pela internet, indicados pelo ${t.name}. Evite sites falsos.`,
   },
+  "/equipe": {
+    title: "Nossa equipe",
+    description: (t) =>
+      `Conheça quem atende no ${t.name}: o titular, os substitutos, os ` +
+      "escreventes e os colaboradores, com as portarias de nomeação.",
+  },
   "/contato": {
     title: "Contato",
     description: (t) =>

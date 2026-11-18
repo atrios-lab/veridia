@@ -87,6 +87,10 @@ export const OFFICE_PERMISSIONS = [
   "numbering.manage",
   "access.manage",
   "certificates.manage",
+  // The office's team shown on the site (decision of 18/11/2026): names,
+  // positions, photos and the portarias of nomeação. The Tabelião/Registrador
+  // by default; he lets others edit it in Perfis e permissões.
+  "team.edit",
   // Papel de segurança (decision of 11/11/2026): the lots, their use and
   // losses, and the ofícios to the Corregedoria (Prov. CGJ/RN 156/2016,
   // arts. 59 and 60).
@@ -165,6 +169,7 @@ export const GRANTABLE_PERMISSIONS = [
   "numbering.manage",
   "access.manage",
   "certificates.manage",
+  "team.edit",
   "security-paper.manage",
   "paper-orders.manage",
   "daily-book.manage",
@@ -202,6 +207,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "numbering.manage": "content.edit",
   "access.manage": "user.manage",
   "certificates.manage": "user.manage",
+  // Only the Tabelião/Registrador edits the team until he decides otherwise.
+  "team.edit": "user.manage",
   // Whoever issues the certidões and traslados uses the paper.
   "security-paper.manage": "requests.manage",
   // Listed after its parent: `withDerived` adds it in the same pass.
@@ -292,6 +299,7 @@ export const DEMO_CLOSED_PERMISSIONS = [
   "chat.settings",
   "signer.use",
   "certificates.manage",
+  "team.edit",
   "rcpn.import",
   "attributions.import",
   "knowledge.manage",
@@ -530,6 +538,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "numbering.manage": "Numeração de documentos",
   "access.manage": "Duas etapas e horário de acesso (ligar, desligar, liberar)",
   "certificates.manage": "Certificados digitais da serventia",
+  "team.edit":
+    "Equipe do cartório: cadastrar pessoas, níveis, fotos e portarias (o que aparece no site)",
   "security-paper.manage":
     "Papel de segurança (lotes, uso, extravios e ofícios à Corregedoria)",
   "paper-orders.manage":

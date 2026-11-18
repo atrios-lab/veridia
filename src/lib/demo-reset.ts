@@ -40,6 +40,7 @@ import {
   messengerMessages,
   messengerProfiles,
   officePublications,
+  officeStaff,
   paperOrders,
   paperSuppliers,
   qualificationDocumentReviews,
@@ -184,6 +185,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   { table: dpoMessages, reason: "Assistente Virtual" },
   { table: dpoMonthlyUsage, reason: "contagem de uso da plataforma" },
   { table: dpoTenantSettings, reason: "limite definido pela Átrios" },
+  {
+    table: officeStaff,
+    reason:
+      "equipe do cartório, fechada aos participantes (só o Tabelião edita)",
+  },
 ];
 
 /** The keys of `tenant_content` that belong to the platform, not to the

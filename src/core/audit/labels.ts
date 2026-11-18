@@ -229,6 +229,19 @@ const EXACT: Record<string, string> = {
   "signing-station.signed": "Assinou com um certificado A3 compartilhado",
   "signing-station.refused":
     "Pedido de assinatura com A3 compartilhado não foi assinado",
+  "team.create": "Cadastrou uma pessoa na equipe do cartório",
+  "team.update": "Alterou os dados de uma pessoa da equipe do cartório",
+  "team.photo-set": "Enviou a foto de uma pessoa da equipe",
+  "team.portaria-attach":
+    "Anexou a portaria de uma pessoa da equipe (fica pública no site)",
+  "team.word-set": "Enviou o Word da portaria de uma pessoa da equipe",
+  "team.file-clear":
+    "Retirou a foto, a portaria ou o Word de uma pessoa da equipe",
+  "team.archive": "Arquivou uma pessoa da equipe do cartório",
+  "team.restore": "Voltou uma pessoa arquivada para a equipe",
+  "team.move": "Mudou a ordem de uma pessoa da equipe",
+  "team.levels": "Alterou os níveis da equipe do cartório",
+  "team.import-signers": "Trouxe quem assina para a equipe do cartório",
   "office-settings.save": "Alterou uma configuração da serventia",
   "office-settings.attributions":
     "Alterou as atribuições da serventia (o que oferece e o regime de cada uma)",
@@ -675,6 +688,24 @@ const EXPLANATIONS: Record<string, string> = {
     "Um documento foi assinado com um certificado A3 compartilhado, pela estação. Quem pediu está no registro.",
   "signing-station.refused":
     "Um pedido de assinatura com A3 compartilhado não foi assinado (recusado na estação, token desconectado ou uso não liberado).",
+  "team.create": "Uma pessoa foi cadastrada na equipe do cartório.",
+  "team.update":
+    "Os dados de uma pessoa da equipe foram alterados (nome, nível, profissão, o que aparece no site ou se pode assinar).",
+  "team.photo-set": "A foto de uma pessoa da equipe foi enviada ou trocada.",
+  "team.portaria-attach":
+    "A portaria de uma pessoa da equipe foi anexada: quem entra no site passa a poder abri-la.",
+  "team.word-set":
+    "O Word da portaria de uma pessoa da equipe foi enviado. Ele fica só no painel.",
+  "team.file-clear":
+    "A foto, a portaria ou o Word de uma pessoa da equipe foi retirado. Se era a portaria, ela deixou de aparecer no site.",
+  "team.archive":
+    "Uma pessoa saiu da equipe (arquivada): deixa de aparecer no painel e no site. O registro fica guardado.",
+  "team.restore": "Uma pessoa arquivada voltou para a equipe.",
+  "team.move": "A ordem de uma pessoa dentro do nível foi mudada.",
+  "team.levels":
+    "Os níveis da equipe (nomes e ordem) foram alterados. Isso muda a ordem do mosaico no site.",
+  "team.import-signers":
+    "As pessoas de Quem assina foram trazidas para a equipe. Dali em diante a lista de quem assina vem da equipe, na mesma ordem de antes.",
   "appointment.remove": "Um agendamento foi excluído.",
   "appointment.correct": "Os dados de um agendamento foram corrigidos.",
   "appointment.note": "Foi feita uma anotação num agendamento.",

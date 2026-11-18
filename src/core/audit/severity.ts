@@ -67,6 +67,9 @@ const EXACT: Record<string, AuditLevel> = {
   "signing-station.revoke": "atencao",
   "signing-station.signed": "rotina",
   "signing-station.refused": "atencao",
+  // A portaria attached becomes public: worth a look.
+  "team.portaria-attach": "atencao",
+  "team.import-signers": "atencao",
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",

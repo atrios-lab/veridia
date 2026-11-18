@@ -17,6 +17,8 @@ const SECTION_REQUIRES: Record<Section, Attribution[] | "always"> = {
   transparencia: "always",
   "selo-tjrn": "always",
   "centrais-contato": "always",
+  // Every office has a team; the page lists whoever the Tabelião marked.
+  equipe: "always",
 };
 
 /**
@@ -36,6 +38,7 @@ export const SECTION_ROUTES: Record<Section, string> = {
   transparencia: "/transparencia",
   "selo-tjrn": "/selo",
   "centrais-contato": "/centrais",
+  equipe: "/equipe",
 };
 
 /** Navigation label of each section, as the citizen reads it. */
@@ -50,6 +53,7 @@ export const SECTION_LABELS: Record<Section, string> = {
   transparencia: "Transparência",
   "selo-tjrn": "Selo digital",
   "centrais-contato": "Centrais e contato",
+  equipe: "Nossa equipe",
 };
 
 /**
@@ -71,6 +75,7 @@ export const SECTION_DESCRIPTIONS: Record<Section, string> = {
   // Describes the portals page. The section's other link, the contact page,
   // has its own line in sectionNavLinks.
   "centrais-contato": "Links oficiais de cada serviço, sem sites falsos",
+  equipe: "Quem atende você, do titular aos colaboradores",
 };
 
 /**

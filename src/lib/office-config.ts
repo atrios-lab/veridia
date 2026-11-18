@@ -70,6 +70,8 @@ export const OFFICE_CHAT_KEY = "office-chat";
 export const OFFICE_AGENDA_KEY = "office-agenda";
 /** When the panel opens, and who the holder released outside it. */
 export const OFFICE_ACCESS_HOURS_KEY = "office-access-hours";
+/** The levels of the office's team: names and order (change equipe-do-cartorio). */
+export const OFFICE_TEAM_LEVELS_KEY = "office-team-levels";
 /**
  * Papel de segurança (decision of 11/11/2026): to whom the ofícios go and
  * the State's rule; and, apart, which reminders already went by e-mail.

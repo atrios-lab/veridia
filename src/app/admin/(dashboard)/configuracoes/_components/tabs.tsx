@@ -68,6 +68,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         permission: "content.edit",
       },
       {
+        label: "Equipe do cartório",
+        href: "/admin/configuracoes/equipe",
+        permission: "team.edit",
+      },
+      {
         label: "Certificados digitais",
         href: "/admin/configuracoes/certificados",
         permission: "certificates.manage",
