@@ -9,6 +9,7 @@ import { cartorioJoaoCamara2 } from "./tenants/joao-camara-2.ts";
 import { cartorioMacaiba1 } from "./tenants/macaiba-1.ts";
 import { cartorioMajorSales } from "./tenants/major-sales.ts";
 import { cartorioMarinho } from "./tenants/marinho.ts";
+import { cartorioRuyBarbosa } from "./tenants/ruy-barbosa.ts";
 import { cartorioSantaCruz2 } from "./tenants/santa-cruz.ts";
 import { cartorioSaoJoseDeMipibu2 } from "./tenants/sao-jose-de-mipibu-2.ts";
 import { cartorioTaipu } from "./tenants/taipu.ts";
@@ -30,6 +31,7 @@ export const TENANTS: Record<string, Tenant> = {
   [cartorioCanguaretama.slug]: cartorioCanguaretama,
   [cartorioBrejinho.slug]: cartorioBrejinho,
   [cartorioJoaoCamara2.slug]: cartorioJoaoCamara2,
+  [cartorioRuyBarbosa.slug]: cartorioRuyBarbosa,
   [cartorioDemonstracao.slug]: cartorioDemonstracao,
   [cartorioValeDoSilicio.slug]: cartorioValeDoSilicio,
 };
