@@ -12,7 +12,8 @@
   subtitle, logos `selo-padrao-*`, `revenue` (347722.18 / 468414.94, `justica-aberta`,
   `2026-11-17`) e `legalFooter` no mesmo texto das demais serventias
 - [x] 1.2 Comentar no arquivo a fonte (cadastro do CNJ no Justiça Aberta, 17/11/2026) e o porquê
-  de não usar o agregador; deixar sem `emailFrom`, sem `heroImage` e sem `pix`; registrar em
+  de não usar o agregador; deixar sem `heroImage` e sem `pix` (e sem `emailFrom` até a
+  verificação do domínio no Postmark, preenchido depois com `nao-responda@`); registrar em
   comentário o Hotmail do cadastro do CNJ e o celular da lista oficial; marcar com `ponytail:` o
   WhatsApp, o horário e a alíquota de ISS
 - [x] 1.3 Registrar o tenant em `src/core/tenant/resolve.ts` (import + entrada em `TENANTS`)
@@ -21,9 +22,9 @@
 
 - [x] 2.1 `pnpm test src/core/tenant/tenant.test.ts` (o teste percorre o registro: schema,
   tema, isolamento por host e receita opcional)
-- [ ] 2.2 Subir o dev server e abrir `http://ruybarbosa.localhost:3000`: home com o título do
-  ofício único, navegação com as seções das seis atribuições e contato com o cartão de endereço
-  e a rota "Como chegar"
+- [x] 2.2 Abrir o site e conferir: home com o título do ofício único e contato com o cartão de
+  endereço e a rota "Como chegar" (feito em produção, `https://www.cartorioruybarbosarn.com.br`,
+  em 18/11/2026, depois da propagação do DNS)
 - [x] 2.3 `pnpm biome check` e `pnpm tsc --noEmit` limpos
 
 ## 3. Pendências fora do código (registrar no PR, não executar aqui)
