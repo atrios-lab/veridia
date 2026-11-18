@@ -1212,3 +1212,29 @@ ENTRIES["/admin/configuracoes/certificados"] = {
     },
   ],
 };
+
+ENTRIES["/admin/configuracoes/equipe"] = {
+  purpose:
+    "A equipe do cartório, do Tabelião aos serviços gerais, na ordem da hierarquia. É daqui que sai a página Nossa equipe do site.",
+  steps: [
+    "Clique em Adicionar pessoa e preencha nome, cargo (o nível da hierarquia), profissão e Portaria/Matrícula. Os níveis já vêm na ordem usual, e você pode renomear, reordenar e criar os seus em Níveis da hierarquia.",
+    "Mostrar no site: só quem estiver marcado aparece para o visitante, com nome, cargo e profissão. Desmarcado, a pessoa fica só no painel.",
+    "Foto: só aparece no site com a autorização de imagem registrada (marque a opção e guarde a autorização da pessoa).",
+    "Portaria: anexar o PDF é publicar. Aí o site mostra o número, a data e o link para abrir. Confira se o arquivo não tem CPF nem endereço, porque quem entra no site pode abri-lo. Sem anexo, o site não mostra a portaria.",
+    "Word da portaria: fica só no painel, para você guardar o editável. Nunca vai para o site.",
+    "Pode assinar documentos: a pessoa entra em Quem assina (guias, ISS e declarações). Se Quem assina já tem gente, use Trazer quem assina para a equipe: elas entram na mesma ordem de antes.",
+    "Use as setas para mudar a ordem dentro do nível. Arquivar tira a pessoa do painel e do site sem apagar o registro, e dá para voltar.",
+  ],
+  terms: [
+    {
+      term: "Portaria de nomeação",
+      meaning:
+        "O ato do titular que designa a pessoa para a função (escrevente, substituto etc.). O número e a data aparecem no site quando o PDF é anexado.",
+    },
+    {
+      term: "Autorização de imagem",
+      meaning:
+        "O consentimento da pessoa para mostrar a foto dela no site. Sem ele registrado aqui, a foto não aparece, mesmo enviada.",
+    },
+  ],
+};

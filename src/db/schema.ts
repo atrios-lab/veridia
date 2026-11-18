@@ -2905,3 +2905,65 @@ export const demoOutbox = pgTable(
     ),
   ],
 );
+
+/**
+ * The office's team (decision of 18/11/2026): the people of the serventia, by
+ * level, shown on the site and kept in the panel by the Tabelião/Registrador.
+ * Apart from the panel accounts (a person of serviços gerais may never log
+ * in). Nothing here is deleted: a person leaves the lists by being archived,
+ * and the stored files are named by their own columns.
+ *
+ * The levels (their names and order) are the office's own, kept in
+ * `tenant_content`; `level_id` points at one of them by its id, not by a
+ * foreign key.
+ */
+export const officeStaff = pgTable(
+  "office_staff",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    name: text("name").notNull(),
+    levelId: text("level_id").notNull(),
+    profession: text("profession").notNull().default(""),
+    /** "Portaria/Matrícula", free text: it also reads on the signed documents. */
+    registration: text("registration").notNull().default(""),
+    portariaDate: date("portaria_date"),
+    /** Place inside the level, set by the Tabelião. */
+    position: integer("position").notNull().default(0),
+    /** On the site only when marked. */
+    showOnSite: boolean("show_on_site").notNull().default(false),
+    /** The photo is public only with the image authorization recorded. */
+    imageConsent: boolean("image_consent").notNull().default(false),
+    imageConsentAt: timestamp("image_consent_at", { withTimezone: true }),
+    /** Listed in "Quem assina" (guias, ISS, declarações). */
+    canSign: boolean("can_sign").notNull().default(false),
+    /**
+     * The place in "Quem assina": the documents keep who signs by its place
+     * in that list, so it is given once and kept, never the hierarchy's order.
+     */
+    signerOrder: integer("signer_order"),
+    photoPath: text("photo_path"),
+    photoMime: text("photo_mime"),
+    photoUpdatedAt: timestamp("photo_updated_at", { withTimezone: true }),
+    /** The portaria's PDF: attaching it is what publishes it. */
+    portariaPath: text("portaria_path"),
+    portariaName: text("portaria_name"),
+    portariaUpdatedAt: timestamp("portaria_updated_at", { withTimezone: true }),
+    /** The Word of the portaria: the panel only, never the site. */
+    wordPath: text("word_path"),
+    wordName: text("word_name"),
+    wordMime: text("word_mime"),
+    wordUpdatedAt: timestamp("word_updated_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: text("archived_by"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("office_staff_tenant_level").on(t.tenantSlug, t.levelId)],
+);

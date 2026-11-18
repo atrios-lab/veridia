@@ -14,6 +14,7 @@ import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { rootMetadata } from "@/lib/root-metadata.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
+import { publicTeam } from "@/lib/team.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { MenuPopover } from "../_components/menu-popover.tsx";
@@ -74,7 +75,7 @@ const NAV_GROUPS = [
   {
     title: "Cidadão",
     slug: "cidadao",
-    hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/contato"],
+    hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/equipe", "/contato"],
   },
 ];
 
@@ -97,9 +98,14 @@ export default async function PublicLayout({
   const tenant = await getTenant();
   // Every page the office offers, in gating order, each one knowing its
   // section: that attribute is what the gating e2e reads off the footer.
-  const links = enabledSections(tenant).flatMap((section) =>
-    sectionNavLinks(section).map((link) => ({ ...link, section })),
-  );
+  // The team's page joins the menus only once someone is published on it:
+  // an empty "Nossa equipe" is not worth a link.
+  const hasTeam = (await publicTeam(tenant.slug)).groups.length > 0;
+  const links = enabledSections(tenant)
+    .filter((section) => section !== "equipe" || hasTeam)
+    .flatMap((section) =>
+      sectionNavLinks(section).map((link) => ({ ...link, section })),
+    );
   // By address, in the order given, skipping what the office does not offer.
   const pick = (hrefs: readonly string[]) =>
     hrefs.flatMap((href) => links.filter((link) => link.href === href));

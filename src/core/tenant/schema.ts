@@ -53,6 +53,8 @@ export const SECTIONS = [
   "editais",
   "selo-tjrn",
   "centrais-contato",
+  // The office's team, listed by level (change equipe-do-cartorio).
+  "equipe",
 ] as const;
 export const SectionSchema = z.enum(SECTIONS);
 export type Section = z.infer<typeof SectionSchema>;

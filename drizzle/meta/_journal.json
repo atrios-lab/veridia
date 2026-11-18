@@ -519,6 +519,13 @@
       "when": 1794870528128,
       "tag": "0073_estacoes_de_assinatura",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794975599207,
+      "tag": "0074_equipe_do_cartorio",
+      "breakpoints": true
     }
   ]
 }

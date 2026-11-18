@@ -6,6 +6,7 @@ import { GuideSettingsSchema } from "@/core/guides/schema.ts";
 import { db } from "@/db/index.ts";
 import { getSession } from "@/lib/session.ts";
 import { getGuideSettings, saveGuideSettingsWith } from "@/lib/tax-guides.ts";
+import { teamSignersWith } from "@/lib/team.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
 export type SignersState =
@@ -55,7 +56,16 @@ export async function saveOfficeSigners(
   }
   const tenant = await getTenant();
   try {
-    const current = await getGuideSettings(tenant);
+    // The team feeds the list once someone there is marked to sign: the
+    // saved one is not the list in use, so it is not changed from here.
+    if ((await teamSignersWith(db, tenant.slug)).length > 0) {
+      return {
+        status: "error",
+        message:
+          "Esta lista agora vem da Equipe do cartório. Marque ou desmarque quem pode assinar lá.",
+      };
+    }
+    const current = await getGuideSettings(tenant, { legacySigners: true });
     await saveGuideSettingsWith(
       db,
       tenant.slug,

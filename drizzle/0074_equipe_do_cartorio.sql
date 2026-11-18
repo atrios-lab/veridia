@@ -1,0 +1,33 @@
+CREATE TABLE "office_staff" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"tenant_slug" text NOT NULL,
+	"name" text NOT NULL,
+	"level_id" text NOT NULL,
+	"profession" text DEFAULT '' NOT NULL,
+	"registration" text DEFAULT '' NOT NULL,
+	"portaria_date" date,
+	"position" integer DEFAULT 0 NOT NULL,
+	"show_on_site" boolean DEFAULT false NOT NULL,
+	"image_consent" boolean DEFAULT false NOT NULL,
+	"image_consent_at" timestamp with time zone,
+	"can_sign" boolean DEFAULT false NOT NULL,
+	"signer_order" integer,
+	"photo_path" text,
+	"photo_mime" text,
+	"photo_updated_at" timestamp with time zone,
+	"portaria_path" text,
+	"portaria_name" text,
+	"portaria_updated_at" timestamp with time zone,
+	"word_path" text,
+	"word_name" text,
+	"word_mime" text,
+	"word_updated_at" timestamp with time zone,
+	"archived_at" timestamp with time zone,
+	"archived_by" text,
+	"created_by" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_by" text,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX "office_staff_tenant_level" ON "office_staff" USING btree ("tenant_slug","level_id");
