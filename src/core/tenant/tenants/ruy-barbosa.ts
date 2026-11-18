@@ -12,10 +12,9 @@ export const cartorioRuyBarbosa: Tenant = parseTenant({
   slug: "cartorio-ruy-barbosa",
   hosts: ["cartorioruybarbosarn.com.br", "ruybarbosa.localhost"],
   name: "Cartório de Ruy Barbosa",
-  // emailFrom: waiting on cartorioruybarbosarn.com.br being verified in
-  // Postmark (DKIM + Return-Path); until then the platform fallback sends.
-  // Pointing it at a domain Postmark has not verified is worse than leaving
-  // it out: the fallback delivers, an unverified From is refused outright.
+  // The domain was verified in Postmark (DKIM + Return-Path) on 18/11/2026,
+  // so the office sends from its own address.
+  emailFrom: "nao-responda@cartorioruybarbosarn.com.br",
   subtitle: "Ofício Único de Ruy Barbosa / RN",
   about:
     "O Ofício Único de Ruy Barbosa / RN reúne todos os serviços de registro e notas do " +
