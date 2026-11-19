@@ -208,8 +208,12 @@ const SUGGESTED_NEXT_STATUSES: Record<
   // From the analysis the request goes to payment by informing the value,
   // or to an exigência by registering it; the buttons are the rest.
   // A scan or a photo is checked by the office; a digital signature that is
-  // ours moves the request by itself.
-  "awaiting-signed-form": ["new", "cancelled"],
+  // ours moves the request by itself. Indeferir is offered here too
+  // (decision of 19/11/2026): a pedido the office will not take (an act it
+  // does not do, an invalid signature that the citizen insists on) is
+  // refused with its reason, not left waiting for a file that settles
+  // nothing. Sending the file back to be redone stays in the review card.
+  "awaiting-signed-form": ["new", "rejected", "cancelled"],
   new: ["in-review", "cancelled"],
   "in-review": [
     "processing",
@@ -381,7 +385,7 @@ export const STATUS_GUIDANCE: Record<ServiceRequestStatus, StatusGuidance> = {
     holder: "applicant",
     meaning:
       "Pedido feito pelo site que ainda não tem o requerimento assinado aceito. O requerimento assinado digitalmente (gov.br ou certificado ICP-Brasil) é conferido pelo sistema e libera o pedido sozinho; o enviado em foto ou escaneado aguarda a conferência da serventia.",
-    next: "Se o solicitante enviou o requerimento em foto ou escaneado, confira se é o requerimento deste protocolo, assinado e com firma reconhecida. Estando correto, libere o pedido; não estando, devolva com o motivo, e o solicitante é avisado por e-mail.",
+    next: "Se o solicitante enviou o requerimento em foto ou escaneado, confira se é o requerimento deste protocolo, assinado e com firma reconhecida. Estando correto, libere o pedido; não estando (assinatura inválida, arquivo errado), devolva com o motivo, e o solicitante é avisado por e-mail. Se o pedido não puder ser atendido, indefira com a justificativa.",
   },
   new: {
     holder: "office",
