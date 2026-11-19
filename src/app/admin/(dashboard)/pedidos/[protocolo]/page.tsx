@@ -55,6 +55,7 @@ import {
   variantOwner,
 } from "@/core/request/kinds.ts";
 import { formatCents } from "@/core/request/money.ts";
+import { closingStage } from "@/core/request/pickup.ts";
 import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import {
   formatDate,
@@ -76,6 +77,7 @@ import {
   type ReviewView,
   reviewsOfAttachmentsWith,
 } from "@/lib/qualificacao-revisao.ts";
+import { latestPickup } from "@/lib/request-pickup.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -106,6 +108,7 @@ import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
 import type { SeenLabels } from "./_components/citizen-seen.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
+import { DeliveryClosing } from "./_components/delivery-closing.tsx";
 import { DeliverySection } from "./_components/delivery-section.tsx";
 import { ExemptionDecisionControl } from "./_components/exemption-decision.tsx";
 import { KeySection } from "./_components/key-section.tsx";
@@ -251,6 +254,20 @@ export default async function ServiceRequestDetailPage({
   const deliveredAttachments = ownAttachments
     .filter((a) => a.kind === "office")
     .map(row);
+  // How the request ends once the final document is attached.
+  const heldCount = ownAttachments.filter(
+    (a) => a.kind === "office" && a.heldForSignatureAt,
+  ).length;
+  const pickup =
+    request.status === "done"
+      ? await latestPickup(tenant.slug, request.id).catch(() => null)
+      : null;
+  const closing = closingStage({
+    status: request.status,
+    released: deliveredAttachments.length - heldCount,
+    held: heldCount,
+    hasPickup: pickup !== null,
+  });
   // Which delivered PDFs carry no digital signature, and what this clerk
   // may sign them with: the delivery section reminds and offers to sign.
   const requirementForms = attachments.filter((a) => a.requirementId);
@@ -852,6 +869,25 @@ export default async function ServiceRequestDetailPage({
                   "user.manage",
                   session.user.permissions,
                 )}
+              />
+            )}
+
+            {/* With the final document attached, the card asks how the
+                request ends (digital or at the counter) and, for the
+                counter, who came to pick it up. */}
+            {!act?.consultation && (
+              <DeliveryClosing
+                requestId={request.id}
+                stage={closing}
+                preferred={
+                  deliveryFormat === "paper"
+                    ? "counter"
+                    : deliveryFormat === "digital"
+                      ? "digital"
+                      : null
+                }
+                applicantName={request.applicantName ?? ""}
+                pickup={pickup}
               />
             )}
 

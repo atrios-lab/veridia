@@ -44,6 +44,12 @@ import {
   validateStatusReason,
 } from "@/core/request/kinds.ts";
 import { parseCentsInput } from "@/core/request/money.ts";
+import {
+  CLOSING_MODES,
+  CLOSING_STATUS,
+  type ClosingMode,
+  closingStage,
+} from "@/core/request/pickup.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
 import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
@@ -61,6 +67,7 @@ import {
   type ReviewView,
   reviewDocumentWith,
 } from "@/lib/qualificacao-revisao.ts";
+import { PickupError, registerPickupWith } from "@/lib/request-pickup.ts";
 import {
   AttachmentInUseError,
   answerSearch,
@@ -363,6 +370,121 @@ export async function changeStatus(
       return { status: "error", message: error.message };
     }
     console.error("pedidos.change-status", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning };
+}
+
+/**
+ * With the final document attached, how the request ends (decision of
+ * 19/11/2026): "digital" concludes it at once, "counter" leaves it waiting
+ * for the pickup, whose registration (who came) concludes it. The citizen is
+ * told in both cases, as when the andamento is moved by hand.
+ */
+export async function closeDeliveryAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  const mode = String(formData.get("mode") ?? "") as ClosingMode;
+  if (!CLOSING_MODES.includes(mode)) {
+    return { status: "error", message: "Escolha como o pedido termina." };
+  }
+  const tenant = await getTenant();
+  let emailWarning: string | null = null;
+  try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const attachments = (await listAttachments(tenant.slug, requestId)).filter(
+      (a) => a.kind === "office" && a.requirementId === null,
+    );
+    const held = attachments.filter((a) => a.heldForSignatureAt).length;
+    const stage = closingStage({
+      status: request.status,
+      released: attachments.length - held,
+      held,
+      hasPickup: false,
+    });
+    if (stage === "held") {
+      return {
+        status: "error",
+        message:
+          "O documento está retido, esperando a assinatura. Assine-o antes de concluir.",
+      };
+    }
+    if (stage !== "ask") {
+      return {
+        status: "error",
+        message: "Este pedido não está pronto para ser concluído por aqui.",
+      };
+    }
+    const status = CLOSING_STATUS[mode];
+    await updateRequestStatus(tenant.slug, requestId, status, session.user.id);
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
+    emailWarning = await notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject:
+        mode === "digital"
+          ? "Pedido concluído"
+          : "Pedido disponível para retirada",
+      body:
+        mode === "digital"
+          ? "O seu pedido foi concluído."
+          : "O seu pedido está disponível para retirada.",
+    });
+  } catch (error) {
+    console.error("pedidos.close-delivery", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning };
+}
+
+/** Who came to pick up the document at the counter; closes the request. */
+export async function registerPickupAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  const text = (name: string) => String(formData.get(name) ?? "");
+  const tenant = await getTenant();
+  let emailWarning: string | null = null;
+  try {
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    await registerPickupWith(
+      db,
+      tenant.slug,
+      requestId,
+      {
+        personName: text("personName"),
+        relation: text("relation"),
+        documentType: text("documentType"),
+        documentNumber: text("documentNumber"),
+        note: text("note"),
+      },
+      session.user.id,
+    );
+    await reconcileDeadlinePause(tenant, requestId, session.user.id, today());
+    emailWarning = await notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Pedido concluído",
+      body: "O seu pedido foi concluído.",
+    });
+  } catch (error) {
+    if (error instanceof PickupError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.register-pickup", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidateAdmin();

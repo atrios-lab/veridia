@@ -24,6 +24,8 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
+  "service-request.pickup":
+    "Registrou quem retirou o documento no balcão e concluiu o pedido",
   "tax-guide.issue": "Emitiu uma guia de transmissão de bens",
   "tax-guide.update": "Corrigiu uma guia de transmissão de bens",
   "tax-guide.renumber": "Alterou o número de uma guia",
@@ -433,6 +435,8 @@ const EXPLANATIONS: Record<string, string> = {
   "service-request.edit": "Os dados de um pedido foram corrigidos.",
   "service-request.amount": "O valor cobrado num pedido foi alterado.",
   "service-request.deadline": "O prazo de um pedido foi alterado.",
+  "service-request.pickup":
+    "Foi registrado quem retirou o documento no balcão (nome, documento e relação com o solicitante), e o pedido foi concluído.",
   "service-request.delete": "Um pedido foi excluído do sistema.",
   "service-request.attachment.delete":
     "Um arquivo enviado num pedido foi excluído.",

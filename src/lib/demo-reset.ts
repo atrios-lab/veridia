@@ -61,6 +61,7 @@ import {
   securityPaperReports,
   serviceRequestAttachments,
   serviceRequestCitizenViews,
+  serviceRequestPickups,
   serviceRequestRequirementMessages,
   serviceRequestRequirements,
   serviceRequests,
@@ -197,6 +198,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     reason: "notícias do cartório, fechadas aos participantes",
   },
   { table: officeNewsFiles, reason: "arquivos das notícias do cartório" },
+  {
+    table: serviceRequestPickups,
+    reason:
+      "quem retirou o documento no balcão: prova da entrega, sem chave estrangeira",
+  },
 ];
 
 /** The keys of `tenant_content` that belong to the platform, not to the

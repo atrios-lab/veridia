@@ -3031,3 +3031,34 @@ export const officeNewsFiles = pgTable(
   },
   (t) => [index("office_news_files_news").on(t.newsId)],
 );
+
+/**
+ * Who came to pick up the document at the counter (decision of 19/11/2026):
+ * written when the pickup is registered and the request is closed. Kept as
+ * proof of the delivery; nothing here is deleted or edited, a correction is
+ * a new row and the latest one is read. The citizen's screens never read it.
+ */
+export const serviceRequestPickups = pgTable(
+  "service_request_pickups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id").notNull(),
+    personName: text("person_name").notNull(),
+    /** "applicant", "attorney", "authorized", "relative" or "other". */
+    relation: text("relation").notNull(),
+    /** "cpf", "rg", "cnh" or "other". */
+    documentType: text("document_type").notNull(),
+    /** A CPF as digits; the other documents as typed. */
+    documentNumber: text("document_number").notNull(),
+    note: text("note").notNull().default(""),
+    pickedUpAt: timestamp("picked_up_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    registeredBy: text("registered_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("service_request_pickups_request").on(t.requestId)],
+);
