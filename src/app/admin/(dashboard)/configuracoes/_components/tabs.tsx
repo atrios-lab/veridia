@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { CSSProperties } from "react";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import { cn } from "../../../_ui/cn.ts";
 
@@ -26,6 +27,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         label: "Dados gerais",
         href: "/admin/configuracoes",
         permission: "content.edit",
+      },
+      {
+        label: "Equipe do cartório",
+        href: "/admin/configuracoes/equipe",
+        permission: "team.edit",
       },
       {
         label: "Notícias e eventos",
@@ -71,11 +77,6 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         label: "Quem assina",
         href: "/admin/configuracoes/quem-assina",
         permission: "content.edit",
-      },
-      {
-        label: "Equipe do cartório",
-        href: "/admin/configuracoes/equipe",
-        permission: "team.edit",
       },
       {
         label: "Certificados digitais",
@@ -124,9 +125,8 @@ export function ConfiguracoesTabs({
     groups[0];
   if (!current) return null;
 
-  // One strip at every width: on a phone it scrolls sideways instead of
-  // wrapping, the same as the line tabs everywhere else in the panel
-  // (redesign of 11/11/2026).
+  // The group first, then its pages (redesign of 11/11/2026; the pages'
+  // row laid out in columns on 19/11/2026).
   return (
     <nav aria-label="Seções de configurações">
       {groups.length > 1 && (
@@ -153,17 +153,28 @@ export function ConfiguracoesTabs({
           </div>
         </div>
       )}
-      <div className="-mx-4 mt-3 overflow-x-auto px-4 md:mx-0 md:px-0">
-        <ul className="flex min-w-max gap-6 border-b">
+      {/* On a phone, one line that scrolls sideways (its bar hidden). From
+          the tablet up, the tabs share the width in even columns, at most
+          four to a row, each over its own stretch of the rule: a group with
+          eight tabs reads as two tidy rows instead of a strip that scrolls. */}
+      <div className="-mx-4 mt-3 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:overflow-visible md:px-0 [&::-webkit-scrollbar]:hidden">
+        <ul
+          className="flex min-w-max gap-6 border-b md:grid md:min-w-0 md:grid-cols-[repeat(var(--tab-columns),minmax(0,1fr))] md:gap-0 md:border-b-0"
+          style={
+            {
+              "--tab-columns": Math.min(current.tabs.length, 4),
+            } as CSSProperties
+          }
+        >
           {current.tabs.map((tab) => {
             const selected = tab.href === pathname;
             return (
-              <li key={tab.href}>
+              <li key={tab.href} className="md:border-b">
                 <Link
                   href={tab.href}
                   aria-current={selected ? "page" : undefined}
                   className={cn(
-                    "-mb-px block border-b-2 pb-2.5 text-sm font-medium whitespace-nowrap transition-colors",
+                    "-mb-px block border-b-2 pb-2.5 text-sm font-medium whitespace-nowrap transition-colors md:truncate md:px-3 md:pt-2 md:text-center md:hover:bg-muted/50",
                     selected
                       ? "border-primary text-foreground"
                       : "border-transparent text-muted-foreground hover:text-foreground",
