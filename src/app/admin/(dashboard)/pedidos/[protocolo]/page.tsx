@@ -337,7 +337,8 @@ export default async function ServiceRequestDetailPage({
   const requirements: RequirementItem[] = requirementRows.map((r, i) => ({
     id: r.id,
     text: r.text,
-    status: r.status === "fulfilled" ? "fulfilled" : "pending",
+    status:
+      r.status === "fulfilled" || r.status === "closed" ? r.status : "pending",
     createdAt: r.createdAt,
     fulfilledAt: r.fulfilledAt,
     resolutionFileName: r.resolutionAttachmentId

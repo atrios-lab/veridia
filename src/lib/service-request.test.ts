@@ -31,6 +31,7 @@ import {
   attachToRequestWith,
   createRecordWith,
   createServiceRequestWith,
+  findByIdWith,
   findByProtocolWith,
   findByProtocolWithKeyWith,
   findOpenServiceRequestDuplicateWith,
@@ -1004,4 +1005,56 @@ test("the purge deletes files 30 days after the closing, keeps the record and lo
     await purgeExpiredRequestFilesWith(db, TENANT.slug, "2026-11-08"),
     0,
   );
+});
+
+test("indeferir ou cancelar encerra as exigências abertas; as cumpridas ficam como estão", async () => {
+  for (const ending of ["rejected", "cancelled"] as const) {
+    const { id } = await createServiceRequestWith(db, TENANT, ACT, {
+      applicantName: "Rosa Almeida Fontes",
+      contact: "rosa@exemplo.com",
+      accessKeyHash: hashAccessKey(`chave-${ending}`),
+    });
+    await registerRequirementWith(
+      db,
+      TENANT.slug,
+      id,
+      "Falta a certidão anterior.",
+      "staff-1",
+    );
+    await registerRequirementWith(
+      db,
+      TENANT.slug,
+      id,
+      "Falta o comprovante de residência.",
+      "staff-1",
+    );
+    const [first] = await listRequirementsWith(db, TENANT.slug, id);
+    assert.ok(first);
+    await resolveRequirementWith(db, TENANT.slug, first.id, "staff-1");
+
+    await updateRequestStatusWith(db, TENANT.slug, id, ending, "staff-1");
+    const after = await listRequirementsWith(db, TENANT.slug, id);
+    assert.deepEqual(after.map((r) => r.status).sort(), [
+      "closed",
+      "fulfilled",
+    ]);
+    // A closed requirement no longer moves the request back to "awaiting".
+    assert.equal((await findByIdWith(db, TENANT.slug, id))?.status, ending);
+    const trail = await db
+      .select({ action: auditLog.action })
+      .from(auditLog)
+      .where(
+        and(
+          eq(auditLog.targetId, id),
+          eq(auditLog.action, "service-request.requirement.close"),
+        ),
+      );
+    assert.equal(trail.length, 1);
+
+    // Reopening the request does not reopen the closed requirement: whoever
+    // wants the service again files a new request.
+    await updateRequestStatusWith(db, TENANT.slug, id, "processing", "staff-1");
+    const reopened = await listRequirementsWith(db, TENANT.slug, id);
+    assert.equal(reopened.filter((r) => r.status === "pending").length, 0);
+  }
 });

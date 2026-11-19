@@ -923,7 +923,7 @@ function RequirementConversation({
   >(writeRequirementMessageAction, { status: "idle" });
   const { send, uploading, error: uploadError } = useAttachmentUpload(action);
   const sending = pending || uploading;
-  const closed = requirement.status === "fulfilled";
+  const closed = requirement.status !== "pending";
 
   if (closed && requirement.messages.length === 0) return null;
 
@@ -1069,12 +1069,19 @@ function RequirementRow({
   protocolNumber: string;
   accessKey: string;
 }) {
-  if (requirement.status === "fulfilled") {
+  if (requirement.status !== "pending") {
+    const ended = requirement.status === "closed";
     return (
       <div className="rounded-xl border border-brand-border bg-brand-card p-3.5 opacity-85">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-brand-primary-soft px-2.5 py-0.5 text-[10.5px] font-bold text-white">
-            Cumprida
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${
+              ended
+                ? "bg-brand-tint text-brand-muted"
+                : "bg-brand-primary-soft text-white"
+            }`}
+          >
+            {ended ? "Encerrada com o pedido" : "Cumprida"}
           </span>
           <span className="text-[11px] text-brand-faint">
             registrada em {formatDate(requirement.createdAt)}
@@ -1086,6 +1093,13 @@ function RequirementRow({
         <p className="mt-2 whitespace-pre-line [overflow-wrap:anywhere] text-[13px] leading-relaxed text-brand-text">
           {requirement.text}
         </p>
+        {ended && (
+          <p className="mt-1.5 text-left text-[12px] leading-relaxed text-brand-muted hyphens-none">
+            O pedido foi encerrado (indeferido ou cancelado), e esta exigência
+            não recebe mais respostas. Se ainda quiser o serviço, faça um novo
+            pedido.
+          </p>
+        )}
         {requirement.resolutionFileName && (
           <div className="mt-1.5 flex items-center gap-1.5 text-[12px] text-brand-primary-soft">
             <Icon name="file" className="h-3.5 w-3.5" />
