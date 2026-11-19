@@ -8,8 +8,23 @@ import { MAX_MESSAGE_LENGTH, TEXT_TOO_LONG } from "../chat/message.ts";
  * the protocol consult they already have, with a single attachment as the
  * answer.
  */
-export const REQUIREMENT_STATUSES = ["pending", "fulfilled"] as const;
+export const REQUIREMENT_STATUSES = ["pending", "fulfilled", "closed"] as const;
 export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
+
+/**
+ * The andamentos that end a request without delivering it (decision of
+ * 19/11/2026): when the request is indeferido or cancelado, every exigência
+ * still open is closed with it ("closed"), and its conversation stops for
+ * both sides. Whoever still wants the service files a new request.
+ */
+export const REQUIREMENT_CLOSING_STATUSES: readonly string[] = [
+  "rejected",
+  "cancelled",
+];
+
+export function closesRequirements(requestStatus: string): boolean {
+  return REQUIREMENT_CLOSING_STATUSES.includes(requestStatus);
+}
 
 /**
  * The same shape as a conversation message, and on purpose: the office writes

@@ -145,7 +145,8 @@ export interface RequirementMessageView {
 export interface RequirementView {
   id: string;
   text: string;
-  status: "pending" | "fulfilled";
+  /** "closed": ended with the request, indeferido or cancelado. */
+  status: "pending" | "fulfilled" | "closed";
   createdAt: string;
   fulfilledAt?: string;
   resolutionFileName?: string;
@@ -778,7 +779,7 @@ export async function lookupProtocolDetail(
       requirements: requirements.map((r, i) => ({
         id: r.id,
         text: r.text,
-        status: r.status as "pending" | "fulfilled",
+        status: r.status as "pending" | "fulfilled" | "closed",
         createdAt: r.createdAt.toISOString(),
         fulfilledAt: r.fulfilledAt?.toISOString(),
         resolutionFileName: r.resolutionAttachmentId

@@ -57,6 +57,7 @@ import {
   formatProtocolNumber,
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
+import { closesRequirements } from "@/core/request/requirement.ts";
 import type { SearchTerm } from "@/core/request/search.ts";
 import {
   type IsoDate,
@@ -834,6 +835,31 @@ export async function updateRequestStatusWith(
     targetType: "service-request",
     targetId: id,
   });
+  // Indeferido or cancelado: the exigências still open close with the
+  // request, so nobody keeps writing into a protocol that has ended
+  // (decision of 19/11/2026). Nothing is deleted: they stay, "closed".
+  if (closesRequirements(status)) {
+    const closed = await database
+      .update(serviceRequestRequirements)
+      .set({ status: "closed" })
+      .where(
+        and(
+          eq(serviceRequestRequirements.tenantSlug, tenantSlug),
+          eq(serviceRequestRequirements.requestId, id),
+          eq(serviceRequestRequirements.status, "pending"),
+        ),
+      )
+      .returning({ id: serviceRequestRequirements.id });
+    if (closed.length > 0) {
+      await recordAuditWith(database, {
+        tenantSlug,
+        actorId,
+        action: "service-request.requirement.close",
+        targetType: "service-request",
+        targetId: id,
+      });
+    }
+  }
   if (deadline) {
     // Keyed by the request, not by the term itself, so the entry shows up in
     // the request's own history: `listRequestHistory` matches on the id or

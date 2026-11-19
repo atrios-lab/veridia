@@ -304,6 +304,8 @@ const EXACT: Record<string, string> = {
   "service-request.requirement.delete": "Excluiu uma exigência",
   "service-request.requirement.reply": "Respondeu em uma exigência",
   "service-request.requirement.fulfill": "Deu uma exigência por cumprida",
+  "service-request.requirement.close":
+    "Encerrou as exigências abertas ao indeferir ou cancelar o pedido",
   "service-request.search-answer": "Respondeu a uma busca",
   "transparency.bulletin.publish": "Publicou um boletim de transparência",
   "transparency.bulletin.remove": "Excluiu um boletim de transparência",
@@ -447,6 +449,8 @@ const EXPLANATIONS: Record<string, string> = {
   "service-request.requirement.register":
     "Foi registrada uma exigência: algo que o cidadão precisa enviar ou corrigir.",
   "service-request.requirement.delete": "Uma exigência foi excluída.",
+  "service-request.requirement.close":
+    "O pedido foi indeferido ou cancelado, e as exigências que estavam abertas foram encerradas com ele: o cidadão não responde mais nelas.",
   "service-request.delivery-signed":
     "Um documento entregue ao cidadão foi assinado digitalmente.",
   "service-request.delivery-rename":

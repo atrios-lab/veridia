@@ -60,7 +60,8 @@ export interface RequirementMessageItem {
 export interface RequirementItem {
   id: string;
   text: string;
-  status: "pending" | "fulfilled";
+  /** "closed": ended with the request, indeferido or cancelado. */
+  status: "pending" | "fulfilled" | "closed";
   createdAt: Date;
   fulfilledAt: Date | null;
   resolutionFileName?: string;
@@ -380,7 +381,7 @@ function RequirementConversation({
     messagesEndRef.current?.scrollIntoView({ block: "nearest" });
   }, [requirement.messages.length]);
 
-  const closed = requirement.status === "fulfilled";
+  const closed = requirement.status !== "pending";
   const last = requirement.messages.at(-1);
   const awaitingOffice = !closed && last?.author === "citizen";
 
@@ -622,10 +623,16 @@ function RequirementCard({
           className={
             pendingReq
               ? "bg-warning text-warning-foreground"
-              : "border-success/30 bg-success-soft text-success-text"
+              : requirement.status === "closed"
+                ? "bg-muted text-muted-foreground"
+                : "border-success/30 bg-success-soft text-success-text"
           }
         >
-          {pendingReq ? "Aguardando o cidadão" : "Cumprida"}
+          {pendingReq
+            ? "Aguardando o cidadão"
+            : requirement.status === "closed"
+              ? "Encerrada com o pedido"
+              : "Cumprida"}
         </Badge>
         <span className="flex-none text-xs text-muted-foreground">
           registrada em {formatOfficeDayMonth(requirement.createdAt)}
