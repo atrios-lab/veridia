@@ -661,6 +661,7 @@ test("pedido do site espera o requerimento assinado antes de chegar ao cartório
   );
   assert.deepEqual(suggestedNextStatuses("awaiting-signed-form"), [
     "new",
+    "rejected",
     "cancelled",
   ]);
   assert.equal(

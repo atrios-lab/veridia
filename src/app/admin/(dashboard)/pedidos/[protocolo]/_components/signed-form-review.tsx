@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "../../../../_ui/button.tsx";
 import { Label } from "../../../../_ui/label.tsx";
@@ -12,8 +12,18 @@ import { type ActionState, returnSignedFormAction } from "../actions.ts";
  * office (decision of 12/11/2026). Signed digitally and ours, the system
  * frees the pedido by itself; a scan or a photo waits here: the office
  * frees it by the andamento ("Requerimento conferido: liberar o pedido")
- * or sends it back with the reason.
+ * or sends it back with the reason. The usual reasons are one click away
+ * (decision of 19/11/2026), and the card says where to refuse the pedido
+ * for good: Indeferir, in the andamento, with its justification.
  */
+
+/** Why a file goes back, in the words the citizen reads. */
+const RETURN_REASONS = [
+  "A assinatura não é válida.",
+  "Assinado a punho, sem firma reconhecida.",
+  "Não é o requerimento deste protocolo.",
+  "O arquivo está ilegível ou incompleto.",
+] as const;
 export function SignedFormReview({
   requestId,
   check,
@@ -32,10 +42,12 @@ export function SignedFormReview({
     returnSignedFormAction,
     { status: "idle" },
   );
+  const [reason, setReason] = useState("");
   useEffect(() => {
     if (state.status === "success") {
       toast.success("Requerimento devolvido. O solicitante foi avisado.");
       if (state.emailWarning) toast.warning(state.emailWarning);
+      setReason("");
     }
   }, [state]);
 
@@ -74,14 +86,35 @@ export function SignedFormReview({
           <form action={action} className="flex flex-col gap-2">
             <input type="hidden" name="requestId" value={requestId} />
             <Label htmlFor="sf-motivo">
-              Não está correto? Devolva com o motivo
+              Assinatura inválida ou arquivo errado? Devolva com o motivo
             </Label>
+            <div className="flex flex-wrap gap-1.5">
+              {RETURN_REASONS.map((text) => (
+                <button
+                  key={text}
+                  type="button"
+                  onClick={() =>
+                    setReason((current) =>
+                      current.includes(text)
+                        ? current
+                        : `${current.trim()} ${text}`.trim(),
+                    )
+                  }
+                  disabled={pending}
+                  className="cursor-pointer rounded-full border border-input bg-background px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+                >
+                  {text.replace(/\.$/, "")}
+                </button>
+              ))}
+            </div>
             <Textarea
               id="sf-motivo"
               name="motivo"
               rows={2}
               maxLength={5000}
-              placeholder="Ex.: assinatura a punho sem firma reconhecida."
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Escolha um motivo acima ou escreva o seu. O solicitante lê este texto."
             />
             {state.status === "error" && (
               <p
@@ -102,6 +135,13 @@ export function SignedFormReview({
           </form>
         </>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        Devolver pede outro arquivo e mantém o pedido. Para recusar o pedido de
+        vez, use <strong className="font-semibold">Indeferir o pedido</strong>{" "}
+        no andamento, com a justificativa: o solicitante a vê na consulta do
+        protocolo.
+      </p>
     </section>
   );
 }
