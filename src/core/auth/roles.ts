@@ -91,6 +91,9 @@ export const OFFICE_PERMISSIONS = [
   // positions, photos and the portarias of nomeação. The Tabelião/Registrador
   // by default; he lets others edit it in Perfis e permissões.
   "team.edit",
+  // The office's notice board on the site (decision of 19/11/2026): community
+  // weddings, social events, correição visits. Same default as the team.
+  "news.edit",
   // Papel de segurança (decision of 11/11/2026): the lots, their use and
   // losses, and the ofícios to the Corregedoria (Prov. CGJ/RN 156/2016,
   // arts. 59 and 60).
@@ -170,6 +173,7 @@ export const GRANTABLE_PERMISSIONS = [
   "access.manage",
   "certificates.manage",
   "team.edit",
+  "news.edit",
   "security-paper.manage",
   "paper-orders.manage",
   "daily-book.manage",
@@ -209,6 +213,7 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "certificates.manage": "user.manage",
   // Only the Tabelião/Registrador edits the team until he decides otherwise.
   "team.edit": "user.manage",
+  "news.edit": "user.manage",
   // Whoever issues the certidões and traslados uses the paper.
   "security-paper.manage": "requests.manage",
   // Listed after its parent: `withDerived` adds it in the same pass.
@@ -300,6 +305,7 @@ export const DEMO_CLOSED_PERMISSIONS = [
   "signer.use",
   "certificates.manage",
   "team.edit",
+  "news.edit",
   "rcpn.import",
   "attributions.import",
   "knowledge.manage",
@@ -540,6 +546,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "certificates.manage": "Certificados digitais da serventia",
   "team.edit":
     "Equipe do cartório: cadastrar pessoas, níveis, fotos e portarias (o que aparece no site)",
+  "news.edit":
+    "Notícias e eventos: casamentos comunitários, eventos sociais e correições no site",
   "security-paper.manage":
     "Papel de segurança (lotes, uso, extravios e ofícios à Corregedoria)",
   "paper-orders.manage":

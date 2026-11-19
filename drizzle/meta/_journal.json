@@ -533,6 +533,20 @@
       "when": 1794980420325,
       "tag": "0075_enquadramento_da_foto",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1795051062569,
+      "tag": "0076_mural_do_cartorio",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795052558382,
+      "tag": "0077_retirada_no_balcao",
+      "breakpoints": true
     }
   ]
 }

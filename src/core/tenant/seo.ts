@@ -81,6 +81,12 @@ export const PAGE_META: Record<string, PageMeta> = {
       `Conheça quem atende no ${t.name}: o titular, os substitutos, os ` +
       "escreventes e os colaboradores, com as portarias de nomeação.",
   },
+  "/noticias": {
+    title: "Notícias e eventos",
+    description: (t) =>
+      `Casamentos comunitários, eventos sociais, correições e outras ` +
+      `notícias do ${t.name}.`,
+  },
   "/contato": {
     title: "Contato",
     description: (t) =>

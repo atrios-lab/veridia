@@ -8,7 +8,12 @@
 // Migrar antes de compilar é o que garante que a versão publicada nunca
 // consulta uma coluna que ainda não existe. Se a migration falhar, o build
 // falha e a versão anterior continua no ar.
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
+import {
+  MAX_BUILD_ATTEMPTS,
+  RETRY_DELAY_SECONDS,
+  shouldRetryBuild,
+} from "./build-retry.ts";
 
 const isProduction = process.env.VERCEL_ENV === "production";
 
@@ -29,4 +34,29 @@ if (isProduction) {
   );
 }
 
-run("pnpm build");
+// The build is tried again only when Google Fonts did not answer (see
+// build-retry.ts): the same commit then builds on the next try, and a
+// deploy should not fail for a font server. Any other error stops here.
+for (let attempt = 1; ; attempt++) {
+  const result = spawnSync("pnpm", ["build"], {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    stdio: ["inherit", "pipe", "pipe"],
+  });
+  process.stdout.write(result.stdout ?? "");
+  process.stderr.write(result.stderr ?? "");
+  if (result.status === 0) break;
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  if (!shouldRetryBuild(attempt, output)) {
+    process.exit(result.status ?? 1);
+  }
+  console.log(
+    `[vercel-build] as fontes do Google nao responderam (tentativa ${attempt} de ${MAX_BUILD_ATTEMPTS}); tentando de novo em ${RETRY_DELAY_SECONDS} s`,
+  );
+  Atomics.wait(
+    new Int32Array(new SharedArrayBuffer(4)),
+    0,
+    0,
+    RETRY_DELAY_SECONDS * 1000,
+  );
+}

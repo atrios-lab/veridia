@@ -1,6 +1,5 @@
 import { integerInWords } from "../money/extenso.ts";
 import {
-  formatIsoDate,
   isMatricula,
   type RcpnKind,
   type RcpnPerson,

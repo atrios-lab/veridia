@@ -39,6 +39,8 @@ import {
   messengerMembers,
   messengerMessages,
   messengerProfiles,
+  officeNews,
+  officeNewsFiles,
   officePublications,
   officeStaff,
   paperOrders,
@@ -59,6 +61,7 @@ import {
   securityPaperReports,
   serviceRequestAttachments,
   serviceRequestCitizenViews,
+  serviceRequestPickups,
   serviceRequestRequirementMessages,
   serviceRequestRequirements,
   serviceRequests,
@@ -189,6 +192,16 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     table: officeStaff,
     reason:
       "equipe do cartório, fechada aos participantes (só o Tabelião edita)",
+  },
+  {
+    table: officeNews,
+    reason: "notícias do cartório, fechadas aos participantes",
+  },
+  { table: officeNewsFiles, reason: "arquivos das notícias do cartório" },
+  {
+    table: serviceRequestPickups,
+    reason:
+      "quem retirou o documento no balcão: prova da entrega, sem chave estrangeira",
   },
 ];
 

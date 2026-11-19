@@ -28,6 +28,11 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
         permission: "content.edit",
       },
       {
+        label: "Notícias e eventos",
+        href: "/admin/configuracoes/noticias",
+        permission: "news.edit",
+      },
+      {
         label: "Assistente Virtual",
         href: "/admin/configuracoes/assistente-virtual",
         permission: "user.manage",

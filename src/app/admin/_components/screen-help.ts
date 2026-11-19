@@ -1213,6 +1213,26 @@ ENTRIES["/admin/configuracoes/certificados"] = {
   ],
 };
 
+ENTRIES["/admin/configuracoes/noticias"] = {
+  purpose:
+    "O mural do cartório: casamentos comunitários, eventos sociais, correições e outras notícias. É daqui que sai a página Notícias e eventos do site.",
+  steps: [
+    "Clique em Nova notícia e preencha o título, o tipo, a data do evento, o resumo (aparece no cartão da lista) e, se quiser, o texto completo.",
+    "Mostrar no site: só o que estiver marcado aparece para o visitante. Desmarcado, a notícia fica só no painel, como rascunho.",
+    "Fotos: até 8 por notícia. Elas só aparecem no site com a autorização de imagem das pessoas que aparecem (marque a opção e guarde as autorizações).",
+    "PDF: anexar é publicar. Quem entra no site pode abrir o arquivo, então confira se não tem CPF nem endereço. Serve para cartaz, programação ou resultado.",
+    "Correição: informe só que a visita aconteceu e, se quiser, o resultado geral. A correição é registrada pela autoridade judiciária no Livro de Visitas e Correições; não publique dados pessoais nem o conteúdo da ata.",
+    "Arquivar tira a notícia do painel e do site sem apagar o registro, e dá para voltar. Para proclamas, avisos e editais, use Publicações.",
+  ],
+  terms: [
+    {
+      term: "Autorização de imagem",
+      meaning:
+        "O consentimento das pessoas que aparecem nas fotos para que a imagem seja publicada no site. Sem ele marcado, as fotos ficam só no painel.",
+    },
+  ],
+};
+
 ENTRIES["/admin/configuracoes/equipe"] = {
   purpose:
     "A equipe do cartório, do Tabelião aos serviços gerais, na ordem da hierarquia. É daqui que sai a página Nossa equipe do site.",

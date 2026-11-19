@@ -3,11 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
-import {
-  type CertidaoForm,
-  certidaoModel,
-  isCertidaoForm,
-} from "@/core/rcpn/certidao.ts";
+import { type CertidaoForm, isCertidaoForm } from "@/core/rcpn/certidao.ts";
 import type { RcpnKind } from "@/core/rcpn/record.ts";
 import { db } from "@/db/index.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";

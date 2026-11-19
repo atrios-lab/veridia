@@ -2969,3 +2969,96 @@ export const officeStaff = pgTable(
   },
   (t) => [index("office_staff_tenant_level").on(t.tenantSlug, t.levelId)],
 );
+
+/**
+ * The office's notice board (decision of 19/11/2026): community weddings,
+ * social events, correição visits and other news the serventia posts on its
+ * site, kept in the panel by whoever the Tabelião lets. Apart from the formal
+ * publications (proclamas, avisos e editais). Nothing is deleted: a post
+ * leaves the lists by being archived, and a file taken off only gets
+ * `removed_at`.
+ */
+export const officeNews = pgTable(
+  "office_news",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    title: text("title").notNull(),
+    /** One of the categories of `core/news/news.ts`, by its id. */
+    category: text("category").notNull().default("outros"),
+    eventDate: date("event_date"),
+    summary: text("summary").notNull().default(""),
+    body: text("body").notNull().default(""),
+    /** On the site only when marked. */
+    published: boolean("published").notNull().default(false),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    /** The photos are public only with the image authorisation recorded. */
+    imageConsent: boolean("image_consent").notNull().default(false),
+    imageConsentAt: timestamp("image_consent_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archivedBy: text("archived_by"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("office_news_tenant_date").on(t.tenantSlug, t.eventDate)],
+);
+
+/** The photos and the PDF of a post. A file taken off keeps its row. */
+export const officeNewsFiles = pgTable(
+  "office_news_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    newsId: uuid("news_id").notNull(),
+    /** "photo" or "pdf". */
+    kind: text("kind").notNull(),
+    position: integer("position").notNull().default(0),
+    path: text("path").notNull(),
+    name: text("name").notNull(),
+    mime: text("mime").notNull(),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+  },
+  (t) => [index("office_news_files_news").on(t.newsId)],
+);
+
+/**
+ * Who came to pick up the document at the counter (decision of 19/11/2026):
+ * written when the pickup is registered and the request is closed. Kept as
+ * proof of the delivery; nothing here is deleted or edited, a correction is
+ * a new row and the latest one is read. The citizen's screens never read it.
+ */
+export const serviceRequestPickups = pgTable(
+  "service_request_pickups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id").notNull(),
+    personName: text("person_name").notNull(),
+    /** "applicant", "attorney", "authorized", "relative" or "other". */
+    relation: text("relation").notNull(),
+    /** "cpf", "rg", "cnh" or "other". */
+    documentType: text("document_type").notNull(),
+    /** A CPF as digits; the other documents as typed. */
+    documentNumber: text("document_number").notNull(),
+    note: text("note").notNull().default(""),
+    pickedUpAt: timestamp("picked_up_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    registeredBy: text("registered_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("service_request_pickups_request").on(t.requestId)],
+);

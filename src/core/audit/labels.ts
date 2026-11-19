@@ -24,6 +24,8 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
+  "service-request.pickup":
+    "Registrou quem retirou o documento no balcão e concluiu o pedido",
   "tax-guide.issue": "Emitiu uma guia de transmissão de bens",
   "tax-guide.update": "Corrigiu uma guia de transmissão de bens",
   "tax-guide.renumber": "Alterou o número de uma guia",
@@ -242,6 +244,15 @@ const EXACT: Record<string, string> = {
   "team.move": "Mudou a ordem de uma pessoa da equipe",
   "team.levels": "Alterou os níveis da equipe do cartório",
   "team.import-signers": "Trouxe quem assina para a equipe do cartório",
+  "news.create": "Criou uma notícia no mural do cartório",
+  "news.update": "Alterou uma notícia do mural do cartório",
+  "news.publish": "Publicou uma notícia do mural no site",
+  "news.unpublish": "Tirou uma notícia do mural do site",
+  "news.photo-add": "Enviou uma foto de uma notícia do mural",
+  "news.pdf-set": "Anexou um PDF a uma notícia do mural (fica público no site)",
+  "news.file-remove": "Retirou uma foto ou o PDF de uma notícia do mural",
+  "news.archive": "Arquivou uma notícia do mural do cartório",
+  "news.restore": "Voltou uma notícia arquivada para o mural",
   "office-settings.save": "Alterou uma configuração da serventia",
   "office-settings.attributions":
     "Alterou as atribuições da serventia (o que oferece e o regime de cada uma)",
@@ -424,6 +435,8 @@ const EXPLANATIONS: Record<string, string> = {
   "service-request.edit": "Os dados de um pedido foram corrigidos.",
   "service-request.amount": "O valor cobrado num pedido foi alterado.",
   "service-request.deadline": "O prazo de um pedido foi alterado.",
+  "service-request.pickup":
+    "Foi registrado quem retirou o documento no balcão (nome, documento e relação com o solicitante), e o pedido foi concluído.",
   "service-request.delete": "Um pedido foi excluído do sistema.",
   "service-request.attachment.delete":
     "Um arquivo enviado num pedido foi excluído.",
@@ -706,6 +719,19 @@ const EXPLANATIONS: Record<string, string> = {
     "Os níveis da equipe (nomes e ordem) foram alterados. Isso muda a ordem do mosaico no site.",
   "team.import-signers":
     "As pessoas de Quem assina foram trazidas para a equipe. Dali em diante a lista de quem assina vem da equipe, na mesma ordem de antes.",
+  "news.create": "Uma notícia foi criada no mural do cartório.",
+  "news.update":
+    "Uma notícia do mural foi alterada (título, texto, tipo, data ou se aparece no site).",
+  "news.publish": "Uma notícia do mural passou a aparecer no site.",
+  "news.unpublish": "Uma notícia do mural deixou de aparecer no site.",
+  "news.photo-add": "Uma foto foi enviada para uma notícia do mural.",
+  "news.pdf-set":
+    "Um PDF foi anexado a uma notícia do mural: quem entra no site passa a poder abri-lo.",
+  "news.file-remove":
+    "Uma foto ou o PDF de uma notícia do mural foi retirado. O arquivo deixou de aparecer no site.",
+  "news.archive":
+    "Uma notícia saiu do mural (arquivada): deixa de aparecer no site. O registro fica guardado.",
+  "news.restore": "Uma notícia arquivada voltou para o mural.",
   "appointment.remove": "Um agendamento foi excluído.",
   "appointment.correct": "Os dados de um agendamento foram corrigidos.",
   "appointment.note": "Foi feita uma anotação num agendamento.",
