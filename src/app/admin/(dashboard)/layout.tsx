@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { closesAt } from "@/core/auth/access-hours.ts";
 import { can } from "@/core/auth/roles.ts";
+import { DEFAULT_SOUND_PREFS } from "@/core/messages/live.ts";
 import { STATUS_LABELS } from "@/core/messages/rules.ts";
 import { showsDemoPanelNotice } from "@/core/tenant/demo-office.ts";
 import { db } from "@/db/index.ts";
@@ -285,6 +286,7 @@ export default async function DashboardLayout({
                   <MessengerWatch
                     setting={alerts.mensagens}
                     sound={messenger[1]?.sound ?? true}
+                    prefs={messenger[1]?.soundPrefs ?? DEFAULT_SOUND_PREFS}
                     initialUnread={messenger[0].unread}
                   />
                 )}

@@ -547,6 +547,13 @@
       "when": 1795052558382,
       "tag": "0077_retirada_no_balcao",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795093741242,
+      "tag": "0078_chat_instantaneo",
+      "breakpoints": true
     }
   ]
 }

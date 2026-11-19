@@ -7,12 +7,23 @@ import {
   eq,
   gt,
   inArray,
+  isNotNull,
   isNull,
   lte,
   ne,
   or,
+  sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { PANEL_ROLES } from "@/core/auth/roles.ts";
+import { isReactionEmoji } from "@/core/messages/emoji.ts";
+import {
+  type ReactionSummary,
+  type SoundPrefs,
+  soundPrefsFrom,
+  summarizeReactions,
+  TYPING_TTL_MS,
+} from "@/core/messages/live.ts";
 import {
   AWAY_STATUSES,
   atLunch,
@@ -42,6 +53,7 @@ import {
   messengerMembers,
   messengerMessages,
   messengerProfiles,
+  messengerReactions,
 } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 
@@ -66,6 +78,8 @@ export interface Profile {
   atLunch: boolean;
   /** When the current status began (an away one lapses after 60 min). */
   statusChangedAt: Date | null;
+  /** The person's own tones, volume and "não perturbe". */
+  soundPrefs: SoundPrefs;
 }
 
 export async function getProfileWith(
@@ -90,6 +104,13 @@ export async function getProfileWith(
       chatDisabledAt: messengerProfiles.chatDisabledAt,
       statusChangedAt: messengerProfiles.statusChangedAt,
       lunchReturnedAt: messengerProfiles.lunchReturnedAt,
+      messageSound: messengerProfiles.messageSound,
+      nudgeSound: messengerProfiles.nudgeSound,
+      soundVolume: messengerProfiles.soundVolume,
+      soundInChat: messengerProfiles.soundInChat,
+      soundInBackground: messengerProfiles.soundInBackground,
+      repeatUntilRead: messengerProfiles.repeatUntilRead,
+      quietUntil: messengerProfiles.quietUntil,
     })
     .from(user)
     .leftJoin(messengerProfiles, eq(messengerProfiles.userId, user.id))
@@ -112,7 +133,46 @@ export async function getProfileWith(
     chatDisabled: Boolean(row.chatDisabledAt),
     atLunch: atLunch(lunch, row.lunchReturnedAt, now),
     statusChangedAt: row.statusChangedAt ?? null,
+    soundPrefs: soundPrefsFrom(row),
   };
+}
+
+/** The person's own sounds (decision of 19/11/2026). */
+export async function updateSoundPrefsWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  prefs: SoundPrefs,
+  now = new Date(),
+): Promise<void> {
+  const clean = soundPrefsFrom({
+    messageSound: prefs.messageSound,
+    nudgeSound: prefs.nudgeSound,
+    soundVolume: prefs.volume,
+    soundInChat: prefs.inChat,
+    soundInBackground: prefs.inBackground,
+    repeatUntilRead: prefs.repeatUntilRead,
+    quietUntil: prefs.quietUntil,
+  });
+  await ensureProfile(database, tenantSlug, userId);
+  await database
+    .update(messengerProfiles)
+    .set({
+      messageSound: clean.messageSound,
+      nudgeSound: clean.nudgeSound,
+      soundVolume: clean.volume,
+      soundInChat: clean.inChat,
+      soundInBackground: clean.inBackground,
+      repeatUntilRead: clean.repeatUntilRead,
+      quietUntil: clean.quietUntil ? new Date(clean.quietUntil) : null,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(messengerProfiles.userId, userId),
+        eq(messengerProfiles.tenantSlug, tenantSlug),
+      ),
+    );
 }
 
 function lunchOf(
@@ -380,6 +440,8 @@ export interface Contact {
   conversationId: string | null;
   unread: number;
   lastMessageAt: Date | null;
+  /** The conversation's last message, as the list shows it, or null. */
+  last: { preview: string; mine: boolean; at: Date } | null;
 }
 
 const pairKeyOf = (a: string, b: string) => [a, b].sort().join(":");
@@ -434,6 +496,11 @@ export async function listContactsWith(
     )
     .where(eq(messengerConversations.tenantSlug, tenantSlug));
   const unread = await unreadByConversation(database, viewerId);
+  const lastByConversation = await lastMessagesWith(
+    database,
+    conversations.map((c) => c.id),
+    viewerId,
+  );
   return people
     .map((person) => {
       const conversation = conversations.find(
@@ -460,6 +527,9 @@ export async function listContactsWith(
         conversationId: conversation?.id ?? null,
         unread: conversation ? (unread.get(conversation.id) ?? 0) : 0,
         lastMessageAt: conversation?.lastMessageAt ?? null,
+        last: conversation
+          ? (lastByConversation.get(conversation.id) ?? null)
+          : null,
       };
     })
     .sort(
@@ -469,6 +539,73 @@ export async function listContactsWith(
         (b.lastMessageAt?.getTime() ?? 0) - (a.lastMessageAt?.getTime() ?? 0) ||
         a.name.localeCompare(b.name),
     );
+}
+
+/** How a message reads in one line: the list, the balloon, a quote. */
+export function previewOf(row: {
+  kind: string;
+  body: string | null;
+  fileName: string | null;
+  deleted?: boolean;
+}): string {
+  if (row.deleted) return "Mensagem apagada";
+  if (row.kind === "chamar") return "🔔 chamou a atenção";
+  if (row.kind === "audio") return "🎤 Áudio";
+  if (row.kind === "arquivo") return `📎 ${row.fileName ?? "Arquivo"}`;
+  return (row.body ?? "").replace(/\s+/g, " ").slice(0, 120);
+}
+
+/**
+ * The last message of each conversation, for the list (decision of
+ * 19/11/2026), skipping what this member cleared.
+ */
+async function lastMessagesWith(
+  database: Database,
+  conversationIds: string[],
+  viewerId: string,
+): Promise<Map<string, { preview: string; mine: boolean; at: Date }>> {
+  if (conversationIds.length === 0) return new Map();
+  const rows = await database
+    .selectDistinctOn([messengerMessages.conversationId], {
+      conversationId: messengerMessages.conversationId,
+      senderId: messengerMessages.senderId,
+      kind: messengerMessages.kind,
+      body: messengerMessages.body,
+      fileName: messengerMessages.fileName,
+      deletedAt: messengerMessages.deletedAt,
+      createdAt: messengerMessages.createdAt,
+    })
+    .from(messengerMessages)
+    .innerJoin(
+      messengerMembers,
+      and(
+        eq(messengerMembers.conversationId, messengerMessages.conversationId),
+        eq(messengerMembers.userId, viewerId),
+      ),
+    )
+    .where(
+      and(
+        inArray(messengerMessages.conversationId, conversationIds),
+        or(
+          isNull(messengerMembers.clearedAt),
+          gt(messengerMessages.createdAt, messengerMembers.clearedAt),
+        ),
+      ),
+    )
+    .orderBy(
+      messengerMessages.conversationId,
+      desc(messengerMessages.createdAt),
+    );
+  return new Map(
+    rows.map((row) => [
+      row.conversationId,
+      {
+        preview: previewOf({ ...row, deleted: Boolean(row.deletedAt) }),
+        mine: row.senderId === viewerId,
+        at: row.createdAt,
+      },
+    ]),
+  );
 }
 
 async function unreadByConversation(
@@ -634,6 +771,10 @@ export interface MessageView {
   deleted: boolean;
   /** For the holder's oversight only: the text as first sent. */
   originalBody: string | null;
+  /** "Responder": the message this one answers, as a one-line quote. */
+  replyTo: { id: string; senderName: string; preview: string } | null;
+  /** The chips under the message. */
+  reactions: ReactionSummary[];
 }
 
 /**
@@ -671,6 +812,8 @@ export async function listMessagesWith(
         .limit(1)
     : [];
   const cleared = full ? null : (membership?.clearedAt ?? null);
+  const quoted = alias(messengerMessages, "quoted");
+  const quotedSender = alias(user, "quoted_sender");
   const rows = await database
     .select({
       id: messengerMessages.id,
@@ -685,9 +828,23 @@ export async function listMessagesWith(
       editedAt: messengerMessages.editedAt,
       originalBody: messengerMessages.originalBody,
       deletedAt: messengerMessages.deletedAt,
+      quotedId: quoted.id,
+      quotedKind: quoted.kind,
+      quotedBody: quoted.body,
+      quotedFileName: quoted.fileName,
+      quotedDeletedAt: quoted.deletedAt,
+      quotedSenderName: quotedSender.name,
     })
     .from(messengerMessages)
     .leftJoin(user, eq(user.id, messengerMessages.senderId))
+    .leftJoin(
+      quoted,
+      and(
+        eq(quoted.id, messengerMessages.replyToId),
+        eq(quoted.conversationId, messengerMessages.conversationId),
+      ),
+    )
+    .leftJoin(quotedSender, eq(quotedSender.id, quoted.senderId))
     .where(
       and(
         eq(messengerMessages.conversationId, conversationId),
@@ -697,25 +854,95 @@ export async function listMessagesWith(
               gt(messengerMessages.createdAt, options.after),
               gt(messengerMessages.editedAt, options.after),
               gt(messengerMessages.deletedAt, options.after),
+              // A reaction changes no column of the message itself.
+              inArray(
+                messengerMessages.id,
+                database
+                  .select({ id: messengerReactions.messageId })
+                  .from(messengerReactions)
+                  .where(gt(messengerReactions.updatedAt, options.after)),
+              ),
             )
           : undefined,
       ),
     )
     .orderBy(desc(messengerMessages.createdAt))
     .limit(options.limit ?? 200);
-  return rows.reverse().map(({ deletedAt, originalBody, ...row }) => {
-    const deleted = Boolean(deletedAt);
-    const hide = deleted && !full;
-    return {
-      ...row,
-      senderName: row.senderName ?? "Conta removida",
-      kind: row.kind as MessageKind,
-      body: hide ? null : row.body,
-      fileName: hide ? null : row.fileName,
-      deleted,
-      originalBody: full ? originalBody : null,
-    };
-  });
+  const reactionRows = rows.length
+    ? await database
+        .select({
+          messageId: messengerReactions.messageId,
+          userId: messengerReactions.userId,
+          name: user.name,
+          emoji: messengerReactions.emoji,
+        })
+        .from(messengerReactions)
+        .leftJoin(user, eq(user.id, messengerReactions.userId))
+        .where(
+          and(
+            inArray(
+              messengerReactions.messageId,
+              rows.map((row) => row.id),
+            ),
+            isNull(messengerReactions.removedAt),
+          ),
+        )
+        .orderBy(asc(messengerReactions.updatedAt))
+    : [];
+  return rows
+    .reverse()
+    .map(
+      ({
+        deletedAt,
+        originalBody,
+        quotedId,
+        quotedKind,
+        quotedBody,
+        quotedFileName,
+        quotedDeletedAt,
+        quotedSenderName,
+        ...row
+      }) => {
+        const deleted = Boolean(deletedAt);
+        const hide = deleted && !full;
+        return {
+          ...row,
+          senderName: row.senderName ?? "Conta removida",
+          kind: row.kind as MessageKind,
+          body: hide ? null : row.body,
+          fileName: hide ? null : row.fileName,
+          deleted,
+          originalBody: full ? originalBody : null,
+          replyTo: quotedId
+            ? {
+                id: quotedId,
+                senderName:
+                  quotedSenderName === null
+                    ? "Conta removida"
+                    : quotedSenderName,
+                preview: previewOf({
+                  kind: quotedKind ?? "texto",
+                  body: quotedBody,
+                  fileName: quotedFileName,
+                  deleted: Boolean(quotedDeletedAt) && !full,
+                }),
+              }
+            : null,
+          reactions: hide
+            ? []
+            : summarizeReactions(
+                reactionRows
+                  .filter((r) => r.messageId === row.id)
+                  .map((r) => ({
+                    userId: r.userId,
+                    name: r.name ?? "Alguém",
+                    emoji: r.emoji,
+                  })),
+                viewer.id,
+              ),
+        };
+      },
+    );
 }
 
 /** Up to when this member's view of the conversation was cleared. */
@@ -874,7 +1101,7 @@ export async function sendMessageWith(
   conversationId: string,
   senderId: string,
   input:
-    | { kind: "texto"; body: string }
+    | { kind: "texto"; body: string; replyToId?: string | null }
     | { kind: "arquivo" | "audio"; file: OutgoingFile; body?: string }
     | { kind: "chamar" },
   now = new Date(),
@@ -914,6 +1141,27 @@ export async function sendMessageWith(
   }
   const file =
     input.kind === "arquivo" || input.kind === "audio" ? input.file : undefined;
+  // "Responder": only a message of this same conversation can be quoted.
+  let replyToId: string | null = null;
+  if (input.kind === "texto" && input.replyToId) {
+    if (!/^[0-9a-f-]{36}$/i.test(input.replyToId)) {
+      throw new MessageError("A mensagem respondida não foi encontrada.");
+    }
+    const [quoted] = await database
+      .select({ id: messengerMessages.id })
+      .from(messengerMessages)
+      .where(
+        and(
+          eq(messengerMessages.id, input.replyToId),
+          eq(messengerMessages.conversationId, conversationId),
+        ),
+      )
+      .limit(1);
+    if (!quoted) {
+      throw new MessageError("A mensagem respondida não foi encontrada.");
+    }
+    replyToId = quoted.id;
+  }
   const [row] = await database
     .insert(messengerMessages)
     .values({
@@ -930,6 +1178,7 @@ export async function sendMessageWith(
       fileName: file?.name.slice(0, 200) ?? null,
       mimeType: file?.mimeType ?? null,
       sizeBytes: file?.sizeBytes ?? null,
+      replyToId,
       createdAt: now,
     })
     .returning({ id: messengerMessages.id });
@@ -938,15 +1187,276 @@ export async function sendMessageWith(
     .set({ lastMessageAt: now })
     .where(eq(messengerConversations.id, conversationId));
   await markReadWith(database, conversationId, senderId, now);
+  // Sent: "digitando…" stops at once on the other side.
+  await setTypingWith(database, tenantSlug, senderId, null, now);
   return row.id;
 }
 
+/**
+ * A reaction (decision of 19/11/2026): one per person per message; the same
+ * emoji again, or `null`, takes it back. Taking back stamps `removedAt`,
+ * never erases the row.
+ */
+export async function reactWith(
+  database: Database,
+  tenantSlug: string,
+  messageId: string,
+  userId: string,
+  emoji: string | null,
+  now = new Date(),
+): Promise<void> {
+  if (!/^[0-9a-f-]{36}$/i.test(messageId)) {
+    throw new MessageError("Mensagem não encontrada.");
+  }
+  if (emoji !== null && !isReactionEmoji(emoji)) {
+    throw new MessageError("Escolha uma reação da lista.");
+  }
+  const [message] = await database
+    .select({
+      conversationId: messengerMessages.conversationId,
+      deletedAt: messengerMessages.deletedAt,
+      kind: messengerMessages.kind,
+    })
+    .from(messengerMessages)
+    .where(
+      and(
+        eq(messengerMessages.id, messageId),
+        eq(messengerMessages.tenantSlug, tenantSlug),
+      ),
+    )
+    .limit(1);
+  if (!message || message.deletedAt || message.kind === "chamar") {
+    throw new MessageError("Mensagem não encontrada.");
+  }
+  const conversation = await findConversationWith(
+    database,
+    tenantSlug,
+    message.conversationId,
+    { id: userId, oversight: false },
+  );
+  if (!conversation?.member) throw new MessageError("Mensagem não encontrada.");
+  const [current] = await database
+    .select({
+      emoji: messengerReactions.emoji,
+      removedAt: messengerReactions.removedAt,
+    })
+    .from(messengerReactions)
+    .where(
+      and(
+        eq(messengerReactions.messageId, messageId),
+        eq(messengerReactions.userId, userId),
+      ),
+    )
+    .limit(1);
+  const takeBack =
+    emoji === null ||
+    (current && !current.removedAt && current.emoji === emoji);
+  if (takeBack) {
+    if (current && !current.removedAt) {
+      await database
+        .update(messengerReactions)
+        .set({ removedAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(messengerReactions.messageId, messageId),
+            eq(messengerReactions.userId, userId),
+          ),
+        );
+    }
+    return;
+  }
+  await database
+    .insert(messengerReactions)
+    .values({
+      tenantSlug,
+      messageId,
+      userId,
+      emoji,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [messengerReactions.messageId, messengerReactions.userId],
+      set: { emoji, updatedAt: now, removedAt: null },
+    });
+}
+
+/**
+ * "Digitando…" (decision of 19/11/2026): the screen pings while keys are
+ * pressed; `null` says the person stopped (sent, or emptied the box). Only a
+ * conversation the person is in can be typed into.
+ */
+export async function setTypingWith(
+  database: Database,
+  tenantSlug: string,
+  userId: string,
+  conversationId: string | null,
+  now = new Date(),
+): Promise<void> {
+  if (conversationId !== null) {
+    if (!/^[0-9a-f-]{36}$/i.test(conversationId)) return;
+    const [member] = await database
+      .select({ id: messengerMembers.id })
+      .from(messengerMembers)
+      .where(
+        and(
+          eq(messengerMembers.conversationId, conversationId),
+          eq(messengerMembers.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!member) return;
+  }
+  await database
+    .insert(messengerProfiles)
+    .values({
+      userId,
+      tenantSlug,
+      typingConversationId: conversationId,
+      typingAt: conversationId ? now : null,
+    })
+    .onConflictDoUpdate({
+      target: messengerProfiles.userId,
+      set: {
+        typingConversationId: conversationId,
+        typingAt: conversationId ? now : null,
+      },
+    });
+}
+
+/**
+ * For the ticks under one's own messages: up to when the other member read
+ * the conversation, and when they were last seen in the panel (delivered).
+ */
+export async function conversationReceiptsWith(
+  database: Database,
+  conversationId: string,
+  viewerId: string,
+): Promise<{ readAt: Date | null; seenAt: Date | null }> {
+  if (!/^[0-9a-f-]{36}$/i.test(conversationId)) {
+    return { readAt: null, seenAt: null };
+  }
+  const [other] = await database
+    .select({
+      readAt: messengerMembers.lastReadAt,
+      seenAt: messengerProfiles.lastSeenAt,
+    })
+    .from(messengerMembers)
+    .leftJoin(
+      messengerProfiles,
+      eq(messengerProfiles.userId, messengerMembers.userId),
+    )
+    .where(
+      and(
+        eq(messengerMembers.conversationId, conversationId),
+        ne(messengerMembers.userId, viewerId),
+      ),
+    )
+    .limit(1);
+  return { readAt: other?.readAt ?? null, seenAt: other?.seenAt ?? null };
+}
+
+export interface TypingNow {
+  userId: string;
+  conversationId: string;
+}
+
+/**
+ * What the live connection watches (decision of 19/11/2026), in one query:
+ * a version that changes whenever anything this person can see changes (a
+ * message sent, edited or deleted; a reaction; the other side reading), and
+ * who is typing to them right now.
+ */
+export async function messengerSignalWith(
+  database: Database,
+  userId: string,
+  now = new Date(),
+): Promise<{ version: string; typing: TypingNow[] }> {
+  const mine = database
+    .select({ id: messengerMembers.conversationId })
+    .from(messengerMembers)
+    .where(eq(messengerMembers.userId, userId));
+  const [messages] = await database
+    .select({
+      last: sql<
+        string | null
+      >`max(greatest(${messengerMessages.createdAt}, coalesce(${messengerMessages.editedAt}, ${messengerMessages.createdAt}), coalesce(${messengerMessages.deletedAt}, ${messengerMessages.createdAt})))::text`,
+      total: count(),
+    })
+    .from(messengerMessages)
+    .where(inArray(messengerMessages.conversationId, mine));
+  const [reactions] = await database
+    .select({
+      last: sql<string | null>`max(${messengerReactions.updatedAt})::text`,
+    })
+    .from(messengerReactions)
+    .innerJoin(
+      messengerMessages,
+      eq(messengerMessages.id, messengerReactions.messageId),
+    )
+    .where(inArray(messengerMessages.conversationId, mine));
+  const [reads] = await database
+    .select({
+      last: sql<string | null>`max(${messengerMembers.lastReadAt})::text`,
+    })
+    .from(messengerMembers)
+    .where(
+      and(
+        inArray(messengerMembers.conversationId, mine),
+        ne(messengerMembers.userId, userId),
+      ),
+    );
+  const typing = await database
+    .select({
+      userId: messengerProfiles.userId,
+      conversationId: messengerProfiles.typingConversationId,
+    })
+    .from(messengerProfiles)
+    .where(
+      and(
+        ne(messengerProfiles.userId, userId),
+        isNotNull(messengerProfiles.typingConversationId),
+        gt(messengerProfiles.typingAt, new Date(now.getTime() - TYPING_TTL_MS)),
+        inArray(messengerProfiles.typingConversationId, mine),
+      ),
+    );
+  return {
+    version: [
+      messages?.last ?? "",
+      messages?.total ?? 0,
+      reactions?.last ?? "",
+      reads?.last ?? "",
+    ].join("|"),
+    typing: typing
+      .filter((t): t is TypingNow => t.conversationId !== null)
+      .sort((a, b) => a.userId.localeCompare(b.userId)),
+  };
+}
+
+/**
+ * Read up to now. Written only when there is something new from the others
+ * to read: the reading time is what the other side's ticks follow, and a
+ * time rewritten on every look would tell the other screen "something
+ * changed" over and over, each one waking the other (decision of
+ * 19/11/2026).
+ */
 export async function markReadWith(
   database: Database,
   conversationId: string,
   userId: string,
   now = new Date(),
 ): Promise<void> {
+  const newest = database
+    .select({
+      at: sql<Date>`max(${messengerMessages.createdAt})`,
+    })
+    .from(messengerMessages)
+    .where(
+      and(
+        eq(messengerMessages.conversationId, conversationId),
+        ne(messengerMessages.senderId, userId),
+      ),
+    );
   await database
     .update(messengerMembers)
     .set({ lastReadAt: now })
@@ -954,6 +1464,10 @@ export async function markReadWith(
       and(
         eq(messengerMembers.conversationId, conversationId),
         eq(messengerMembers.userId, userId),
+        or(
+          isNull(messengerMembers.lastReadAt),
+          sql`${messengerMembers.lastReadAt} < (${newest})`,
+        ),
       ),
     );
 }

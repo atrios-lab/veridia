@@ -2028,6 +2028,29 @@ export const messengerProfiles = pgTable("messenger_profiles", {
   statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
   /** "Voltei do almoço": unlocks the chat inside today's window. */
   lunchReturnedAt: timestamp("lunch_returned_at", { withTimezone: true }),
+  /**
+   * "Digitando…" (decision of 19/11/2026): the conversation this person is
+   * writing in and when they last typed. A ping, not history: it is
+   * overwritten every few seconds and read only while fresh.
+   */
+  typingConversationId: uuid("typing_conversation_id"),
+  typingAt: timestamp("typing_at", { withTimezone: true }),
+  /**
+   * The person's own sounds (decision of 19/11/2026). Null means "o som da
+   * serventia" (Configurações › Notificações) for the message tone and the
+   * standard one for "Chamar atenção".
+   */
+  messageSound: text("message_sound"),
+  nudgeSound: text("nudge_sound"),
+  soundVolume: integer("sound_volume").notNull().default(80),
+  /** Also ring for the conversation that is open on screen. */
+  soundInChat: boolean("sound_in_chat").notNull().default(true),
+  /** Also ring while the panel is in a tab out of sight. */
+  soundInBackground: boolean("sound_in_background").notNull().default(true),
+  /** The tone comes back every few seconds while anything waits unread. */
+  repeatUntilRead: boolean("repeat_until_read").notNull().default(true),
+  /** "Não perturbe": no sound until then. */
+  quietUntil: timestamp("quiet_until", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -2105,9 +2128,42 @@ export const messengerMessages = pgTable(
     /** "Apagar": hidden from the conversation, kept for the holder. */
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedBy: text("deleted_by"),
+    /** "Responder" (decision of 19/11/2026): the message this one answers. */
+    replyToId: uuid("reply_to_id"),
   },
   (t) => [
     index("messenger_messages_conversation").on(t.conversationId, t.createdAt),
+  ],
+);
+
+/**
+ * A reaction to a message, one per person per message, like the phone
+ * messengers (decision of 19/11/2026). Taking it back stamps `removedAt`
+ * instead of erasing the row; choosing again brings it back.
+ */
+export const messengerReactions = pgTable(
+  "messenger_reactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    // No foreign key on purpose: the demonstration's cleaning erases the
+    // messages and keeps this table (DEMO_RESET_KEPT), and a reaction whose
+    // message is gone is simply never read again.
+    messageId: uuid("message_id").notNull(),
+    userId: text("user_id").notNull(),
+    emoji: text("emoji").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** Any change (new emoji, taken back): what an open screen follows. */
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex("messenger_reactions_one").on(t.messageId, t.userId),
+    index("messenger_reactions_updated").on(t.updatedAt),
   ],
 );
 

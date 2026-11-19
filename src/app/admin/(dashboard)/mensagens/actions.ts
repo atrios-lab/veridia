@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { can } from "@/core/auth/roles.ts";
+import { type SoundPrefs, soundPrefsFrom } from "@/core/messages/live.ts";
 import {
   acceptedType,
   FILE_TYPES,
@@ -15,10 +16,10 @@ import {
   type Contact,
   clearConversationWith,
   clearedAtWith,
+  conversationReceiptsWith,
   decideLunchWith,
   deleteMessageWith,
   editMessageWith,
-  getProfileWith,
   type Incoming,
   inboxWith,
   listContactsWith,
@@ -29,6 +30,7 @@ import {
   type OnlinePerson,
   onlineNowWith,
   openDirectWith,
+  reactWith,
   requestLunchWith,
   returnFromLunchWith,
   sendMessageWith,
@@ -36,34 +38,10 @@ import {
   setStatusByHolderWith,
   touchPresenceWith,
   updateProfileWith,
+  updateSoundPrefsWith,
 } from "@/lib/messages.ts";
-import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
 import { storeMessengerFile } from "@/lib/uploads.ts";
-
-async function messengerAccess() {
-  const session = await getSession();
-  const role = session?.user.role ?? "";
-  if (!session || !can(role, "messages.use", session.user.permissions)) {
-    return null;
-  }
-  const tenant = await getTenant();
-  const profile = await getProfileWith(db, tenant.slug, session.user.id);
-  return {
-    session,
-    tenant,
-    /** The holder turned this person's messenger off. */
-    off: Boolean(profile?.chatDisabled),
-    /** Inside the lunch window, not back yet: the chat is locked. */
-    lunch: Boolean(profile?.atLunch),
-    // The Átrios account reads every conversation and is seen by no one:
-    // it never writes, never shows online (decision of 11/11/2026).
-    platform: role === "superadmin",
-    oversight:
-      role === "superadmin" ||
-      can(role, "audit.manage", session.user.permissions),
-  };
-}
+import { messengerAccess } from "./access.ts";
 
 export type Result<T = undefined> =
   | ({ ok: true } & (T extends undefined ? object : { data: T }))
@@ -122,6 +100,32 @@ export async function openConversation(
 export async function sendText(
   conversationId: string,
   body: string,
+  /** "Responder": the message this one answers. */
+  replyToId: string | null = null,
+): Promise<Result<string>> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  if (access.off) return CHAT_OFF;
+  if (access.lunch) return AT_LUNCH;
+  try {
+    const id = await sendMessageWith(
+      db,
+      access.tenant.slug,
+      conversationId,
+      access.session.user.id,
+      { kind: "texto", body, replyToId },
+    );
+    return { ok: true, data: id };
+  } catch (error) {
+    return failure(error, "mensagens.texto");
+  }
+}
+
+/** A reaction to a message; the same emoji again, or null, takes it back. */
+export async function reactToMessage(
+  messageId: string,
+  emoji: string | null,
 ): Promise<Result> {
   const access = await messengerAccess();
   if (!access) return DENIED;
@@ -129,17 +133,40 @@ export async function sendText(
   if (access.off) return CHAT_OFF;
   if (access.lunch) return AT_LUNCH;
   try {
-    await sendMessageWith(
+    await reactWith(
       db,
       access.tenant.slug,
-      conversationId,
+      messageId,
       access.session.user.id,
-      { kind: "texto", body },
+      emoji,
     );
     return { ok: true };
   } catch (error) {
-    return failure(error, "mensagens.texto");
+    return failure(error, "mensagens.reagir");
   }
+}
+
+/** The person's own tones, volume and "não perturbe". */
+export async function saveSoundPrefs(prefs: SoundPrefs): Promise<Result> {
+  const access = await messengerAccess();
+  if (!access) return DENIED;
+  if (access.platform) return PLATFORM_READS_ONLY;
+  await updateSoundPrefsWith(
+    db,
+    access.tenant.slug,
+    access.session.user.id,
+    soundPrefsFrom({
+      messageSound: prefs.messageSound,
+      nudgeSound: prefs.nudgeSound,
+      soundVolume: prefs.volume,
+      soundInChat: prefs.inChat,
+      soundInBackground: prefs.inBackground,
+      repeatUntilRead: prefs.repeatUntilRead,
+      quietUntil: prefs.quietUntil,
+    }),
+  );
+  revalidatePath("/admin", "layout");
+  return { ok: true };
 }
 
 export async function sendNudge(conversationId: string): Promise<Result> {
@@ -220,8 +247,19 @@ export interface SerializedMessage
   editedAt: string | null;
 }
 
-export interface SerializedContact extends Omit<Contact, "lastMessageAt"> {
+export interface SerializedContact
+  extends Omit<Contact, "lastMessageAt" | "last"> {
   lastMessageAt: string | null;
+  last: { preview: string; mine: boolean; at: string } | null;
+}
+
+/** A contact as the client receives it: dates as ISO strings. */
+function serializeContact(c: Contact): SerializedContact {
+  return {
+    ...c,
+    lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+    last: c.last ? { ...c.last, at: c.last.at.toISOString() } : null,
+  };
 }
 
 /**
@@ -240,6 +278,8 @@ export async function pollMessenger(
     now: string;
     /** "Limpar conversa", by either member: nothing up to here shows. */
     clearedAt: string | null;
+    /** For the ticks: when the other read the conversation, and was seen. */
+    receipts: { readAt: string | null; seenAt: string | null };
   }>
 > {
   const access = await messengerAccess();
@@ -259,6 +299,9 @@ export async function pollMessenger(
   const clearedAt = conversationId
     ? await clearedAtWith(db, conversationId, viewer.id)
     : null;
+  const receipts = conversationId
+    ? await conversationReceiptsWith(db, conversationId, viewer.id)
+    : { readAt: null, seenAt: null };
   const contacts = await listContactsWith(
     db,
     access.tenant.slug,
@@ -268,10 +311,7 @@ export async function pollMessenger(
   return {
     ok: true,
     data: {
-      contacts: contacts.map((c) => ({
-        ...c,
-        lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
-      })),
+      contacts: contacts.map(serializeContact),
       messages: messages.map((m) => ({
         ...m,
         createdAt: m.createdAt.toISOString(),
@@ -279,6 +319,10 @@ export async function pollMessenger(
       })),
       now: now.toISOString(),
       clearedAt: clearedAt?.toISOString() ?? null,
+      receipts: {
+        readAt: receipts.readAt?.toISOString() ?? null,
+        seenAt: receipts.seenAt?.toISOString() ?? null,
+      },
     },
   };
 }
