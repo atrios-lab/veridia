@@ -295,6 +295,79 @@ export const SOUNDS = {
       { frequency: 1100, start: 0.1, duration: 0.14, wave: "triangle" },
     ],
   },
+  // Added 19/11/2026 for the internal messenger, each drawn here from
+  // plain notes like the rest: soft enough to hear all day at the counter.
+  gota: {
+    label: "Gota d'água",
+    group: CHAT,
+    notes: [
+      { frequency: 1800, start: 0, duration: 0.1, wave: "sine", slideTo: 700 },
+      { frequency: 900, start: 0.12, duration: 0.18, wave: "sine" },
+    ],
+  },
+  xilofone: {
+    label: "Xilofone",
+    group: CHAT,
+    notes: [
+      { frequency: 1046.5, start: 0, duration: 0.14, wave: "triangle" },
+      { frequency: 1318.5, start: 0.1, duration: 0.14, wave: "triangle" },
+      { frequency: 1568, start: 0.2, duration: 0.14, wave: "triangle" },
+      { frequency: 2093, start: 0.3, duration: 0.3, wave: "triangle" },
+    ],
+  },
+  cristal: {
+    label: "Cristal",
+    group: CHAT,
+    notes: [
+      { frequency: 2637, start: 0, duration: 0.5, wave: "sine" },
+      { frequency: 3520, start: 0.08, duration: 0.45, wave: "sine" },
+    ],
+  },
+  marimba: {
+    label: "Marimba",
+    group: CHAT,
+    notes: [
+      { frequency: 523.3, start: 0, duration: 0.18, wave: "sine" },
+      { frequency: 784, start: 0.12, duration: 0.18, wave: "sine" },
+      { frequency: 659.3, start: 0.24, duration: 0.3, wave: "sine" },
+    ],
+  },
+  clique: {
+    label: "Clique discreto",
+    group: CHAT,
+    notes: [
+      { frequency: 2400, start: 0, duration: 0.04, wave: "triangle" },
+      { frequency: 1800, start: 0.07, duration: 0.05, wave: "triangle" },
+    ],
+  },
+  harpa: {
+    label: "Harpa",
+    group: CHAT,
+    notes: [
+      { frequency: 587.3, start: 0, duration: 0.5, wave: "sine" },
+      { frequency: 740, start: 0.07, duration: 0.5, wave: "sine" },
+      { frequency: 880, start: 0.14, duration: 0.5, wave: "sine" },
+      { frequency: 1174.7, start: 0.21, duration: 0.6, wave: "sine" },
+    ],
+  },
+  "ding-dong": {
+    label: "Ding-dong",
+    group: CLASSIC,
+    notes: [
+      { frequency: 1318.5, start: 0, duration: 0.45, wave: "sine" },
+      { frequency: 1046.5, start: 0.38, duration: 0.7, wave: "sine" },
+    ],
+  },
+  "sino-balcao": {
+    label: "Sino de balcão",
+    group: URGENT,
+    notes: [
+      { frequency: 2349, start: 0, duration: 0.6, wave: "sine" },
+      { frequency: 3136, start: 0, duration: 0.35, wave: "sine" },
+      { frequency: 2349, start: 0.28, duration: 0.6, wave: "sine" },
+      { frequency: 3136, start: 0.28, duration: 0.35, wave: "sine" },
+    ],
+  },
   alerta: {
     label: "Alerta",
     group: URGENT,

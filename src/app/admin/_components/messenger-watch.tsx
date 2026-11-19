@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ChannelAlert } from "@/core/alerts/office.ts";
-import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
+import { type SoundPrefs, toneFor } from "@/core/messages/live.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { playSound, unlockAudio } from "../../_components/chat-sound.ts";
@@ -22,12 +22,25 @@ import {
 } from "../(dashboard)/mensagens/actions.ts";
 import { MicHelp, useRecorder } from "../(dashboard)/mensagens/recorder.tsx";
 import { CHAT_SHAKE_TARGET_ID } from "./chat-alerts.tsx";
+import {
+  getOpenConversation,
+  isLive,
+  pingTyping,
+  stopTyping,
+  subscribeMessenger,
+  type TypingNow,
+} from "./messenger-live.ts";
 
+/**
+ * With the live connection up (messenger-live.ts), news arrives the moment
+ * it happens and these looks are only a safety net; without it, they are
+ * how news arrives, as before.
+ */
 const POLL_MS = 4000;
+const SAFETY_POLL_MS = 20_000;
 const MINI_POLL_MS = 3000;
 /** While something waits unread, the tone comes back this often. */
 const INSIST_MS = 10_000;
-const VOLUME = 80;
 
 interface Caller {
   conversationId: string;
@@ -88,13 +101,36 @@ function MiniChat({
     });
   }, [caller.conversationId]);
 
+  const [typing, setTyping] = useState(false);
   useEffect(() => {
     last.current = null;
     setMessages([]);
     void poll();
-    const timer = setInterval(() => void poll(), MINI_POLL_MS);
-    return () => clearInterval(timer);
-  }, [poll]);
+    let lastLook = Date.now();
+    const look = () => {
+      lastLook = Date.now();
+      void poll();
+    };
+    const off = subscribeMessenger({
+      onChange: look,
+      onReady: look,
+      onTyping: (list: TypingNow[]) =>
+        setTyping(
+          list.some(
+            (t) =>
+              t.conversationId === caller.conversationId &&
+              t.userId === caller.senderId,
+          ),
+        ),
+    });
+    const timer = setInterval(() => {
+      if (!isLive() || Date.now() - lastLook > SAFETY_POLL_MS) look();
+    }, MINI_POLL_MS);
+    return () => {
+      off();
+      clearInterval(timer);
+    };
+  }, [poll, caller.conversationId, caller.senderId]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls when messages arrive
   useEffect(() => {
@@ -104,6 +140,7 @@ function MiniChat({
   const send = async () => {
     if (!text.trim() || busy) return;
     setBusy(true);
+    stopTyping();
     const result = await sendText(caller.conversationId, text);
     setBusy(false);
     if (!result.ok) {
@@ -233,6 +270,11 @@ function MiniChat({
               </div>
             );
           })}
+        {typing && (
+          <p className="my-1.5 text-xs text-success-text italic">
+            {caller.senderName} está digitando…
+          </p>
+        )}
       </div>
       <div className="border-t p-2">
         <div className="mb-1.5 flex items-center gap-1">
@@ -280,7 +322,11 @@ function MiniChat({
         <div className="flex items-end gap-1.5">
           <Textarea
             value={text}
-            onChange={(event) => setText(event.target.value)}
+            onChange={(event) => {
+              setText(event.target.value);
+              if (event.target.value.trim()) pingTyping(caller.conversationId);
+              else stopTyping();
+            }}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -373,10 +419,13 @@ function useFloatingPosition() {
 export function MessengerWatch({
   setting,
   sound,
+  prefs,
   initialUnread,
 }: {
   setting: ChannelAlert;
   sound: boolean;
+  /** The person's own tones, volume and "não perturbe". */
+  prefs: SoundPrefs;
   initialUnread: number;
 }) {
   const pathname = usePathname();
@@ -393,8 +442,29 @@ export function MessengerWatch({
   // Read inside the poll, which outlives renders.
   const state = useRef({ open, minimized });
   state.current = { open, minimized };
-  const tone = setting.enabled && sound ? setting.sound : "none";
+  const silent = !setting.enabled || !sound;
   const onMessenger = pathname.startsWith("/admin/mensagens");
+  // Read inside the callbacks, which outlive renders.
+  const sounds = useRef({ prefs, onMessenger });
+  sounds.current = { prefs, onMessenger };
+  /** The tone for this arrival under the person's rules, or null. */
+  const toneNow = useCallback(
+    (nudge: boolean, conversationIds: string[]) => {
+      if (silent) return null;
+      const open = sounds.current.onMessenger ? getOpenConversation() : null;
+      return toneFor(sounds.current.prefs, {
+        nudge,
+        officeSound: setting.sound,
+        hidden: document.hidden,
+        inOpenConversation:
+          open !== null &&
+          conversationIds.length > 0 &&
+          conversationIds.every((id) => id === open),
+        now: new Date(),
+      });
+    },
+    [silent, setting.sound],
+  );
 
   useEffect(() => {
     const unlock = () => void unlockAudio();
@@ -404,7 +474,21 @@ export function MessengerWatch({
 
   useEffect(() => {
     if (!setting.enabled) return;
+    let running = false;
+    let lastLook = 0;
     const tick = async () => {
+      // One look at a time: the live connection and the safety net can ask
+      // in the same instant.
+      if (running) return;
+      running = true;
+      lastLook = Date.now();
+      try {
+        await look();
+      } finally {
+        running = false;
+      }
+    };
+    const look = async () => {
       const result = await pollInbox(since.current).catch(() => null);
       if (!result?.ok) return;
       since.current = result.data.now;
@@ -431,7 +515,9 @@ export function MessengerWatch({
               ...fresh.map((p) => ({ ...p, key: `${p.userId}-${at}` })),
             ].slice(-4),
           );
-          if (tone !== "none") playSound(tone, VOLUME / 2);
+          const arrivalTone = toneNow(false, []);
+          if (arrivalTone)
+            playSound(arrivalTone, sounds.current.prefs.volume / 2);
         }
       }
       const latest = result.data.latest;
@@ -464,7 +550,11 @@ export function MessengerWatch({
         shakeElement(document.getElementById(CHAT_SHAKE_TARGET_ID));
         vibrate();
       }
-      if (tone !== "none") playSound(nudge ? NUDGE_SOUND : tone, VOLUME);
+      const tone = toneNow(
+        nudge,
+        result.data.incoming.map((i) => i.conversationId),
+      );
+      if (tone) playSound(tone, sounds.current.prefs.volume);
       if (
         setting.notify &&
         document.hidden &&
@@ -478,16 +568,29 @@ export function MessengerWatch({
       }
     };
     void tick();
-    const timer = setInterval(() => void tick(), POLL_MS);
-    return () => clearInterval(timer);
-  }, [setting, tone]);
+    const off = subscribeMessenger({
+      onChange: () => void tick(),
+      onReady: () => void tick(),
+    });
+    const timer = setInterval(() => {
+      if (!isLive() || Date.now() - lastLook > SAFETY_POLL_MS) void tick();
+    }, POLL_MS);
+    return () => {
+      off();
+      clearInterval(timer);
+    };
+  }, [setting, toneNow]);
 
-  // Insists: the tone again while anything waits unread.
+  // Insists: the tone again while anything waits unread, unless the person
+  // turned that off (decision of 19/11/2026).
   useEffect(() => {
-    if (unread === 0 || tone === "none") return;
-    const timer = setInterval(() => playSound(tone, VOLUME), INSIST_MS);
+    if (unread === 0 || silent || !prefs.repeatUntilRead) return;
+    const timer = setInterval(() => {
+      const tone = toneNow(false, []);
+      if (tone) playSound(tone, sounds.current.prefs.volume);
+    }, INSIST_MS);
     return () => clearInterval(timer);
-  }, [unread, tone]);
+  }, [unread, silent, prefs.repeatUntilRead, toneNow]);
 
   // The tab's title blinks while anything waits, so it calls from another tab.
   useEffect(() => {

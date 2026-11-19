@@ -4,7 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
-import { NUDGE_SOUND } from "@/core/chat/alerts.ts";
+import { QUICK_REACTIONS } from "@/core/messages/emoji.ts";
+import {
+  QUICK_REPLIES,
+  RECEIPT_LABELS,
+  type Receipt,
+  receiptOf,
+  type SoundPrefs,
+} from "@/core/messages/live.ts";
 import {
   COLOR_LABELS,
   COLORS,
@@ -22,13 +29,17 @@ import {
 } from "@/core/messages/rules.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
-import {
-  isAudioLocked,
-  playSound,
-  unlockAudio,
-} from "../../../_components/chat-sound.ts";
+import { isAudioLocked, unlockAudio } from "../../../_components/chat-sound.ts";
 import { shakeElement, vibrate } from "../../../_components/shake.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
+import {
+  isLive,
+  pingTyping,
+  setOpenConversation,
+  stopTyping,
+  subscribeMessenger,
+  type TypingNow,
+} from "../../_components/messenger-live.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { cn } from "../../_ui/cn.ts";
 import { Input } from "../../_ui/input.tsx";
@@ -39,6 +50,7 @@ import {
   editMessage,
   openConversation,
   pollMessenger,
+  reactToMessage,
   requestLunch,
   returnFromLunch,
   type SerializedContact,
@@ -48,9 +60,14 @@ import {
   sendNudge,
   sendText,
 } from "./actions.ts";
+import { EmojiPicker, rememberEmoji } from "./emoji-picker.tsx";
 import { MicHelp, useRecorder } from "./recorder.tsx";
+import { SoundSettings } from "./sound-settings.tsx";
 
+/** Without the live connection, the screen asks this often, as before. */
 const POLL_MS = 3000;
+/** With it, only now and then, as a safety net. */
+const SAFETY_POLL_MS = 20_000;
 
 export interface Me {
   userId: string;
@@ -60,6 +77,7 @@ export interface Me {
   personalMessage: string;
   color: MessengerColor;
   sound: boolean;
+  soundPrefs: SoundPrefs;
   lunch: Lunch | null;
   lunchPending: Lunch | null;
   /** Inside the lunch window, not back yet: the chat is locked. */
@@ -83,21 +101,6 @@ const DOT: Record<Presence, string> = {
   almoco: "bg-msg-away",
   offline: "bg-msg-offline",
 };
-
-const EMOJIS = [
-  "😊",
-  "😂",
-  "😉",
-  "😍",
-  "😎",
-  "😢",
-  "😮",
-  "👍",
-  "👏",
-  "🙏",
-  "☕",
-  "📄",
-];
 
 function Avatar({
   userId,
@@ -330,6 +333,68 @@ function LunchField({
   );
 }
 
+/** "14:05" today, "ontem", the weekday this week, or the date. */
+function listTime(iso: string): string {
+  const day = (d: Date) =>
+    d.toLocaleDateString("en-CA", { timeZone: OFFICE_TIME_ZONE });
+  const then = new Date(iso);
+  const now = new Date();
+  if (day(then) === day(now)) return formatTime(iso);
+  const yesterday = new Date(now.getTime() - 86_400_000);
+  if (day(then) === day(yesterday)) return "ontem";
+  if (now.getTime() - then.getTime() < 6 * 86_400_000) {
+    return then
+      .toLocaleDateString("pt-BR", {
+        weekday: "short",
+        timeZone: OFFICE_TIME_ZONE,
+      })
+      .replace(".", "");
+  }
+  return then.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: OFFICE_TIME_ZONE,
+  });
+}
+
+/** ✓ sent, ✓✓ delivered, ✓✓ in blue when read, a clock while sending. */
+function Ticks({ receipt }: { receipt: Receipt }) {
+  return (
+    <span
+      role="img"
+      aria-label={RECEIPT_LABELS[receipt]}
+      title={RECEIPT_LABELS[receipt]}
+      className={cn(
+        "ml-1 inline-block font-semibold tracking-tighter",
+        receipt === "lida" ? "text-info" : "text-muted-foreground",
+      )}
+    >
+      {receipt === "pendente" ? "🕓" : receipt === "enviada" ? "✓" : "✓✓"}
+    </span>
+  );
+}
+
+/** A message on screen: what came from the server, or one still sending. */
+type ShownMessage = SerializedMessage & { pending?: boolean };
+
+/** The three dots that say "digitando…", as on the phone. */
+function TypingDots({ name }: { name: string }) {
+  return (
+    <div className="my-1 flex items-center gap-2 text-xs text-muted-foreground">
+      <span className="flex gap-1 rounded-xl rounded-bl-sm bg-card px-3 py-2.5 shadow-xs">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="size-1.5 rounded-full bg-muted-foreground motion-safe:animate-bounce"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </span>
+      {name} está digitando…
+    </div>
+  );
+}
+
 export function Messenger({
   me: initialMe,
   initialContacts,
@@ -346,61 +411,80 @@ export function Messenger({
   const [photoVersion, setPhotoVersion] = useState(0);
   const [contacts, setContacts] = useState(initialContacts);
   const [active, setActive] = useState(initialConversation);
-  const [messages, setMessages] = useState<SerializedMessage[]>([]);
+  const [messages, setMessages] = useState<ShownMessage[]>([]);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
-  const [settings, setSettings] = useState(false);
+  const [panel, setPanel] = useState<"personalizar" | "sons" | null>(null);
   const [lunchOpen, setLunchOpen] = useState(false);
-  const [emojis, setEmojis] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [search, setSearch] = useState("");
+  const [replyTo, setReplyTo] = useState<ShownMessage | null>(null);
+  const [reactingTo, setReactingTo] = useState<string | null>(null);
+  const [fullPickerFor, setFullPickerFor] = useState<string | null>(null);
+  const [typing, setTyping] = useState<TypingNow[]>([]);
+  const [receipts, setReceipts] = useState<{
+    readAt: string | null;
+    seenAt: string | null;
+  }>({ readAt: null, seenAt: null });
   const windowRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastIso = useRef<string | null>(null);
-  const messagesRef = useRef<SerializedMessage[]>([]);
+  const messagesRef = useRef<ShownMessage[]>([]);
   messagesRef.current = messages;
   const [editing, setEditing] = useState<{ id: string; body: string } | null>(
     null,
   );
   const [deleting, setDeleting] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
-  const soundOn = useRef(me.sound);
-  soundOn.current = me.sound;
 
   const partner = contacts.find((c) => c.userId === active?.withUserId);
-  // A deleted message leaves the conversation for both people; the record
-  // stays for the holder's oversight, without telling anyone.
   const [cleared, setCleared] = useState<string | null>(null);
   // Cleared by either person: what came before it leaves this screen too.
   const shown = messages.filter(
     (m) =>
       !m.deleted && (!cleared || new Date(m.createdAt) > new Date(cleared)),
   );
+  const typingIn = (conversationId: string | null, userId: string) =>
+    conversationId !== null &&
+    typing.some(
+      (t) => t.conversationId === conversationId && t.userId === userId,
+    );
+  const partnerTyping = partner
+    ? typingIn(active?.id ?? null, partner.userId)
+    : false;
 
-  const ring = useCallback((nudge: boolean) => {
-    if (nudge) {
-      shakeElement(windowRef.current);
-      vibrate();
-    }
-    if (!soundOn.current) return;
-    if (!playSound(nudge ? NUDGE_SOUND : "mensageiro", 80)) setLocked(true);
+  // The sound of a message is the panel watcher's (messenger-watch.tsx),
+  // under the person's rules; here a call for attention also shakes the
+  // window it was sent to.
+  const nudged = useCallback(() => {
+    shakeElement(windowRef.current);
+    vibrate();
   }, []);
 
   const poll = useCallback(async () => {
-    const result = await pollMessenger(active?.id ?? null, lastIso.current);
+    const conversationId = active?.id ?? null;
+    const result = await pollMessenger(conversationId, lastIso.current);
     if (!result.ok) return;
-    const { contacts: next, messages: fresh, now, clearedAt } = result.data;
+    const {
+      contacts: next,
+      messages: fresh,
+      now,
+      clearedAt,
+      receipts: seen,
+    } = result.data;
     setCleared(clearedAt);
     setContacts(next);
-    // Another conversation's news rings through the panel's watcher
-    // (messenger-watch.tsx), insisting until it is read; here only the
-    // list's badges follow.
+    setReceipts(seen);
     const first = lastIso.current === null;
     // The server's clock, so edits and deletions since then come next time.
     lastIso.current = now;
     if (fresh.length) {
       const known = new Set(messagesRef.current.map((m) => m.id));
       const added = fresh.filter((m) => !known.has(m.id));
-      // An edited or deleted message comes again: it takes its old place.
+      // An edited or deleted message (or a new reaction) comes again: it
+      // takes its old place. A sent one replaces its "sending" copy.
       setMessages((current) => {
         const changed = new Map(fresh.map((m) => [m.id, m]));
         const have = new Set(current.map((m) => m.id));
@@ -409,15 +493,14 @@ export function Messenger({
           ...fresh.filter((m) => !have.has(m.id)),
         ];
       });
-      if (!first) {
-        const theirs = added.filter(
-          (m) => m.senderId !== me.userId && !m.deleted,
-        );
-        if (theirs.some((m) => m.kind === "chamar")) ring(true);
-        else if (theirs.length) ring(false);
+      if (
+        !first &&
+        added.some((m) => m.senderId !== me.userId && m.kind === "chamar")
+      ) {
+        nudged();
       }
     }
-  }, [active?.id, me.userId, ring]);
+  }, [active?.id, me.userId, nudged]);
 
   // A new conversation starts from its history.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the conversation changes
@@ -426,14 +509,61 @@ export function Messenger({
     setEditing(null);
     setDeleting(null);
     setClearing(false);
+    setReplyTo(null);
+    setReactingTo(null);
+    setReceipts({ readAt: null, seenAt: null });
     lastIso.current = null;
+    setOpenConversation(active?.id ?? null);
     void poll();
   }, [active?.id]);
 
+  useEffect(() => () => setOpenConversation(null), []);
+
+  // Live: the server says when something changed, and who is typing
+  // (decision of 19/11/2026); the timer below is only the safety net.
+  const pollRef = useRef(poll);
+  pollRef.current = poll;
   useEffect(() => {
-    const timer = setInterval(() => void poll(), POLL_MS);
-    return () => clearInterval(timer);
-  }, [poll]);
+    let lastLook = Date.now();
+    const look = () => {
+      lastLook = Date.now();
+      void pollRef.current();
+    };
+    const off = subscribeMessenger({
+      onChange: look,
+      onReady: look,
+      onTyping: setTyping,
+    });
+    const timer = setInterval(() => {
+      if (!isLive() || Date.now() - lastLook > SAFETY_POLL_MS) look();
+    }, POLL_MS);
+    return () => {
+      off();
+      clearInterval(timer);
+    };
+  }, []);
+
+  // The quick reactions close on a click elsewhere or on Escape, as a menu
+  // does; a click on one of them reacts first.
+  useEffect(() => {
+    if (!reactingTo) return;
+    const away = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest("[data-reactions]")) setReactingTo(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setReactingTo(null);
+    };
+    const timer = setTimeout(() => {
+      document.addEventListener("pointerdown", away);
+      document.addEventListener("keydown", onKey);
+    });
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [reactingTo]);
 
   useEffect(() => {
     setLocked(isAudioLocked());
@@ -443,10 +573,10 @@ export function Messenger({
     return () => window.removeEventListener("pointerdown", unlock);
   }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls when messages arrive
+  // biome-ignore lint/correctness/useExhaustiveDependencies: scrolls when messages arrive or someone types
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [messages.length]);
+  }, [shown.length, partnerTyping]);
 
   const open = async (contact: SerializedContact) => {
     if (contact.conversationId) {
@@ -462,16 +592,56 @@ export function Messenger({
     router.replace(`/admin/mensagens?com=${contact.userId}`, { scroll: false });
   };
 
-  const send = async () => {
-    if (!active || !text.trim() || busy) return;
-    setBusy(true);
-    const result = await sendText(active.id, text);
-    setBusy(false);
+  /**
+   * Sends at once on screen, with a clock instead of the ticks, and swaps
+   * in the stored message when the server answers (decision of 19/11/2026).
+   */
+  const send = async (body = text) => {
+    if (!active || !body.trim() || busy) return;
+    const quoted = replyTo;
+    const temp: ShownMessage = {
+      id: `enviando-${Date.now()}`,
+      senderId: me.userId,
+      senderName: me.name,
+      kind: "texto",
+      body: body.trim(),
+      fileName: null,
+      mimeType: null,
+      sizeBytes: null,
+      createdAt: new Date().toISOString(),
+      editedAt: null,
+      deleted: false,
+      originalBody: null,
+      replyTo: quoted
+        ? {
+            id: quoted.id,
+            senderName:
+              quoted.senderId === me.userId ? "Você" : quoted.senderName,
+            preview: (quoted.body ?? quoted.fileName ?? "").slice(0, 120),
+          }
+        : null,
+      reactions: [],
+      pending: true,
+    };
+    setMessages((current) => [...current, temp]);
+    setText("");
+    setReplyTo(null);
+    stopTyping();
+    const result = await sendText(active.id, body, quoted?.id ?? null);
     if (!result.ok) {
+      setMessages((current) => current.filter((m) => m.id !== temp.id));
+      setText(body);
       toast.error(result.message);
       return;
     }
-    setText("");
+    // The stored id takes the copy's place; the next look fills the rest.
+    setMessages((current) =>
+      current.some((m) => m.id === result.data)
+        ? current.filter((m) => m.id !== temp.id)
+        : current.map((m) =>
+            m.id === temp.id ? { ...m, id: result.data, pending: false } : m,
+          ),
+    );
     void poll();
   };
 
@@ -486,6 +656,47 @@ export function Messenger({
     setBusy(false);
     if (!result.ok) toast.error(result.message);
     else void poll();
+  };
+
+  const react = async (message: ShownMessage, emoji: string) => {
+    setReactingTo(null);
+    setFullPickerFor(null);
+    if (message.pending) return;
+    rememberEmoji(emoji);
+    // On screen at once; the server's answer confirms it.
+    setMessages((current) =>
+      current.map((m) => {
+        if (m.id !== message.id) return m;
+        const mineBefore = m.reactions.find((r) => r.mine);
+        const takeBack = mineBefore?.emoji === emoji;
+        const reactions = m.reactions
+          .map((r) =>
+            r.mine
+              ? {
+                  ...r,
+                  count: r.count - 1,
+                  mine: false,
+                  names: r.names.filter((n) => n !== "Você"),
+                }
+              : r,
+          )
+          .filter((r) => r.count > 0);
+        if (!takeBack) {
+          const same = reactions.find((r) => r.emoji === emoji);
+          if (same) {
+            same.count += 1;
+            same.mine = true;
+            same.names = [...same.names, "Você"];
+          } else {
+            reactions.push({ emoji, count: 1, mine: true, names: ["Você"] });
+          }
+        }
+        return { ...m, reactions };
+      }),
+    );
+    const result = await reactToMessage(message.id, emoji);
+    if (!result.ok) toast.error(result.message);
+    void poll();
   };
 
   const saveEdit = async () => {
@@ -570,48 +781,111 @@ export function Messenger({
       setMe({ ...next, photo: true });
       setPhotoVersion((v) => v + 1);
       toast.success("Foto atualizada.");
-    }
+    } else if (patch.sound !== undefined) router.refresh();
   };
 
-  const online = contacts.filter((c) => c.presence !== "offline");
-  const offline = contacts.filter((c) => c.presence === "offline");
+  const insert = (piece: string) => {
+    const box = inputRef.current;
+    if (!box) {
+      setText((t) => t + piece);
+      return;
+    }
+    const start = box.selectionStart ?? text.length;
+    const end = box.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + piece + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      box.focus();
+      box.setSelectionRange(start + piece.length, start + piece.length);
+    });
+  };
 
-  const contactRow = (contact: SerializedContact) => (
-    <li key={contact.userId}>
-      <button
-        type="button"
-        onClick={() => void open(contact)}
-        aria-current={
-          active?.withUserId === contact.userId ? "true" : undefined
-        }
-        className={cn(
-          "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-card",
-          active?.withUserId === contact.userId && "bg-card shadow-xs",
-        )}
-      >
-        <Avatar
-          userId={contact.userId}
-          name={contact.name}
-          photo={contact.photo}
-          presence={contact.presence}
-          size={36}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold text-foreground">
-            {contact.name}
+  const term = search.trim().toLocaleLowerCase("pt-BR");
+  const matches = (c: SerializedContact) =>
+    !term ||
+    c.name.toLocaleLowerCase("pt-BR").includes(term) ||
+    (c.last?.preview ?? "").toLocaleLowerCase("pt-BR").includes(term);
+  // Conversations with something in them, the newest first, as on the
+  // phone; then the rest of the team, the ones online first.
+  const recent = contacts
+    .filter((c) => c.last && matches(c))
+    .sort((a, b) => (b.last?.at ?? "").localeCompare(a.last?.at ?? ""));
+  const team = contacts
+    .filter((c) => !c.last && matches(c))
+    .sort(
+      (a, b) =>
+        Number(b.presence !== "offline") - Number(a.presence !== "offline") ||
+        a.name.localeCompare(b.name, "pt-BR"),
+    );
+
+  const contactRow = (contact: SerializedContact) => {
+    const isTyping = typingIn(contact.conversationId, contact.userId);
+    const current = active?.withUserId === contact.userId;
+    return (
+      <li key={contact.userId}>
+        <button
+          type="button"
+          onClick={() => void open(contact)}
+          aria-current={current ? "true" : undefined}
+          className={cn(
+            "flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-card",
+            current && "bg-card shadow-xs",
+          )}
+        >
+          <Avatar
+            userId={contact.userId}
+            name={contact.name}
+            photo={contact.photo}
+            presence={contact.presence}
+            size={40}
+          />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                {contact.name}
+              </span>
+              {contact.last && (
+                <span
+                  className={cn(
+                    "flex-none text-xs",
+                    contact.unread > 0
+                      ? "font-semibold text-success-text"
+                      : "text-muted-foreground",
+                  )}
+                >
+                  {listTime(contact.last.at)}
+                </span>
+              )}
+            </span>
+            <span className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "min-w-0 flex-1 truncate text-xs",
+                  isTyping
+                    ? "font-medium text-success-text italic"
+                    : contact.unread > 0
+                      ? "font-medium text-foreground"
+                      : "text-muted-foreground",
+                )}
+              >
+                {isTyping
+                  ? "digitando…"
+                  : contact.last
+                    ? `${contact.last.mine ? "Você: " : ""}${contact.last.preview}`
+                    : contact.personalMessage ||
+                      STATUS_LABELS[contact.presence]}
+              </span>
+              {contact.unread > 0 && (
+                <span className="inline-flex h-5 min-w-5 flex-none items-center justify-center rounded-full bg-success px-1.5 text-xs font-semibold text-success-foreground">
+                  {contact.unread}
+                </span>
+              )}
+            </span>
           </span>
-          <span className="block truncate text-xs italic text-muted-foreground">
-            {contact.personalMessage || STATUS_LABELS[contact.presence]}
-          </span>
-        </span>
-        {contact.unread > 0 && (
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-msg-busy px-1.5 text-xs font-semibold text-white">
-            {contact.unread}
-          </span>
-        )}
-      </button>
-    </li>
-  );
+        </button>
+      </li>
+    );
+  };
 
   let lastDay = "";
 
@@ -620,13 +894,15 @@ export function Messenger({
       ref={windowRef}
       className="flex h-[calc(100dvh-150px)] min-h-[460px] flex-col overflow-hidden rounded-xl border border-border bg-msg-pane shadow-lg md:h-[calc(100dvh-170px)]"
     >
-      {/* The window's title bar, in the colour the person picked. */}
+      {/* The window's bar, in the colour the person picked. The page's own
+          title already says "Mensagens internas"; the bar holds the tools. */}
       <div
-        className={`flex items-center gap-2 bg-gradient-to-r px-4 py-2 text-white ${TITLE_BAR[me.color]}`}
+        className={`flex flex-wrap items-center gap-2 bg-gradient-to-r px-4 py-1.5 text-white ${TITLE_BAR[me.color]}`}
       >
-        <AdminIcon name="chat" className="h-4 w-4" />
-        <span className="flex-1 text-sm font-semibold tracking-wide">
-          Mensagens internas
+        <span className="flex-1 text-xs font-medium opacity-90">
+          {isAway(me.status) || me.status !== "disponivel"
+            ? `Você está: ${STATUS_LABELS[me.status]}`
+            : "Você está disponível"}
         </span>
         {oversight && (
           <Link
@@ -638,11 +914,21 @@ export function Messenger({
         )}
         <button
           type="button"
-          onClick={() => setSettings((v) => !v)}
-          aria-expanded={settings}
-          className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-semibold hover:bg-white/25"
+          onClick={() => setPanel((p) => (p === "sons" ? null : "sons"))}
+          aria-expanded={panel === "sons"}
+          className="cursor-pointer rounded-md bg-white/15 px-2 py-0.5 text-xs font-semibold hover:bg-white/25"
         >
-          ⚙ Personalizar: foto, status e almoço
+          {me.sound ? "🔔" : "🔕"} Sons
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            setPanel((p) => (p === "personalizar" ? null : "personalizar"))
+          }
+          aria-expanded={panel === "personalizar"}
+          className="cursor-pointer rounded-md bg-white/15 px-2 py-0.5 text-xs font-semibold hover:bg-white/25"
+        >
+          ⚙ Personalizar
         </button>
       </div>
       {me.atLunch && (
@@ -676,7 +962,7 @@ export function Messenger({
       <div className="flex min-h-0 flex-1">
         {/* Contacts. On a phone, only when no conversation is open. */}
         <aside
-          className={`${active ? "hidden md:flex" : "flex"} w-full flex-col border-r border-border md:w-[290px] md:shrink-0`}
+          className={`${active ? "hidden md:flex" : "flex"} w-full flex-col border-r border-border md:w-[320px] md:shrink-0`}
         >
           <div className="border-b border-border bg-card/70 p-3">
             <div className="flex items-center gap-2.5">
@@ -690,7 +976,7 @@ export function Messenger({
                   name={me.name}
                   photo={me.photo}
                   presence={me.status}
-                  size={52}
+                  size={48}
                   version={photoVersion}
                 />
                 <span className="absolute inset-x-0 bottom-0 rounded-b-lg bg-black/55 py-0.5 text-center text-xs font-semibold text-white">
@@ -777,7 +1063,16 @@ export function Messenger({
             )}
           </div>
 
-          {settings && (
+          {panel === "sons" && (
+            <SoundSettings
+              initial={me.soundPrefs}
+              enabled={me.sound}
+              onEnabled={(sound) => void saveMe({ sound })}
+              onSaved={() => router.refresh()}
+            />
+          )}
+
+          {panel === "personalizar" && (
             <div className="space-y-3 border-b border-border bg-card p-3 text-xs">
               <div>
                 <span className="mb-1 block font-semibold text-foreground">
@@ -834,32 +1129,52 @@ export function Messenger({
                   ))}
                 </div>
               </fieldset>
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="checkbox-admin"
-                  checked={me.sound}
-                  onChange={(event) =>
-                    void saveMe({ sound: event.target.checked })
-                  }
-                />
-                Som ao receber mensagens e chamados
-              </label>
             </div>
           )}
 
+          <div className="border-b border-border px-3 py-2">
+            <label className="relative block">
+              <AdminIcon
+                name="search"
+                className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar pessoa ou conversa"
+                aria-label="Buscar pessoa ou conversa"
+                className="h-9 w-full rounded-full border border-input bg-card pr-3 pl-8 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </label>
+          </div>
+
           <div className="min-h-0 flex-1 overflow-y-auto p-2">
-            <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
-              Disponíveis ({online.length})
-            </p>
-            <ul>{online.map(contactRow)}</ul>
-            <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
-              Offline ({offline.length})
-            </p>
-            <ul>{offline.map(contactRow)}</ul>
+            {recent.length > 0 && (
+              <>
+                <p className="px-2 pt-1 pb-1 text-xs font-medium text-muted-foreground">
+                  Conversas
+                </p>
+                <ul>{recent.map(contactRow)}</ul>
+              </>
+            )}
+            {team.length > 0 && (
+              <>
+                <p className="px-2 pt-3 pb-1 text-xs font-medium text-muted-foreground">
+                  Equipe ({team.filter((c) => c.presence !== "offline").length}{" "}
+                  online)
+                </p>
+                <ul>{team.map(contactRow)}</ul>
+              </>
+            )}
             {contacts.length === 0 && (
               <p className="px-2 py-3 text-xs text-muted-foreground">
                 Ninguém mais tem conta nesta serventia ainda.
+              </p>
+            )}
+            {contacts.length > 0 && !recent.length && !team.length && (
+              <p className="px-2 py-3 text-xs text-muted-foreground">
+                Ninguém encontrado com "{search}".
               </p>
             )}
           </div>
@@ -867,11 +1182,11 @@ export function Messenger({
 
         {/* The conversation. */}
         <section
-          className={`${active ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col bg-card`}
+          className={`${active ? "flex" : "hidden md:flex"} min-w-0 flex-1 flex-col bg-msg-pane`}
         >
           {active && partner ? (
             <>
-              <header className="flex items-center gap-3 border-b border-border bg-msg-pane px-3 py-2.5">
+              <header className="flex items-center gap-3 border-b border-border bg-card px-3 py-2.5">
                 <button
                   type="button"
                   onClick={() => setActive(null)}
@@ -890,31 +1205,47 @@ export function Messenger({
                   name={partner.name}
                   photo={partner.photo}
                   presence={partner.presence}
-                  size={44}
+                  size={42}
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-foreground">
-                    {partner.name}{" "}
-                    <span className="text-xs font-normal text-muted-foreground">
-                      ({STATUS_LABELS[partner.presence]})
-                    </span>
+                    {partner.name}
                   </p>
-                  {partner.personalMessage && (
-                    <p className="truncate text-xs italic text-muted-foreground">
-                      {partner.personalMessage}
-                    </p>
-                  )}
+                  <p
+                    className={cn(
+                      "truncate text-xs",
+                      partnerTyping
+                        ? "font-medium text-success-text italic"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {partnerTyping
+                      ? "digitando…"
+                      : [
+                          STATUS_LABELS[partner.presence],
+                          partner.personalMessage,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => void nudge()}
+                  className="inline-flex min-h-9 flex-none cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-semibold text-msg-busy hover:border-msg-busy"
+                  title="Faz a janela da outra pessoa tremer, com som"
+                >
+                  🔔 <span className="hidden sm:inline">Chamar atenção</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => setClearing((v) => !v)}
                   aria-expanded={clearing}
-                  className="inline-flex min-h-9 flex-none items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground hover:border-primary"
+                  className="inline-flex min-h-9 flex-none cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-semibold text-foreground hover:border-primary"
                   title="Limpar toda a conversa"
                 >
                   <AdminIcon name="trash" className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Limpar conversa</span>
-                  <span className="sm:hidden">Limpar</span>
+                  <span className="hidden lg:inline">Limpar conversa</span>
                 </button>
               </header>
               {clearing && (
@@ -954,7 +1285,7 @@ export function Messenger({
 
               <div
                 ref={listRef}
-                className="min-h-0 flex-1 overflow-y-auto px-4 py-3"
+                className="min-h-0 flex-1 overflow-y-auto px-3 py-3 md:px-6"
               >
                 {shown.length === 0 && (
                   <p className="py-6 text-center text-xs text-muted-foreground">
@@ -969,65 +1300,46 @@ export function Messenger({
                   return (
                     <div key={message.id}>
                       {showDay && (
-                        <p className="my-2 text-center text-xs font-semibold text-muted-foreground">
-                          {day}
+                        <p className="my-3 text-center">
+                          <span className="rounded-full bg-card px-3 py-1 text-xs font-medium text-muted-foreground shadow-xs">
+                            {day}
+                          </span>
                         </p>
                       )}
                       {message.kind === "chamar" ? (
-                        <p className="my-2 text-center text-xs font-semibold italic text-msg-busy">
-                          *** {mine ? "Você" : message.senderName} chamou a
-                          atenção{mine ? "" : " de você"}! ***
+                        <p className="my-2 text-center text-xs font-semibold text-msg-busy italic">
+                          🔔 {mine ? "Você" : message.senderName} chamou a
+                          atenção{mine ? "" : " de você"}!
                         </p>
                       ) : (
                         <div
-                          className={`group my-1.5 rounded-lg px-3 py-1.5 ${mine ? "bg-msg-mine" : ""}`}
+                          className={cn(
+                            "group relative my-1 flex",
+                            mine ? "justify-end" : "justify-start",
+                            message.reactions.length > 0 && "mb-4",
+                          )}
                         >
-                          <div className="flex flex-wrap items-start gap-x-2">
-                            <p className="min-w-0 flex-1 text-xs">
-                              <span
-                                className={`font-semibold ${mine ? "text-foreground" : "text-msg-azul-from"}`}
-                              >
-                                {mine ? "Você" : message.senderName} diz:
-                              </span>{" "}
-                              <span className="text-muted-foreground">
-                                ({formatTime(message.createdAt)})
-                              </span>
-                            </p>
-                            {mine &&
-                              !message.deleted &&
-                              editing?.id !== message.id && (
-                                <span className="flex gap-1 opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100">
-                                  {message.kind === "texto" && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setDeleting(null);
-                                        setEditing({
-                                          id: message.id,
-                                          body: message.body ?? "",
-                                        });
-                                      }}
-                                      className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-semibold text-foreground hover:border-primary"
-                                    >
-                                      Editar
-                                    </button>
-                                  )}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditing(null);
-                                      setDeleting(message.id);
-                                    }}
-                                    className="rounded-full border border-border bg-card px-2 py-0.5 text-xs font-semibold text-destructive hover:border-destructive/40"
-                                  >
-                                    Apagar
-                                  </button>
-                                </span>
-                              )}
-                          </div>
-                          <div className="pl-3">
+                          <div
+                            className={cn(
+                              "relative max-w-[min(78%,560px)] rounded-xl px-3 pt-1.5 pb-1 shadow-xs",
+                              mine
+                                ? "rounded-br-sm bg-msg-mine"
+                                : "rounded-bl-sm bg-card",
+                              message.pending && "opacity-80",
+                            )}
+                          >
+                            {message.replyTo && (
+                              <div className="mb-1 rounded-md border-l-4 border-primary bg-foreground/5 px-2 py-1 text-xs">
+                                <p className="font-semibold text-primary">
+                                  {message.replyTo.senderName}
+                                </p>
+                                <p className="truncate text-muted-foreground">
+                                  {message.replyTo.preview}
+                                </p>
+                              </div>
+                            )}
                             {editing?.id === message.id ? (
-                              <div className="mt-1">
+                              <div className="mt-1 min-w-60">
                                 <textarea
                                   aria-label="Editar mensagem"
                                   value={editing.body}
@@ -1076,86 +1388,280 @@ export function Messenger({
                             ) : (
                               <MessageBody message={message} />
                             )}
-                            {deleting === message.id && (
-                              <div className="mt-1.5 rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs text-warning-text">
-                                <p className="font-semibold">
-                                  Apagar esta mensagem para os dois?
-                                </p>
-                                <p className="mt-0.5">
-                                  Ela some da conversa para você e para{" "}
-                                  {partner.name}.
-                                </p>
-                                <div className="mt-1.5 flex gap-2">
+                            <p className="mt-0.5 flex items-center justify-end text-xs text-muted-foreground">
+                              {formatTime(message.createdAt)}
+                              {mine && (
+                                <Ticks receipt={receiptOf(message, receipts)} />
+                              )}
+                            </p>
+                            {message.reactions.length > 0 && (
+                              <div
+                                className={cn(
+                                  "absolute -bottom-3.5 flex gap-0.5",
+                                  mine ? "right-2" : "left-2",
+                                )}
+                              >
+                                {message.reactions.map((r) => (
                                   <button
+                                    key={r.emoji}
                                     type="button"
-                                    disabled={busy}
-                                    onClick={() => void remove(message.id)}
-                                    className={buttonVariants({
-                                      variant: "destructive-solid",
-                                      size: "sm",
-                                    })}
+                                    title={r.names.join(", ")}
+                                    onClick={() => void react(message, r.emoji)}
+                                    className={cn(
+                                      "flex cursor-pointer items-center gap-0.5 rounded-full border bg-card px-1.5 text-xs leading-5 shadow-xs",
+                                      r.mine
+                                        ? "border-primary"
+                                        : "border-border",
+                                    )}
                                   >
-                                    {busy ? "Apagando..." : "Sim, apagar"}
+                                    {r.emoji}
+                                    {r.count > 1 && (
+                                      <span className="text-muted-foreground tabular-nums">
+                                        {r.count}
+                                      </span>
+                                    )}
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDeleting(null)}
-                                    className={buttonVariants({
-                                      variant: "outline",
-                                      size: "sm",
-                                    })}
-                                  >
-                                    Cancelar
-                                  </button>
-                                </div>
+                                ))}
                               </div>
                             )}
+                          </div>
+                          {/* Answer, react, and the author's edit and delete:
+                              on hover, or always on a touch screen. */}
+                          {!message.pending &&
+                            !message.deleted &&
+                            editing?.id !== message.id && (
+                              <div
+                                className={cn(
+                                  "flex flex-none items-center gap-0.5 self-center px-1 opacity-100 md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100",
+                                  mine ? "order-first" : "",
+                                  reactingTo === message.id && "md:opacity-100",
+                                )}
+                              >
+                                <button
+                                  type="button"
+                                  data-reactions
+                                  onClick={() =>
+                                    setReactingTo((v) =>
+                                      v === message.id ? null : message.id,
+                                    )
+                                  }
+                                  aria-label="Reagir"
+                                  title="Reagir"
+                                  className="flex size-7 cursor-pointer items-center justify-center rounded-full text-sm hover:bg-card"
+                                >
+                                  🙂
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReplyTo(message);
+                                    inputRef.current?.focus();
+                                  }}
+                                  aria-label="Responder"
+                                  title="Responder"
+                                  className="flex size-7 cursor-pointer items-center justify-center rounded-full text-sm text-muted-foreground hover:bg-card"
+                                >
+                                  ↩
+                                </button>
+                                {mine && message.kind === "texto" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeleting(null);
+                                      setEditing({
+                                        id: message.id,
+                                        body: message.body ?? "",
+                                      });
+                                    }}
+                                    aria-label="Editar"
+                                    title="Editar"
+                                    className="flex size-7 cursor-pointer items-center justify-center rounded-full text-xs text-muted-foreground hover:bg-card"
+                                  >
+                                    ✎
+                                  </button>
+                                )}
+                                {mine && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditing(null);
+                                      setDeleting(message.id);
+                                    }}
+                                    aria-label="Apagar"
+                                    title="Apagar"
+                                    className="flex size-7 cursor-pointer items-center justify-center rounded-full text-destructive hover:bg-card"
+                                  >
+                                    <AdminIcon
+                                      name="trash"
+                                      className="size-3.5"
+                                    />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          {reactingTo === message.id && (
+                            <div
+                              data-reactions
+                              className={cn(
+                                "absolute -top-11 z-20 flex items-center gap-0.5 rounded-full border border-border bg-card px-1.5 py-1 shadow-lg",
+                                mine ? "right-0" : "left-0",
+                              )}
+                            >
+                              {QUICK_REACTIONS.map((emoji) => (
+                                <button
+                                  key={emoji}
+                                  type="button"
+                                  onClick={() => void react(message, emoji)}
+                                  className={cn(
+                                    "flex size-8 cursor-pointer items-center justify-center rounded-full text-xl transition-transform hover:scale-125",
+                                    message.reactions.some(
+                                      (r) => r.mine && r.emoji === emoji,
+                                    ) && "bg-primary-soft",
+                                  )}
+                                >
+                                  {emoji}
+                                </button>
+                              ))}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReactingTo(null);
+                                  setFullPickerFor(message.id);
+                                }}
+                                aria-label="Mais emojis"
+                                title="Mais emojis"
+                                className="flex size-8 cursor-pointer items-center justify-center rounded-full bg-muted text-lg text-muted-foreground"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                          {fullPickerFor === message.id && (
+                            <EmojiPicker
+                              className={cn(
+                                "absolute top-full mt-1",
+                                mine ? "right-0" : "left-0",
+                              )}
+                              onPick={(emoji) => void react(message, emoji)}
+                              onClose={() => setFullPickerFor(null)}
+                            />
+                          )}
+                        </div>
+                      )}
+                      {deleting === message.id && (
+                        <div className="my-1.5 ml-auto max-w-sm rounded-lg border border-warning/30 bg-warning-soft px-2.5 py-2 text-xs text-warning-text">
+                          <p className="font-semibold">
+                            Apagar esta mensagem para os dois?
+                          </p>
+                          <p className="mt-0.5">
+                            Ela some da conversa para você e para {partner.name}
+                            .
+                          </p>
+                          <div className="mt-1.5 flex gap-2">
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void remove(message.id)}
+                              className={buttonVariants({
+                                variant: "destructive-solid",
+                                size: "sm",
+                              })}
+                            >
+                              {busy ? "Apagando..." : "Sim, apagar"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleting(null)}
+                              className={buttonVariants({
+                                variant: "outline",
+                                size: "sm",
+                              })}
+                            >
+                              Cancelar
+                            </button>
                           </div>
                         </div>
                       )}
                     </div>
                   );
                 })}
+                {partnerTyping && <TypingDots name={partner.name} />}
               </div>
 
-              <div className="border-t border-border bg-msg-pane px-3 py-2">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div className="border-t border-border bg-card px-3 py-2">
+                {replyTo && (
+                  <div className="mb-2 flex items-start gap-2 rounded-md border-l-4 border-primary bg-msg-pane px-2.5 py-1.5 text-xs">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-primary">
+                        Respondendo a{" "}
+                        {replyTo.senderId === me.userId
+                          ? "você mesmo"
+                          : replyTo.senderName}
+                      </p>
+                      <p className="truncate text-muted-foreground">
+                        {replyTo.body ?? replyTo.fileName ?? ""}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyTo(null)}
+                      aria-label="Cancelar a resposta"
+                      className="cursor-pointer rounded-md px-1.5 text-base leading-none text-muted-foreground hover:bg-card"
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {QUICK_REPLIES.map((reply) => (
+                    <button
+                      key={reply}
+                      type="button"
+                      onClick={() => insert(text.trim() ? ` ${reply}` : reply)}
+                      className="cursor-pointer rounded-full border border-border bg-msg-pane px-2.5 py-0.5 text-xs text-foreground hover:border-primary"
+                    >
+                      {reply}
+                    </button>
+                  ))}
+                </div>
+                {recorder.mic === "denied" && (
+                  <MicHelp onRetry={() => void recorder.allow()} />
+                )}
+                {recorder.mic === "unsupported" && (
+                  <p className="mb-1 text-xs text-muted-foreground">
+                    Este navegador não grava áudio. Use o Chrome, o Edge ou o
+                    Safari atualizado.
+                  </p>
+                )}
+                <div className="flex items-end gap-1.5">
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setEmojis((v) => !v)}
-                      aria-expanded={emojis}
-                      className="rounded-md px-2 py-1 text-base hover:bg-card"
-                      title="Emoticons"
+                      onClick={() => setEmojiOpen((v) => !v)}
+                      aria-expanded={emojiOpen}
+                      aria-label="Emojis"
+                      title="Emojis"
+                      className="flex size-10 cursor-pointer items-center justify-center rounded-full text-xl hover:bg-muted"
                     >
-                      😊
+                      🙂
                     </button>
-                    {emojis && (
-                      <div className="absolute bottom-full left-0 z-10 mb-1 grid w-[200px] grid-cols-6 gap-1 rounded-lg border border-border bg-card p-2 shadow-lg">
-                        {EMOJIS.map((emoji) => (
-                          <button
-                            key={emoji}
-                            type="button"
-                            onClick={() => {
-                              setText((t) => t + emoji);
-                              setEmojis(false);
-                            }}
-                            className="rounded-md p-1 text-lg hover:bg-muted"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
+                    {emojiOpen && (
+                      <EmojiPicker
+                        className="absolute bottom-full left-0 mb-2"
+                        onPick={(emoji) => insert(emoji)}
+                        onClose={() => setEmojiOpen(false)}
+                      />
                     )}
                   </div>
                   <label
-                    className="cursor-pointer rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-card"
+                    className="flex size-10 cursor-pointer items-center justify-center rounded-full text-lg hover:bg-muted"
                     title="Enviar arquivo ou PDF (até 4 MB)"
                   >
-                    📎 Arquivo
+                    📎
                     <input
                       type="file"
                       className="sr-only"
+                      aria-label="Enviar arquivo"
                       disabled={busy}
                       onChange={(event) => {
                         const file = event.target.files?.[0];
@@ -1164,72 +1670,79 @@ export function Messenger({
                       }}
                     />
                   </label>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() =>
-                      recorder.recording
-                        ? recorder.stop()
-                        : void recorder.start()
-                    }
-                    className={`rounded-md px-2 py-1 text-xs font-semibold ${recorder.recording ? "animate-pulse bg-msg-busy text-white" : "text-primary hover:bg-card"}`}
-                  >
-                    {recorder.recording ? "⏹ Parar e enviar" : "🎤 Áudio"}
-                  </button>
-                  {(recorder.mic === "prompt" || recorder.mic === "unknown") &&
-                    !recorder.recording && (
-                      <button
-                        type="button"
-                        onClick={() => void recorder.allow()}
-                        className="rounded-md px-2 py-1 text-xs font-semibold text-muted-foreground underline hover:bg-card"
-                        title="O navegador pergunta uma vez se este site pode usar o microfone"
-                      >
-                        Liberar microfone
-                      </button>
-                    )}
-                  <button
-                    type="button"
-                    onClick={() => void nudge()}
-                    className="rounded-md px-2 py-1 text-xs font-semibold text-msg-busy hover:bg-card"
-                    title="Faz a janela da outra pessoa tremer, com som"
-                  >
-                    🔔 Chamar atenção
-                  </button>
-                </div>
-                {recorder.mic === "denied" && (
-                  <MicHelp onRetry={() => void recorder.allow()} />
-                )}
-                {recorder.mic === "unsupported" && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Este navegador não grava áudio. Use o Chrome, o Edge ou o
-                    Safari atualizado.
-                  </p>
-                )}
-                <div className="mt-1.5 flex items-end gap-2">
                   <textarea
+                    ref={inputRef}
                     value={text}
-                    onChange={(event) => setText(event.target.value)}
+                    onChange={(event) => {
+                      setText(event.target.value);
+                      if (event.target.value.trim()) pingTyping(active.id);
+                      else stopTyping();
+                    }}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" && !event.shiftKey) {
                         event.preventDefault();
                         void send();
                       }
+                      if (event.key === "Escape") setReplyTo(null);
                     }}
-                    rows={2}
+                    rows={1}
                     maxLength={LONG_TEXT_MAX}
                     aria-label="Mensagem"
-                    placeholder="Escreva e tecle Enter para enviar"
-                    className="min-w-0 flex-1 resize-none rounded-md border border-input bg-card px-3 py-2 text-sm text-foreground shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    placeholder="Escreva uma mensagem (Enter envia, Shift+Enter pula linha)"
+                    className="field-sizing-content max-h-36 min-h-10 min-w-0 flex-1 resize-none rounded-xl border border-input bg-msg-pane px-3.5 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                   />
-                  <button
-                    type="button"
-                    onClick={() => void send()}
-                    disabled={busy || !text.trim()}
-                    className={cn(buttonVariants(), "shrink-0")}
-                  >
-                    Enviar
-                  </button>
+                  {text.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => void send()}
+                      className={cn(
+                        buttonVariants(),
+                        "h-10 shrink-0 rounded-full",
+                      )}
+                    >
+                      Enviar
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() =>
+                        recorder.recording
+                          ? recorder.stop()
+                          : void recorder.start()
+                      }
+                      aria-label={
+                        recorder.recording
+                          ? "Parar e enviar o áudio"
+                          : "Gravar áudio"
+                      }
+                      title={
+                        recorder.recording
+                          ? "Parar e enviar o áudio"
+                          : "Gravar áudio"
+                      }
+                      className={cn(
+                        "flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1 rounded-full px-3 text-sm font-semibold",
+                        recorder.recording
+                          ? "animate-pulse bg-msg-busy text-white"
+                          : "bg-primary text-primary-foreground",
+                      )}
+                    >
+                      {recorder.recording ? "⏹ Parar e enviar" : "🎤"}
+                    </button>
+                  )}
                 </div>
+                {(recorder.mic === "prompt" || recorder.mic === "unknown") &&
+                  !recorder.recording && (
+                    <button
+                      type="button"
+                      onClick={() => void recorder.allow()}
+                      className="mt-1 text-xs font-medium text-muted-foreground underline hover:text-foreground"
+                      title="O navegador pergunta uma vez se este site pode usar o microfone"
+                    >
+                      Liberar microfone para áudio
+                    </button>
+                  )}
               </div>
             </>
           ) : (

@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { DEFAULT_SOUND_PREFS } from "@/core/messages/live.ts";
 import { db } from "@/db/index.ts";
 import { getProfileWith, listContactsWith } from "@/lib/messages.ts";
 import { getSession } from "@/lib/session.ts";
@@ -58,6 +59,7 @@ export default async function MessagesPage({
             personalMessage: profile?.personalMessage ?? "",
             color: profile?.color ?? "verde",
             sound: profile?.sound ?? true,
+            soundPrefs: profile?.soundPrefs ?? DEFAULT_SOUND_PREFS,
             lunch: profile?.lunch ?? null,
             lunchPending: profile?.lunchPending ?? null,
             atLunch: profile?.atLunch ?? false,
@@ -65,6 +67,7 @@ export default async function MessagesPage({
           initialContacts={contacts.map((c) => ({
             ...c,
             lastMessageAt: c.lastMessageAt?.toISOString() ?? null,
+            last: c.last ? { ...c.last, at: c.last.at.toISOString() } : null,
           }))}
           initialConversation={
             chosen?.conversationId

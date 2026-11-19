@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { DEFAULT_SOUND_PREFS } from "@/core/messages/live.ts";
 import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   clearConversationWith,
+  conversationReceiptsWith,
   decideLunchWith,
   deleteMessageWith,
   editMessageWith,
@@ -17,15 +19,20 @@ import {
   listMessagesWith,
   listTeamWith,
   MessageError,
+  markReadWith,
+  messengerSignalWith,
   onlineNowWith,
   openDirectWith,
+  reactWith,
   requestLunchWith,
   returnFromLunchWith,
   sendMessageWith,
   setChatDisabledWith,
   setStatusByHolderWith,
+  setTypingWith,
   touchPresenceWith,
   updateProfileWith,
+  updateSoundPrefsWith,
 } from "./messages.ts";
 
 let db: Database;
@@ -495,4 +502,220 @@ test("quem está online agora: para o aviso 'acabou de entrar'", async () => {
   await setChatDisabledWith(db, OFFICE, "escrevente", true, "titular");
   assert.deepEqual(await onlineNowWith(db, OFFICE, "titular", now), []);
   await setChatDisabledWith(db, OFFICE, "escrevente", false, "titular");
+});
+
+test("responder cita a mensagem; só da mesma conversa", async () => {
+  const conversation = await openDirectWith(db, OFFICE, "titular", "auxiliar");
+  const asked = await sendMessageWith(db, OFFICE, conversation, "titular", {
+    kind: "texto",
+    body: "Pode conferir o REQ.2026.000418?",
+  });
+  await sendMessageWith(db, OFFICE, conversation, "auxiliar", {
+    kind: "texto",
+    body: "Conferido, pode emitir.",
+    replyToId: asked,
+  });
+  const list = await listMessagesWith(db, OFFICE, conversation, {
+    id: "auxiliar",
+    oversight: false,
+  });
+  const answer = list?.find((m) => m.body === "Conferido, pode emitir.");
+  assert.deepEqual(answer?.replyTo, {
+    id: asked,
+    senderName: "Maria Exemplo da Silva",
+    preview: "Pode conferir o REQ.2026.000418?",
+  });
+  const other = await openDirectWith(db, OFFICE, "escrevente", "auxiliar");
+  await assert.rejects(
+    sendMessageWith(db, OFFICE, other, "auxiliar", {
+      kind: "texto",
+      body: "Citando de outra conversa",
+      replyToId: asked,
+    }),
+    MessageError,
+  );
+});
+
+test("reação: uma por pessoa, troca, desfaz sem apagar, só emoji da lista", async () => {
+  const conversation = await openDirectWith(
+    db,
+    OFFICE,
+    "titular",
+    "escrevente",
+  );
+  const id = await sendMessageWith(db, OFFICE, conversation, "titular", {
+    kind: "texto",
+    body: "Bom dia, equipe!",
+  });
+  const chips = async () =>
+    (
+      await listMessagesWith(db, OFFICE, conversation, {
+        id: "titular",
+        oversight: false,
+      })
+    )?.find((m) => m.id === id)?.reactions;
+
+  await reactWith(db, OFFICE, id, "escrevente", "👍");
+  await reactWith(db, OFFICE, id, "titular", "👍");
+  assert.deepEqual(await chips(), [
+    {
+      emoji: "👍",
+      count: 2,
+      mine: true,
+      names: ["João Fictício de Souza", "Você"],
+    },
+  ]);
+  // Another emoji replaces the first; the same one again takes it back.
+  await reactWith(db, OFFICE, id, "escrevente", "😂");
+  await reactWith(db, OFFICE, id, "titular", "👍");
+  assert.deepEqual(await chips(), [
+    { emoji: "😂", count: 1, mine: false, names: ["João Fictício de Souza"] },
+  ]);
+  await assert.rejects(
+    reactWith(db, OFFICE, id, "escrevente", "texto livre"),
+    MessageError,
+  );
+  // Someone outside the conversation cannot react.
+  await assert.rejects(
+    reactWith(db, OFFICE, id, "auxiliar", "👍"),
+    MessageError,
+  );
+});
+
+test("o sinal muda com mensagem e reação, mostra quem digita e não oscila com a leitura", async () => {
+  const conversation = await openDirectWith(
+    db,
+    OFFICE,
+    "escrevente",
+    "titular",
+  );
+  const t0 = new Date("2026-11-19T15:00:00Z");
+  const first = await messengerSignalWith(db, "titular", t0);
+
+  const id = await sendMessageWith(
+    db,
+    OFFICE,
+    conversation,
+    "escrevente",
+    { kind: "texto", body: "Chegou um pedido no balcão." },
+    new Date("2026-11-19T15:00:01Z"),
+  );
+  const afterMessage = await messengerSignalWith(db, "titular", t0);
+  assert.notEqual(afterMessage.version, first.version);
+
+  // Reading the new message moves the version once; reading again with
+  // nothing new does not, so two open screens never wake each other.
+  await markReadWith(
+    db,
+    conversation,
+    "titular",
+    new Date("2026-11-19T15:00:02Z"),
+  );
+  const forEscrevente = await messengerSignalWith(db, "escrevente", t0);
+  await markReadWith(
+    db,
+    conversation,
+    "titular",
+    new Date("2026-11-19T15:00:03Z"),
+  );
+  assert.equal(
+    (await messengerSignalWith(db, "escrevente", t0)).version,
+    forEscrevente.version,
+  );
+  assert.deepEqual(
+    await conversationReceiptsWith(db, conversation, "escrevente"),
+    { readAt: new Date("2026-11-19T15:00:02Z"), seenAt: null },
+  );
+
+  await reactWith(
+    db,
+    OFFICE,
+    id,
+    "titular",
+    "🙏",
+    new Date("2026-11-19T15:00:04Z"),
+  );
+  assert.notEqual(
+    (await messengerSignalWith(db, "escrevente", t0)).version,
+    forEscrevente.version,
+  );
+
+  // Digitando: shown while fresh, gone after the time, gone when sent.
+  const typingAt = new Date("2026-11-19T15:01:00Z");
+  await setTypingWith(db, OFFICE, "escrevente", conversation, typingAt);
+  assert.deepEqual(
+    (await messengerSignalWith(db, "titular", new Date("2026-11-19T15:01:02Z")))
+      .typing,
+    [{ userId: "escrevente", conversationId: conversation }],
+  );
+  assert.deepEqual(
+    (await messengerSignalWith(db, "titular", new Date("2026-11-19T15:01:30Z")))
+      .typing,
+    [],
+  );
+  // Not to oneself, and not into a conversation one is not in.
+  assert.deepEqual(
+    (
+      await messengerSignalWith(
+        db,
+        "escrevente",
+        new Date("2026-11-19T15:01:02Z"),
+      )
+    ).typing,
+    [],
+  );
+  const notMine = await openDirectWith(db, OFFICE, "titular", "auxiliar");
+  await setTypingWith(db, OFFICE, "escrevente", notMine, typingAt);
+  assert.deepEqual(
+    (
+      await messengerSignalWith(
+        db,
+        "auxiliar",
+        new Date("2026-11-19T15:01:02Z"),
+      )
+    ).typing,
+    [],
+  );
+});
+
+test("a lista mostra a última mensagem de cada conversa", async () => {
+  const conversation = await openDirectWith(
+    db,
+    OFFICE,
+    "auxiliar",
+    "escrevente",
+  );
+  await sendMessageWith(db, OFFICE, conversation, "auxiliar", {
+    kind: "texto",
+    body: "Vou almoçar e já volto.",
+  });
+  const forEscrevente = await listContactsWith(db, OFFICE, "escrevente");
+  const auxiliar = forEscrevente.find((c) => c.userId === "auxiliar");
+  assert.equal(auxiliar?.last?.preview, "Vou almoçar e já volto.");
+  assert.equal(auxiliar?.last?.mine, false);
+  const forAuxiliar = await listContactsWith(db, OFFICE, "auxiliar");
+  assert.equal(
+    forAuxiliar.find((c) => c.userId === "escrevente")?.last?.mine,
+    true,
+  );
+});
+
+test("os sons de cada pessoa ficam salvos", async () => {
+  await updateSoundPrefsWith(db, OFFICE, "auxiliar", {
+    ...DEFAULT_SOUND_PREFS,
+    messageSound: "marimba",
+    nudgeSound: "sino-balcao",
+    volume: 40,
+    inChat: false,
+    quietUntil: "2026-11-19T16:00:00.000Z",
+  });
+  const profile = await getProfileWith(db, OFFICE, "auxiliar");
+  assert.deepEqual(profile?.soundPrefs, {
+    ...DEFAULT_SOUND_PREFS,
+    messageSound: "marimba",
+    nudgeSound: "sino-balcao",
+    volume: 40,
+    inChat: false,
+    quietUntil: "2026-11-19T16:00:00.000Z",
+  });
 });

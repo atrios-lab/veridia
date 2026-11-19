@@ -39,6 +39,7 @@ import {
   messengerMembers,
   messengerMessages,
   messengerProfiles,
+  messengerReactions,
   officeNews,
   officeNewsFiles,
   officePublications,
@@ -198,6 +199,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     reason: "notícias do cartório, fechadas aos participantes",
   },
   { table: officeNewsFiles, reason: "arquivos das notícias do cartório" },
+  {
+    table: messengerReactions,
+    reason:
+      "reações das mensagens internas: sem as mensagens, nunca mais aparecem",
+  },
   {
     table: serviceRequestPickups,
     reason:
