@@ -28,8 +28,10 @@
   --color-background: #ffffff;
   /* The page behind the cards: navy at 4% over white, half the sidebar's
      tint, so a white card stands out without a heavy shadow (decision of
-     12/11/2026). Cards, tables, fields and the top bar stay white. */
-  --color-surface: #f6f6f9;
+     12/11/2026), deepened to 6% so the white cards stand out more
+     (decision of 19/11/2026). Cards, tables, fields and the top bar stay
+     white. */
+  --color-surface: #f1f2f8;
   --color-foreground: #0a0a0a;
   --color-card: #ffffff;
   --color-card-foreground: #0a0a0a;
@@ -68,6 +70,17 @@
   --color-holder: #7a5418;
   --color-holder-foreground: #ffffff;
   --color-holder-soft: #f7f1e6;
+  /* The tones that tell the Visão geral's cards apart, each with its soft
+     fill (decision of 19/11/2026): navy for the desk, indigo for the open
+     requests, teal for the agenda, violet for publications. Red, amber and
+     green keep their meanings (deadline, payment, done). */
+  --color-primary-soft: #e6e8f5;
+  --color-info: #3b46a8;
+  --color-info-soft: #e8eafb;
+  --color-teal: #0e7490;
+  --color-teal-soft: #e0f4f8;
+  --color-violet: #6d3fb0;
+  --color-violet-soft: #f1eafb;
   --color-border: #e5e5e5;
   /* The border that identifies a field, a checkbox or a select. #e5e5e5
      would be 1.26:1 against white; WCAG 1.4.11 asks 3:1 for the edge that
@@ -155,6 +168,13 @@
   --palette-dark-holder: #d9a85c;
   --palette-dark-holder-foreground: #0c0f1c;
   --palette-dark-holder-soft: #2e2414;
+  --palette-dark-primary-soft: #1e2450;
+  --palette-dark-info: #a5b0ff;
+  --palette-dark-info-soft: #1c2140;
+  --palette-dark-teal: #5fd3e6;
+  --palette-dark-teal-soft: #0f2a31;
+  --palette-dark-violet: #c4a6f5;
+  --palette-dark-violet-soft: #2a1d40;
   --palette-dark-border: #2a3150;
   --palette-dark-input: #666e8c;
   --palette-dark-ring: #8f9af2;
@@ -198,6 +218,13 @@
   --color-success: var(--palette-dark-success);
   --color-success-foreground: var(--palette-dark-success-foreground);
   --color-success-text: var(--palette-dark-success-text);
+  --color-primary-soft: var(--palette-dark-primary-soft);
+  --color-info: var(--palette-dark-info);
+  --color-info-soft: var(--palette-dark-info-soft);
+  --color-teal: var(--palette-dark-teal);
+  --color-teal-soft: var(--palette-dark-teal-soft);
+  --color-violet: var(--palette-dark-violet);
+  --color-violet-soft: var(--palette-dark-violet-soft);
   --color-success-soft: var(--palette-dark-success-soft);
   --color-destructive-soft: var(--palette-dark-destructive-soft);
   --color-holder: var(--palette-dark-holder);

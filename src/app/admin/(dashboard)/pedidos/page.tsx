@@ -38,6 +38,7 @@ import {
   pageSlice,
   QUEUE_TABS,
   type QueueTabId,
+  queueHref,
   queueSearchParams,
   queueTab,
 } from "./_components/queue-order.ts";
@@ -50,6 +51,19 @@ export const metadata = { title: "Pedidos de serviço" };
 
 function shortDate(date: Date): string {
   return formatDate(toIsoDate(date, OFFICE_TIME_ZONE)).slice(0, 5);
+}
+
+/** Recebido if it has requests, else the first open stage that does. */
+function firstStageWithRequests(
+  counts: Record<QueueTabId, number>,
+): QueueTabId | undefined {
+  if ((counts.new ?? 0) > 0) return "new";
+  return QUEUE_TABS.find(
+    (t) =>
+      t.id !== CLOSED_TAB &&
+      t.id !== "awaiting-signed-form" &&
+      (counts[t.id] ?? 0) > 0,
+  )?.id;
 }
 
 export default async function ServiceRequestQueuePage({
@@ -76,11 +90,7 @@ export default async function ServiceRequestQueuePage({
   // Files 30 days past the closing leave storage as the queue opens (see
   // purgeExpiredRequestFiles): before the list is read, for every kind.
   await purgeExpiredRequestFiles(tenant.slug, todayIso);
-  const query = queueSearchParams(await searchParams, tenant.attributions);
-  const tab = queueTab(query.tab);
-  const closed = query.tab === CLOSED_TAB;
-  const hasFilters = Boolean(query.attribution || query.search);
-
+  const raw = await searchParams;
   const byStatus = await countByStatus(tenant.slug);
   const counts = Object.fromEntries(
     QUEUE_TABS.map((t) => [
@@ -88,6 +98,25 @@ export default async function ServiceRequestQueuePage({
       t.statuses.reduce((sum, status) => sum + (byStatus[status] ?? 0), 0),
     ]),
   ) as Record<QueueTabId, number>;
+  // Opened with no stage chosen, the queue starts on Recebido when it has
+  // something, else on the first stage that does (decision of 19/11/2026):
+  // an empty table is not where the day starts.
+  const query = queueSearchParams(
+    { ...raw, aba: raw.aba ?? firstStageWithRequests(counts) },
+    tenant.attributions,
+  );
+  const tab = queueTab(query.tab);
+  const closed = query.tab === CLOSED_TAB;
+  const hasFilters = Boolean(query.attribution || query.search);
+  // Where the open requests are, for the empty stage to point at.
+  const elsewhere = QUEUE_TABS.filter(
+    (t) => t.id !== CLOSED_TAB && t.id !== query.tab && (counts[t.id] ?? 0) > 0,
+  ).map((t) => ({
+    label: t.label,
+    count: counts[t.id] ?? 0,
+    tone: t.tone,
+    href: queueHref({ ...query, page: 1 }, { tab: t.id }),
+  }));
 
   const filters = {
     statuses: tab.statuses,
@@ -189,6 +218,7 @@ export default async function ServiceRequestQueuePage({
             today={todayIso}
             holidays={officeHolidays(tenant)}
             hasFilters={hasFilters}
+            elsewhere={elsewhere}
           />
           <QueuePagination query={current} total={total} />
         </div>

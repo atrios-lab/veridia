@@ -11,6 +11,22 @@ export interface ActionShortcut {
   caption: string;
 }
 
+/** Each shortcut's own colour, by what it opens (decision of 19/11/2026). */
+const SHORTCUT_TONES: Record<string, { card: string; icon: string }> = {
+  "agenda-do-dia": {
+    card: "bg-gradient-to-r from-teal-soft to-card to-60%",
+    icon: "bg-teal-soft text-teal",
+  },
+  "nova-publicacao": {
+    card: "bg-gradient-to-r from-violet-soft to-card to-60%",
+    icon: "bg-violet-soft text-violet",
+  },
+};
+const DEFAULT_TONE = {
+  card: "bg-gradient-to-r from-info-soft to-card to-60%",
+  icon: "bg-info-soft text-info",
+};
+
 /**
  * The row of one-click shortcuts for the day's most repeated tasks. Only
  * ever built from functionality that already exists (see admin-overview
@@ -30,14 +46,19 @@ export function ActionShortcuts({
         <Link
           key={shortcut.key}
           href={shortcut.href}
-          className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3.5 shadow-xs transition-colors hover:bg-muted/50"
+          className={cn(
+            "flex items-center gap-3 rounded-xl border px-4 py-3.5 shadow-xs transition-[filter] hover:brightness-[0.97]",
+            index === 0
+              ? "bg-gradient-to-r from-primary-soft to-card to-60%"
+              : (SHORTCUT_TONES[shortcut.key] ?? DEFAULT_TONE).card,
+          )}
         >
           <span
             className={cn(
               "flex h-9 w-9 flex-none items-center justify-center rounded-lg",
               index === 0
                 ? "bg-primary text-primary-foreground"
-                : "bg-muted text-foreground",
+                : (SHORTCUT_TONES[shortcut.key] ?? DEFAULT_TONE).icon,
             )}
           >
             <AdminIcon

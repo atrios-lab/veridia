@@ -58,6 +58,11 @@ const TEXT: [foreground: string, backgrounds: string[]][] = [
   ["holder-foreground", ["holder"]],
   ["sidebar-label", ["sidebar"]],
   ["sidebar-primary-foreground", ["sidebar-primary"]],
+  ["primary", ["primary-soft"]],
+  ["info", ["background", "info-soft"]],
+  ["teal", ["background", "teal-soft"]],
+  ["violet", ["background", "violet-soft"]],
+  ["foreground", ["primary-soft", "info-soft", "teal-soft", "violet-soft"]],
 ];
 
 for (const theme of THEMES) {
