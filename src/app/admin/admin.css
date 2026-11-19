@@ -302,6 +302,7 @@
   --animate-attention-pulse-light: attention-pulse-light 1.6s linear infinite;
   --animate-number-blink: number-blink 1.4s ease-in-out infinite;
   --animate-row-glow: row-glow 2s ease-in-out infinite;
+  --animate-dot-pulse: dot-pulse 1.6s linear infinite;
   --animate-signature-blink: signature-blink 1.2s ease-in-out infinite;
   --animate-notice-rise: notice-rise 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-chat-shake: chat-shake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97)
@@ -329,6 +330,19 @@
     100% {
       box-shadow: 0 0 0 8px
         color-mix(in srgb, var(--color-primary) 0%, transparent);
+    }
+  }
+
+  /* A ring around a small dot, in the dot's own colour: the dot sets
+     `color` and paints itself with `bg-current`, so one keyframe serves the
+     navy and the red states of "Sua mesa hoje". */
+  @keyframes dot-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 55%, transparent);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent);
     }
   }
 
