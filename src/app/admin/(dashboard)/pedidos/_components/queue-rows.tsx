@@ -24,6 +24,7 @@ import {
 } from "../actions.ts";
 import { DeadlineBadge } from "./deadline-badge.tsx";
 import { StatusBadge } from "./status-badge.tsx";
+import { type Tone, toneClass } from "./status-tone.ts";
 
 export interface QueueRow {
   id: string;
@@ -61,7 +62,15 @@ export function QueueRows({
   today,
   holidays,
   hasFilters,
+  elsewhere = [],
 }: {
+  /** The other stages with requests, offered when this one is empty. */
+  elsewhere?: readonly {
+    label: string;
+    count: number;
+    tone: Tone;
+    href: string;
+  }[];
   rows: readonly QueueRow[];
   /** The Finalizados tab: Situação instead of Prazo, and a quieter row. */
   closed: boolean;
@@ -251,8 +260,30 @@ export function QueueRows({
                 <p className="mt-1 text-sm whitespace-normal text-muted-foreground">
                   {hasFilters
                     ? "Nenhum protocolo nesta etapa com esses filtros."
-                    : "Nenhum pedido nesta etapa."}
+                    : elsewhere.length > 0
+                      ? `Os pedidos em aberto estão em:`
+                      : "Nenhum pedido nesta etapa."}
                 </p>
+                {!hasFilters && elsewhere.length > 0 && (
+                  <div className="mt-4 flex flex-wrap justify-center gap-2 whitespace-normal">
+                    {elsewhere.map((stage) => (
+                      <Link
+                        key={stage.href}
+                        href={stage.href}
+                        scroll={false}
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-semibold transition hover:brightness-[0.97]",
+                          toneClass(stage.tone),
+                        )}
+                      >
+                        <span className="text-lg leading-none tabular-nums">
+                          {stage.count}
+                        </span>
+                        {stage.label} →
+                      </Link>
+                    ))}
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           )}

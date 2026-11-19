@@ -8,6 +8,15 @@ import type { Tone } from "../pedidos/_components/status-tone.ts";
  * exigência, waiting on the citizen, being worked on, ready to hand over.
  * The same tones the queue's tabs use.
  */
+/** The bar on top of a stage with requests, in the tone's full colour. */
+const STRIPES: Record<Tone, string> = {
+  blocked: "bg-destructive",
+  waiting: "bg-warning",
+  working: "bg-success",
+  delivered: "bg-primary-foreground/60",
+  closed: "bg-muted-foreground/40",
+};
+
 const ACTIVE_STYLES: Record<Tone, string> = {
   blocked: "border-destructive/40 bg-destructive-soft text-destructive",
   waiting: "border-warning/30 bg-warning-soft text-warning-text",
@@ -34,10 +43,10 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
   }));
   const total = stages.reduce((sum, s) => sum + s.count, 0);
   return (
-    <section className="rounded-xl border bg-card p-6 shadow-xs">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+    <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b bg-gradient-to-r from-primary-soft to-card to-70% px-6 pt-5 pb-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="text-lg font-semibold text-primary">
             Pedidos em aberto por etapa
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -45,13 +54,13 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
           </p>
         </div>
         <p className="text-sm text-muted-foreground">
-          <strong className="text-2xl font-semibold text-foreground tabular-nums">
+          <strong className="text-2xl font-semibold text-primary tabular-nums">
             {total}
           </strong>{" "}
           {total === 1 ? "pedido em aberto" : "pedidos em aberto"}
         </p>
       </div>
-      <ol className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:grid-cols-7">
+      <ol className="grid grid-cols-2 gap-2.5 px-6 pt-4 pb-6 sm:grid-cols-4 xl:grid-cols-7">
         {stages.map((s, i) => {
           const active = s.count > 0;
           return (
@@ -59,13 +68,27 @@ export function PipelineCard({ counts }: { counts: Record<string, number> }) {
               <Link
                 href={`/admin/pedidos?aba=${s.id}`}
                 className={cn(
-                  "flex h-full flex-col gap-1 rounded-lg border px-3.5 py-3 transition hover:-translate-y-0.5 hover:shadow-sm",
+                  "relative flex h-full flex-col gap-1 overflow-hidden rounded-lg border px-3.5 pt-4 pb-3 transition hover:-translate-y-0.5 hover:shadow-sm",
                   active
                     ? `${ACTIVE_STYLES[s.tone]} motion-safe:animate-attention-pulse-light`
-                    : "border-border bg-card text-muted-foreground",
+                    : "border-border bg-gradient-to-b from-muted to-card text-muted-foreground",
                 )}
               >
-                <span className="text-xs font-medium opacity-80">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "absolute inset-x-0 top-0 h-1",
+                    active ? STRIPES[s.tone] : "bg-muted-foreground/30",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "w-fit rounded-full border px-2 py-0.5 text-xs font-medium",
+                    active && s.tone === "delivered"
+                      ? "border-primary-foreground/30 bg-primary-foreground/15"
+                      : "border-current/20 bg-card/70",
+                  )}
+                >
                   Etapa {i + 1}
                 </span>
                 <span

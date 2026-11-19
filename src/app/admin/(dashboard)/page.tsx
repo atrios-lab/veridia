@@ -262,22 +262,44 @@ export default async function AdminHome() {
         isOpenServiceRequestStatus(status) && status !== "awaiting-signed-form",
     )
     .reduce((sum, [, count]) => sum + count, 0);
+  // What the open requests are waiting on, in the card's own words: the
+  // stalled ones first, then the ones to be paid (decision of 19/11/2026).
+  const stalled = statusCounts["awaiting-compliance"] ?? 0;
+  const toPay =
+    (statusCounts["awaiting-payment"] ?? 0) +
+    (statusCounts["awaiting-guide-payment"] ?? 0);
+  const openSummary =
+    [
+      stalled > 0
+        ? `${stalled} ${stalled === 1 ? "parado" : "parados"} em exigência`
+        : "",
+      toPay > 0 ? `${toPay} a pagar` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || "em todas as etapas";
+  const nextAppointment =
+    rankedAgenda.find((a) => a.state === "next") ??
+    rankedAgenda.find((a) => a.state === "upcoming");
   const kpis: OverviewKpi[] = [
     {
       key: "mesa",
       label: "Na sua mesa",
       value: deskCount,
       caption: "aguardando o cartório",
+      okCaption: "nada esperando por você",
       href: "/admin/pedidos",
       icon: "inbox",
+      tone: "primary",
     },
     {
       key: "criticos",
       label: "Prazos críticos",
       value: criticalCount,
       caption: criticalCount > 0 ? "resolver primeiro" : "nenhum vencendo",
+      okCaption: "nenhum prazo vencendo",
       href: canChannels ? "/admin/lgpd" : "/admin/pedidos",
       icon: "alert",
+      tone: "destructive",
       alert: criticalCount > 0,
     },
     ...(canRequests
@@ -286,17 +308,20 @@ export default async function AdminHome() {
             key: "abertos",
             label: "Pedidos em aberto",
             value: openRequests,
-            caption: "em todas as etapas",
+            caption: openSummary,
             href: "/admin/pedidos",
             icon: "file" as const,
+            tone: "info" as const,
           },
           {
             key: "pagamentos",
             label: "Pagamentos a conferir",
             value: statusCounts["payment-reported"] ?? 0,
             caption: "comprovantes enviados",
+            okCaption: "nenhum comprovante novo",
             href: "/admin/pedidos?aba=payment-reported",
             icon: "checkCircle" as const,
+            tone: "success" as const,
           },
         ]
       : []),
@@ -306,9 +331,13 @@ export default async function AdminHome() {
             key: "agenda",
             label: "Atendimentos hoje",
             value: rankedAgenda.length,
-            caption: "na agenda do dia",
+            caption: nextAppointment
+              ? `próximo às ${nextAppointment.slotTime} · ${nextAppointment.citizenName}`
+              : "na agenda do dia",
+            okCaption: "nenhum atendimento hoje",
             href: "/admin/agenda",
             icon: "calendar" as const,
+            tone: "teal" as const,
           },
         ]
       : []),
