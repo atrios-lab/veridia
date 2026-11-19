@@ -23,6 +23,7 @@ import {
   PURPOSE_PLACEHOLDER,
   REQUESTER_QUALIFICATION_NOTICE,
 } from "@/core/acts/catalog.ts";
+import { GUIDE_MAX_FILES } from "@/core/guides/request.ts";
 import { MAX_ATTACHMENTS } from "@/core/request/attachment.ts";
 import { DEADLINE_CAVEAT } from "@/core/request/deadline.ts";
 import { CITIZEN_DOCUMENT_NAMES } from "@/core/request/delivery-name.ts";
@@ -669,7 +670,18 @@ export function RequestForm({
   // Validation gates the send; the untouched FormData (honeypot and
   // attachments included) still goes to the same server action.
   const onSubmit = handleSubmit((_data, event) => {
-    void send(event?.target as HTMLFormElement, "anexos");
+    const form = event?.target as HTMLFormElement;
+    // A guia's documents, by party, travel in their own field (decision of
+    // 19/11/2026), straight to the store like the rest.
+    void send(
+      form,
+      act.taxGuide
+        ? [
+            { field: "anexos", limit: MAX_ATTACHMENTS },
+            { field: "guiaAnexos", limit: GUIDE_MAX_FILES },
+          ]
+        : "anexos",
+    );
   });
 
   return (
@@ -888,8 +900,13 @@ export function RequestForm({
         )}
 
         {/* On a phone the checklist sits with the upload; on desktop it moves
-            to the sidebar, next to the act, the way the redesign draws it. */}
-        <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+            to the sidebar, next to the act, the way the redesign draws it.
+            A guia asks for its documents part by part above (decision of
+            19/11/2026), so this box would only contradict it. */}
+        <div
+          hidden={act.taxGuide}
+          className="rounded-2xl border border-brand-border bg-brand-card p-4"
+        >
           <div className={act.documents ? "md:hidden" : undefined}>
             <div className="text-[13px] font-bold text-brand-primary">
               Documentos para este ato

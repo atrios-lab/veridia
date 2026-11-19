@@ -1,3 +1,4 @@
+import { splitBold } from "@/core/text/rich.ts";
 import "server-only";
 import { AsyncLocalStorage } from "node:async_hooks";
 import PDFDocument from "pdfkit";
@@ -251,16 +252,30 @@ function drawSection(
   // ABNT (NBR 14724, decision of 11/11/2026): justified, 12 pt, 1.5 line
   // spacing and the first line indented 1.25 cm.
   for (const paragraph of section.paragraphs ?? []) {
-    pdf
-      .font("Times-Roman")
-      .fontSize(ABNT.fontSize)
-      .fillColor(NEUTRALS.text)
-      .text(paragraph, MARGIN, pdf.y, {
-        width: contentWidth(pdf),
-        align: "justify",
-        lineGap: ABNT.lineGap,
-        indent: ABNT.indent,
-      });
+    // Bold pieces (`**...**`, core/text/rich.ts) go in the same justified
+    // paragraph, one `continued` run each; a paragraph with none is a
+    // single plain run, as always.
+    const pieces = splitBold(paragraph);
+    pdf.fontSize(ABNT.fontSize).fillColor(NEUTRALS.text);
+    // PDFKit keeps the first run's layout for the runs that continue it;
+    // passing the width or indent again restarts the line (a known quirk),
+    // so only the first run carries them.
+    pieces.forEach((piece, index) => {
+      const continued = index < pieces.length - 1;
+      pdf.font(piece.bold ? "Times-Bold" : "Times-Roman");
+      if (index === 0) {
+        pdf.text(piece.text, MARGIN, pdf.y, {
+          width: contentWidth(pdf),
+          align: "justify",
+          lineGap: ABNT.lineGap,
+          indent: ABNT.indent,
+          continued,
+        });
+      } else {
+        pdf.text(piece.text, { continued });
+      }
+    });
+    pdf.font("Times-Roman");
     pdf.moveDown(0.4);
   }
 

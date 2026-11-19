@@ -211,6 +211,14 @@ function PartyCard({
                 />
                 <div className="md:col-span-3">
                   <Field
+                    label="Cônjuge (nome e CPF)"
+                    value={party.spouse ?? ""}
+                    onChange={(value) => set("spouse", value)}
+                    placeholder="Ex.: JOÃO EXEMPLO DE SOUZA, inscrito no CPF sob o nº 000.000.000-00"
+                  />
+                </div>
+                <div className="md:col-span-3">
+                  <Field
                     label="Registro do casamento"
                     value={party.marriageRecord}
                     onChange={(value) => set("marriageRecord", value)}
@@ -453,6 +461,62 @@ export function GuideForm({
             ))}
           </datalist>
         </Label>
+      </section>
+
+      {/* Who asked for it (decision of 19/11/2026): the paper names the
+          requerente apart, "Requerente/Adquirente" when it is one of them. */}
+      <section className="grid grid-cols-1 gap-3 rounded-xl border bg-card p-4 md:grid-cols-3">
+        <h2 className="text-base font-semibold text-foreground md:col-span-3">
+          Requerente
+        </h2>
+        <Select
+          label="Quem pede a guia"
+          value={guide.requester.role}
+          onChange={(role) =>
+            update({
+              requester: { ...guide.requester, role: role ?? "nao-informado" },
+            })
+          }
+          options={[
+            {
+              value: "adquirente",
+              label: `O(a) ${info.roles.adquirente.toLocaleLowerCase("pt-BR")}`,
+            },
+            {
+              value: "transmitente",
+              label: `O(a) ${info.roles.transmitente.toLocaleLowerCase("pt-BR")}`,
+            },
+            { value: "terceiro", label: "Outra pessoa, por mandato" },
+            { value: "nao-informado", label: "Não informar" },
+          ]}
+        />
+        {guide.requester.role === "terceiro" && (
+          <>
+            <Field
+              label="Nome do procurador"
+              value={guide.requester.name}
+              onChange={(name) =>
+                update({ requester: { ...guide.requester, name } })
+              }
+            />
+            <Field
+              label="CPF do procurador"
+              value={guide.requester.taxId}
+              onChange={(taxId) =>
+                update({ requester: { ...guide.requester, taxId } })
+              }
+            />
+            <div className="md:col-span-3">
+              <Field
+                label="Mandato (procuração: cartório, livro, folha e data)"
+                value={guide.requester.mandate}
+                onChange={(mandate) =>
+                  update({ requester: { ...guide.requester, mandate } })
+                }
+              />
+            </div>
+          </>
+        )}
       </section>
 
       {roles.map((role) => (

@@ -14,9 +14,75 @@ import {
   formatGuideNumber,
   formatRate,
   type Guide,
+  type GuideParty,
   type GuideSettings,
   taxOn,
 } from "./schema.ts";
+
+/** The qualification with the name in bold (decision of 19/11/2026). */
+const qualifyBold = (party: GuideParty) => qualify(party, { boldName: true });
+
+function formatTaxId(value: string): string {
+  const d = value.replace(/\D/g, "");
+  if (d.length === 11) {
+    return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
+  if (d.length === 14) {
+    return d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  }
+  return value.trim();
+}
+
+/** "**MARIA EXEMPLO** (CPF 000.000.000-00)", the names in bold. */
+function namesOf(parties: GuideParty[]): string {
+  return parties
+    .map((party) => {
+      const name = party.name.trim().toLocaleUpperCase("pt-BR");
+      const id = party.taxId.trim()
+        ? ` (${party.personType === "juridica" ? "CNPJ" : "CPF"} ${formatTaxId(party.taxId)})`
+        : "";
+      return name ? `**${name}**${id}` : "";
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+/**
+ * Who requests, who transmits, who acquires, each on its own line with the
+ * names in bold (decision of 19/11/2026). When the requerente is one of
+ * the parties, that side reads "Requerente/Adquirente (comprador)"; when it
+ * is someone else, by mandato, the line says so and how.
+ */
+export function partiesLines(guide: Guide): string[] {
+  const info = GUIDE_KIND_INFO[guide.kind];
+  const transmitting = guide.parties.filter((p) => p.role === "transmitente");
+  const acquiring = guide.parties.filter((p) => p.role === "adquirente");
+  const requester = guide.requester;
+  const lines: string[] = [];
+  if (requester.role === "terceiro") {
+    const name = requester.name.trim().toLocaleUpperCase("pt-BR");
+    const id = requester.taxId.trim()
+      ? `, CPF ${formatTaxId(requester.taxId)}`
+      : "";
+    const mandate = requester.mandate.trim()
+      ? `, por mandato: ${requester.mandate.trim().replace(/\.+$/, "")}`
+      : ", por mandato (procuração anexada ao pedido)";
+    lines.push(
+      `Requerente (procurador): **${name || "não informado"}**${id}${mandate}.`,
+    );
+  }
+  const side = (role: "transmitente" | "adquirente", parties: GuideParty[]) => {
+    if (!parties.length) return;
+    const label =
+      requester.role === role
+        ? `Requerente/${info.roles[role]}`
+        : info.roles[role];
+    lines.push(`${label}: ${namesOf(parties)}.`);
+  };
+  side("transmitente", transmitting);
+  side("adquirente", acquiring);
+  return lines;
+}
 
 const MONTHS = [
   "janeiro",
@@ -168,8 +234,8 @@ export function buildGuideDocument(
   const asset = guide.kind.startsWith("itcd") ? "bem" : "imóvel";
   const request =
     info.rate === "none"
-      ? `${joinAll(acquiring.concat(transmitting).map(qualify))}, ${acquiring.length + transmitting.length > 1 ? "requerem" : "requer"} a expedição de certidão dos tributos que incidem sobre o imóvel abaixo descrito, para instruir a escritura pública${nature ? ` de ${nature}` : ""} a ser lavrada nesta serventia.`
-      : `${joinAll(acquiring.map(qualify))}, ${who} recolher aos cofres da ${authority} o ${info.subject}, à alíquota ${amount.rateLabel.startsWith("progressiva") ? amount.rateLabel : `de ${amount.rateLabel}`} sobre o valor declarado${law ? `, conforme ${law}` : ""}, porquanto ${acquiring.length > 1 ? "dizem" : "diz"} haver ${guide.kind === "itcd-causa-mortis" ? "recebido, por sucessão" : "adquirido"}${nature ? `, por ${nature},` : ""} de ${joinAll(transmitting.map(qualify))}, o ${asset} a seguir descrito.`;
+      ? `${joinAll(acquiring.concat(transmitting).map(qualifyBold))}, ${acquiring.length + transmitting.length > 1 ? "requerem" : "requer"} a expedição de certidão dos tributos que incidem sobre o imóvel abaixo descrito, para instruir a escritura pública${nature ? ` de ${nature}` : ""} a ser lavrada nesta serventia.`
+      : `${joinAll(acquiring.map(qualifyBold))}, ${who} recolher aos cofres da ${authority} o ${info.subject}, à alíquota ${amount.rateLabel.startsWith("progressiva") ? amount.rateLabel : `de ${amount.rateLabel}`} sobre o valor declarado${law ? `, conforme ${law}` : ""}, porquanto ${acquiring.length > 1 ? "dizem" : "diz"} haver ${guide.kind === "itcd-causa-mortis" ? "recebido, por sucessão" : "adquirido"}${nature ? `, por ${nature},` : ""} de ${joinAll(transmitting.map(qualifyBold))}, o ${asset} a seguir descrito.`;
 
   const property: string[] = [
     `${guide.property.type === "rural" ? "IMÓVEL RURAL" : "IMÓVEL URBANO"}: ${guide.property.description.trim()}`,
@@ -200,6 +266,7 @@ export function buildGuideDocument(
 
   const sections: RequerimentoSection[] = [
     { heading: "Destinatário", paragraphs: [addressee(guide, settings)] },
+    { heading: "Das partes", paragraphs: partiesLines(guide) },
     { heading: "Requerimento", paragraphs: [request] },
     { heading: asset === "bem" ? "Do bem" : "Do imóvel", paragraphs: property },
   ];

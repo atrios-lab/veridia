@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { cartorioMarinho } from "../tenant/tenants/marinho.ts";
 import { GUIDE_KIND_INFO, guideKindsSummary, itcdRn } from "./catalog.ts";
-import { buildGuideDocument, guideAmount } from "./document.ts";
+import { buildGuideDocument, guideAmount, partiesLines } from "./document.ts";
 import { missingQualification, qualify } from "./qualification.ts";
 import {
   formatGuideNumber,
   type Guide,
   type GuideParty,
   GuideSchema,
+  NO_REQUESTER,
   OFFERED_GUIDE_KINDS,
   retentionState,
 } from "./schema.ts";
@@ -23,6 +24,7 @@ const party = (over: Partial<GuideParty>): GuideParty => ({
   civilStatus: "solteiro",
   marriageRegime: undefined,
   marriageRecord: "",
+  spouse: "",
   stableUnion: "nao",
   profession: "autônoma",
   taxId: "529.982.247-25",
@@ -36,6 +38,7 @@ const party = (over: Partial<GuideParty>): GuideParty => ({
 
 const itiv: Guide = {
   kind: "itiv",
+  requester: NO_REQUESTER,
   parties: [
     party({}),
     party({
@@ -130,7 +133,13 @@ test("a guia de ITIV sai como o modelo da serventia", () => {
     text,
     /à alíquota de 3% sobre o valor declarado, conforme Lei Complementar Municipal nº 44/,
   );
-  assert.match(text, /por compra e venda, de JOÃO FICTÍCIO DE SOUZA/);
+  // The names go in bold (decision of 19/11/2026).
+  assert.match(text, /por compra e venda, de \*\*JOÃO FICTÍCIO DE SOUZA\*\*/);
+  assert.match(
+    text,
+    /Transmitente[^:\n]*: \*\*JOÃO FICTÍCIO DE SOUZA\*\* \(CPF 123\.456\.789-09\)\./,
+  );
+  assert.ok(doc.sections.some((s) => s.heading === "Das partes"));
   assert.match(
     text,
     /Valor declarado: R\$ 27\.000,00 \(vinte e sete mil reais\)/,
@@ -246,4 +255,63 @@ test("o nome Guias de transmissão de bens lista os tipos do catálogo, sem fixa
   }
   assert.match(line, /transmissão de bens \(imóveis, móveis e digitais\)/);
   assert.match(line, / e laudêmio municipal\./);
+});
+
+test("das partes: requerente, vendedor e comprador, com os nomes em negrito", () => {
+  // The buyer asks for the guide: that side reads "Requerente/Adquirente".
+  const own = partiesLines({
+    ...itiv,
+    requester: {
+      role: "adquirente",
+      name: "Maria Exemplo da Silva",
+      taxId: "529.982.247-25",
+      mandate: "",
+    },
+  });
+  assert.deepEqual(own, [
+    "Transmitente (vendedor): **JOÃO FICTÍCIO DE SOUZA** (CPF 123.456.789-09).",
+    "Requerente/Adquirente (comprador): **MARIA EXEMPLO DA SILVA** (CPF 529.982.247-25).",
+  ]);
+  // Someone else, by mandato: the line says who and how.
+  const proxy = partiesLines({
+    ...itiv,
+    requester: {
+      role: "terceiro",
+      name: "Pedro Procurador Fictício",
+      taxId: "111.444.777-35",
+      mandate:
+        "procuração do Cartório Exemplo, livro 10, fls. 20, de 02/01/2026.",
+    },
+  });
+  assert.equal(
+    proxy[0],
+    "Requerente (procurador): **PEDRO PROCURADOR FICTÍCIO**, CPF 111.444.777-35, por mandato: procuração do Cartório Exemplo, livro 10, fls. 20, de 02/01/2026.",
+  );
+  assert.equal(proxy.length, 3);
+  const attached = partiesLines({
+    ...itiv,
+    requester: { role: "terceiro", name: "Pedro", taxId: "", mandate: "" },
+  });
+  assert.match(attached[0] ?? "", /procuração anexada ao pedido/);
+});
+
+test("casado leva o cônjuge na qualificação, e falta se não vier", () => {
+  const married = party({
+    civilStatus: "casado",
+    marriageRegime: "comunhao-parcial",
+    spouse: "Ana Fictícia de Souza, CPF 529.982.247-25",
+  });
+  assert.match(
+    qualify(married),
+    /casada com Ana Fictícia de Souza, CPF 529\.982\.247-25/,
+  );
+  assert.match(
+    qualify(married, { boldName: true }),
+    /^\*\*MARIA EXEMPLO DA SILVA\*\*, /,
+  );
+  assert.ok(
+    missingQualification(
+      party({ civilStatus: "casado", marriageRegime: "comunhao-parcial" }),
+    ).includes("cônjuge"),
+  );
 });

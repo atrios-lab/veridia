@@ -8,6 +8,11 @@ import { defaultGuideSettings } from "./settings.ts";
 const request = {
   kind: "itiv" as const,
   nature: "",
+  requester: {
+    role: "adquirente" as const,
+    mandate: "",
+    mandateAttached: false,
+  },
   parties: [
     {
       role: "transmitente" as const,
@@ -15,6 +20,9 @@ const request = {
       gender: "masculino" as const,
       taxId: "123.456.789-09",
       civilStatus: "casado" as const,
+      marriageRegime: "comunhao-parcial" as const,
+      spouseName: "Ana Fictícia de Souza",
+      spouseTaxId: "111.444.777-35",
       profession: "funcionário público",
       address: "Avenida Exemplo, 200, Natal/RN",
     },
@@ -73,4 +81,68 @@ test("pede quem transmite, quem adquire, CPF válido e o valor", () => {
     }).success,
     false,
   );
+});
+
+test("casado pede o cônjuge e o regime; procurador pede o mandato", () => {
+  const married = PublicGuideRequestSchema.safeParse({
+    ...request,
+    parties: [
+      {
+        ...request.parties[0],
+        marriageRegime: undefined,
+        spouseName: "",
+      },
+      request.parties[1],
+    ],
+  });
+  const messages = married.success
+    ? []
+    : married.error.issues.map((i) => i.message);
+  assert.ok(messages.includes("Informe o nome do cônjuge."));
+  assert.ok(messages.includes("Escolha o regime de bens."));
+  const proxy = (mandate: string, mandateAttached: boolean) =>
+    PublicGuideRequestSchema.safeParse({
+      ...request,
+      requester: { role: "terceiro", mandate, mandateAttached },
+    }).success;
+  assert.equal(proxy("", false), false);
+  assert.equal(proxy("", true), true);
+  assert.equal(proxy("Cartório Exemplo, livro 10, fls. 20", false), true);
+  assert.equal(
+    PublicGuideRequestSchema.safeParse({ ...request, requester: undefined })
+      .success,
+    false,
+  );
+});
+
+test("a guia leva o requerente e o cônjuge com regime", () => {
+  const parsed = PublicGuideRequestSchema.parse({
+    ...request,
+    requester: {
+      role: "terceiro",
+      mandate: "livro 10, fls. 20",
+      mandateAttached: false,
+    },
+  });
+  const guide = guideFromRequest(
+    parsed,
+    defaultGuideSettings(cartorioMarinho),
+    {
+      name: "Pedro Procurador Fictício",
+      cpf: "111.444.777-35",
+    },
+  );
+  assert.deepEqual(guide.requester, {
+    role: "terceiro",
+    name: "Pedro Procurador Fictício",
+    taxId: "111.444.777-35",
+    mandate: "livro 10, fls. 20",
+  });
+  assert.equal(guide.parties[0]?.marriageRegime, "comunhao-parcial");
+  assert.match(
+    guide.parties[0]?.spouse ?? "",
+    /^ANA FICTÍCIA DE SOUZA, CPF nº 111\.444\.777-35$/,
+  );
+  assert.equal(guide.parties[1]?.spouse, "");
+  assert.equal(GuideSchema.safeParse(guide).success, true);
 });

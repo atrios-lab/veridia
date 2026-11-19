@@ -86,13 +86,9 @@ export default async function SignerPage({
             </p>
           )}
 
-        {/* Minimized until opened (decision of 11/11/2026): the page
-            starts with the form; the list is one click away. The removed
-            view, asked for on purpose, opens already. */}
-        <details
-          open={showRemoved}
-          className="group rounded-xl border bg-card px-5 py-4"
-        >
+        {/* Open from the start (decision of 19/11/2026): a document just
+            signed has to be found again here, to open or download. */}
+        <details open className="group rounded-xl border bg-card px-5 py-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
             <span className="flex items-center gap-2">
               <AdminIcon
@@ -132,7 +128,7 @@ export default async function SignerPage({
           <p className="mt-1 text-xs text-muted-foreground">
             {showRemoved
               ? "Não abrem mais, aqui nem na página pública. O registro da assinatura continua respondendo à verificação."
-              : "Clique no título para ver os detalhes, ou em Abrir para ler e imprimir de novo. O arquivo assinado fica disponível por 6 meses; o registro e o manifesto, para sempre."}
+              : "Tudo o que foi assinado, aqui ou dentro de um pedido, o mais recente primeiro. Clique no título para ver os detalhes, em Abrir para ler e imprimir, ou em Baixar para salvar de novo. O arquivo assinado fica disponível por 6 meses; o registro e o manifesto, para sempre."}
           </p>
           {documents.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
@@ -173,17 +169,30 @@ export default async function SignerPage({
                     </div>
                     <div className="flex shrink-0 flex-wrap gap-2">
                       {document.filePath && (
-                        <a
-                          href={`/admin/utilitarios/assinador/${document.id}/arquivo?abrir=1`}
-                          target="_blank"
-                          rel="noopener"
-                          className={buttonVariants({
-                            variant: "outline",
-                            size: "sm",
-                          })}
-                        >
-                          Abrir
-                        </a>
+                        <>
+                          <a
+                            href={`/admin/utilitarios/assinador/${document.id}/arquivo?abrir=1`}
+                            target="_blank"
+                            rel="noopener"
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            Abrir
+                          </a>
+                          <a
+                            href={`/admin/utilitarios/assinador/${document.id}/arquivo`}
+                            download
+                            className={buttonVariants({
+                              variant: "outline",
+                              size: "sm",
+                            })}
+                          >
+                            <AdminIcon name="download" className="size-3.5" />
+                            Baixar
+                          </a>
+                        </>
                       )}
                       {mayRemove &&
                         (showRemoved ? (

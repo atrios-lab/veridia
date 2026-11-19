@@ -8,7 +8,9 @@ import {
   type Guide,
   type GuideKind,
   GuidePartySchema,
+  type GuideRequester,
   type GuideSettings,
+  MARRIAGE_REGIMES,
   OFFERED_GUIDE_KINDS,
   rateFor,
   STABLE_UNION_OPTIONS,
@@ -38,11 +40,41 @@ export const PublicGuidePartySchema = z.object({
     { message: "Informe o CPF ou o CNPJ." },
   ),
   civilStatus: z.enum(CIVIL_STATUSES).optional(),
+  /** Married: the regime and the spouse (decision of 19/11/2026). */
+  marriageRegime: z.enum(MARRIAGE_REGIMES).optional(),
+  spouseName: text(160).default(""),
+  spouseTaxId: GuidePartySchema.shape.taxId.default(""),
   stableUnion: z.enum(STABLE_UNION_OPTIONS).default("nao-informado"),
   profession: text(80),
   address: text(300, "Informe o endereço."),
 });
-export type PublicGuideParty = z.infer<typeof PublicGuidePartySchema>;
+export type PublicGuideParty = z.input<typeof PublicGuidePartySchema>;
+
+/**
+ * How many documents the guia's groups (vendedor, comprador, imóvel,
+ * procuração) carry together, each file under the request's own size
+ * limit; they go straight to the store, never in the form's body.
+ */
+export const GUIDE_MAX_FILES = 20;
+
+/**
+ * Who is asking, among the people of the deal (decision of 19/11/2026):
+ * the buyer, the seller, or someone else by mandato, who then attaches
+ * the procuração or says where it was made.
+ */
+export const PUBLIC_REQUESTER_ROLES = [
+  "adquirente",
+  "transmitente",
+  "terceiro",
+] as const;
+
+export const PublicGuideRequesterSchema = z.object({
+  role: z.enum(PUBLIC_REQUESTER_ROLES, "Diga quem está pedindo a guia."),
+  /** The procuração or the representation, in words. */
+  mandate: text(LONG_TEXT_MAX).default(""),
+  /** The procuração goes as a file with the request. */
+  mandateAttached: z.boolean().default(false),
+});
 
 export const PublicGuideRequestSchema = z
   .object({
@@ -53,6 +85,7 @@ export const PublicGuideRequestSchema = z
         message: "Escolha uma das guias oferecidas.",
       }),
     nature: text(120),
+    requester: PublicGuideRequesterSchema,
     parties: z.array(PublicGuidePartySchema).max(20, "Use até 20 pessoas."),
     property: z.object({
       type: z.enum(["urbano", "rural"]),
@@ -71,6 +104,35 @@ export const PublicGuideRequestSchema = z
   })
   .superRefine((request, ctx) => {
     const info = GUIDE_KIND_INFO[request.kind];
+    request.parties.forEach((party, index) => {
+      if (party.civilStatus !== "casado") return;
+      if (!party.spouseName.trim()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["parties", index, "spouseName"],
+          message: "Informe o nome do cônjuge.",
+        });
+      }
+      if (!party.marriageRegime) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["parties", index, "marriageRegime"],
+          message: "Escolha o regime de bens.",
+        });
+      }
+    });
+    if (
+      request.requester.role === "terceiro" &&
+      !request.requester.mandate.trim() &&
+      !request.requester.mandateAttached
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requester", "mandate"],
+        message:
+          "Anexe a procuração ou escreva os dados do mandato (cartório, livro, folha e data).",
+      });
+    }
     for (const role of ["transmitente", "adquirente"] as const) {
       if (info.rate === "none" && role === "adquirente") continue;
       if (!request.parties.some((party) => party.role === role)) {
@@ -90,15 +152,44 @@ export const PublicGuideRequestSchema = z
     }
   });
 export type PublicGuideRequest = z.infer<typeof PublicGuideRequestSchema>;
+/** What the form builds, before the defaults fill in. */
+export type PublicGuideRequestInput = z.input<typeof PublicGuideRequestSchema>;
+
+function formatCpf(value: string): string {
+  const d = value.replace(/\D/g, "");
+  if (d.length === 11) {
+    return d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
+  return value.trim();
+}
+
+/** "JOÃO EXEMPLO, inscrito no CPF sob o nº 000.000.000-00" */
+function spouseText(party: z.infer<typeof PublicGuidePartySchema>): string {
+  const name = party.spouseName.trim().toLocaleUpperCase("pt-BR");
+  if (!name) return "";
+  // Neutral wording: the spouse's gender is never presumed from the party's.
+  return party.spouseTaxId.trim()
+    ? `${name}, CPF nº ${formatCpf(party.spouseTaxId)}`
+    : name;
+}
 
 /** The guia as the panel holds it, from what the citizen filled. */
 export function guideFromRequest(
   request: PublicGuideRequest,
   settings: GuideSettings,
+  /** Who filed the request: the requerente, named on the paper. */
+  applicant: { name: string; cpf?: string | null } = { name: "" },
 ): Guide {
   const info = GUIDE_KIND_INFO[request.kind];
+  const requester: GuideRequester = {
+    role: request.requester.role,
+    name: applicant.name.trim(),
+    taxId: applicant.cpf?.trim() ?? "",
+    mandate: request.requester.mandate.trim(),
+  };
   return {
     kind: request.kind,
+    requester,
     parties: request.parties.map((party) => ({
       ...emptyParty(party.role),
       personType:
@@ -107,6 +198,9 @@ export function guideFromRequest(
       gender: party.gender,
       nationality: party.gender === "feminino" ? "brasileira" : "brasileiro",
       civilStatus: party.civilStatus,
+      marriageRegime:
+        party.civilStatus === "casado" ? party.marriageRegime : undefined,
+      spouse: party.civilStatus === "casado" ? spouseText(party) : "",
       stableUnion: party.stableUnion,
       profession: party.profession,
       taxId: party.taxId,
