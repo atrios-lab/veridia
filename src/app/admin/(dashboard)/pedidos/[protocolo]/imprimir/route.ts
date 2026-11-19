@@ -4,7 +4,12 @@ import { brandFor } from "@/lib/document-brand.ts";
 import { findByProtocol } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { printReceiptWith, printRequerimentoWith } from "./handle-print.ts";
+import {
+  parseCounterSelection,
+  printReceiptWith,
+  printRequerimentoWith,
+  printSelectionWith,
+} from "./handle-print.ts";
 
 export const runtime = "nodejs";
 
@@ -74,6 +79,11 @@ export async function GET(
  * browser saves it from this very response and never asks again. The
  * operator opens the saved file to print it, and can keep or send it, which
  * the tab could not offer.
+ *
+ * With `documento` fields in the form, it is the counter's "emitir" instead
+ * (pedidos/novo, decision of 19/11/2026): the documents ticked, in one PDF,
+ * printed (`modo=imprimir`, inline) or saved (`modo=baixar`). See
+ * `printSelectionWith`.
  */
 export async function POST(
   request: Request,
@@ -85,5 +95,12 @@ export async function POST(
   const { tenant, stored, brand, actorId } = loaded;
   const form = await request.formData();
   const accessKey = String(form.get("chave") ?? "");
+  if (form.has("documento")) {
+    return printSelectionWith(db, tenant, stored, actorId, brand, {
+      documents: parseCounterSelection(form.getAll("documento")),
+      accessKey,
+      mode: form.get("modo") === "baixar" ? "baixar" : "imprimir",
+    });
+  }
   return printReceiptWith(db, tenant, stored, actorId, brand, accessKey);
 }
