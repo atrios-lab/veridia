@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import {
   type ActVariants,
   actsOfAttribution,
@@ -29,6 +29,7 @@ import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
+import { Checkbox } from "../../../_ui/checkbox.tsx";
 import { cn } from "../../../_ui/cn.ts";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
@@ -835,6 +836,8 @@ type SuccessState = Extract<ManualEntryState, { status: "success" }>;
 interface Printable {
   key: "requerimento" | "comprovante" | "declaracao";
   title: string;
+  /** How the action button names it when it is the only one ticked. */
+  short: string;
   tag: string;
   /** Tags read as opposites on purpose: one stays, one leaves. */
   tagTone: "stays" | "leaves";
@@ -850,6 +853,7 @@ const BASE_PRINTABLES: Printable[] = [
   {
     key: "requerimento",
     title: "Requerimento",
+    short: "o requerimento",
     tag: "Fica na serventia",
     tagTone: "stays",
     icon: "file",
@@ -860,36 +864,56 @@ const BASE_PRINTABLES: Printable[] = [
   {
     key: "comprovante",
     title: "Comprovante de acesso",
+    short: "o comprovante",
     tag: "Vai com o cidadão",
     tagTone: "leaves",
     icon: "lock",
     description:
-      "A única folha com a chave. Baixa como PDF, para imprimir ou entregar. " +
-      "Só sai enquanto esta tela estiver aberta: depois, apenas emitindo uma " +
-      "chave nova, o que invalida esta.",
+      "A única folha com a chave, para imprimir ou entregar em PDF. Só sai " +
+      "enquanto esta tela estiver aberta: depois, apenas emitindo uma chave " +
+      "nova, o que invalida esta.",
   },
 ];
 
 /** `BASE_PRINTABLES`, plus a third document only when the pedido has
  * gratuidade: not every andamento gera este arquivo, então oferecê-lo
- * incondicionalmente prometeria uma impressão vazia. */
+ * incondicionalmente prometeria uma impressão vazia. It sits between the two,
+ * next to the requerimento it is signed with, in the same order the combined
+ * PDF comes out (`COUNTER_DOCUMENTS` in the imprimir route). */
 function printablesFor(hasExemption: boolean): Printable[] {
   if (!hasExemption) return BASE_PRINTABLES;
+  const [requerimento, comprovante] = BASE_PRINTABLES;
   return [
-    ...BASE_PRINTABLES,
+    requerimento,
     {
       key: "declaracao",
       title: "Declaração de hipossuficiência",
+      short: "a declaração",
       tag: "Fica na serventia",
       tagTone: "stays",
       icon: "file",
-      query: "documento=declaracao",
       description:
         "O Anexo I do Provimento CGJ/TJRN n. 7/2026, preenchido com o que " +
         "foi coletado aqui. Vai junto com o requerimento para o requerente " +
         "assinar.",
     },
+    comprovante,
   ];
+}
+
+/** The action button's words for what is ticked: "Imprimir os dois",
+ * "Baixar o comprovante", "Imprimir os 2 marcados". */
+function emitLabel(
+  verb: "Imprimir" | "Baixar",
+  chosen: Printable[],
+  total: number,
+): string {
+  if (chosen.length === 0) return verb;
+  if (chosen.length === 1) return `${verb} ${chosen[0].short}`;
+  if (chosen.length === total) {
+    return `${verb} ${total === 2 ? "os dois" : "os três"}`;
+  }
+  return `${verb} os ${chosen.length} marcados`;
 }
 
 /** Protocol or key, as a labelled block with its own copy button. */
@@ -983,13 +1007,20 @@ function SuccessScreen({ state }: { state: SuccessState }) {
     which: "protocolo" | "chave";
     ok: boolean;
   } | null>(null);
-  const [printed, setPrinted] = useState<Printable["key"][]>([]);
-  const [sheetBlocked, setSheetBlocked] = useState(false);
-  const receiptFormRef = useRef<HTMLFormElement>(null);
   const printHref = `/admin/pedidos/${encodeURIComponent(state.protocolNumber)}/imprimir`;
   const docs = printablesFor(state.hasExemption);
+  // Everything ticked to start with: the usual counter visit emits it all,
+  // and unticking is the exception (decision of 19/11/2026).
+  const [selected, setSelected] = useState<Printable["key"][]>(() =>
+    docs.map((doc) => doc.key),
+  );
+  const [emitted, setEmitted] = useState<
+    Partial<Record<Printable["key"], EmitMode>>
+  >({});
+  const chosen = docs.filter((doc) => selected.includes(doc.key));
+  const emittedCount = docs.filter((doc) => emitted[doc.key]).length;
 
-  const receiptPrinted = printed.includes("comprovante");
+  const receiptPrinted = Boolean(emitted.comprovante);
   const summary = [
     { label: "Contato", value: state.contact },
     ...(state.cpfLabel ? [{ label: "CPF", value: state.cpfLabel }] : []),
@@ -1028,38 +1059,29 @@ function SuccessScreen({ state }: { state: SuccessState }) {
     setTimeout(() => setCopied(null), 2500);
   }
 
-  /**
-   * Marks a document as asked for. Nothing on this side can know whether paper
-   * came out of a printer, so the label below says "enviado para impressão"
-   * and never "impresso": the honest claim is the one the screen can back.
-   * The receipt is a download, and "baixado" is what the screen can say of it.
-   */
-  function markPrinted(key: Printable["key"]) {
-    setPrinted((current) =>
-      current.includes(key) ? current : [...current, key],
+  function toggle(key: Printable["key"], on: boolean) {
+    setSelected((current) =>
+      on
+        ? docs
+            .map((doc) => doc.key)
+            .filter((k) => k === key || current.includes(k))
+        : current.filter((k) => k !== key),
     );
-    if (key === "requerimento") setSheetBlocked(false);
   }
 
   /**
-   * One click cannot reliably open two tabs: a browser lets a gesture through
-   * once and blocks whatever follows. So the order is deliberate and the
-   * result is checked.
-   *
-   * The receipt goes first, by form submit, because it is the irreversible
-   * one: the key it carries stops existing when this screen does. It comes
-   * back as a download, so its tab closes on its own and it is never the one
-   * a pop-up blocker holds against this page. The requerimento follows
-   * through `window.open`, which returns null when it is refused, and that is
-   * the only one of the two whose failure this page can actually see.
-   * Blocked, it says so and leaves its own button to finish the job, instead
-   * of ticking a box over a tab that never opened.
+   * Marks the ticked documents as asked for, in the way they were asked.
+   * Nothing on this side can know whether paper came out of a printer, so
+   * the label says "enviado para impressão" and never "impresso": the honest
+   * claim is the one the screen can back. Runs on the submit button's click,
+   * before the browser sends the form; the form itself does the work.
    */
-  function printBoth() {
-    receiptFormRef.current?.requestSubmit();
-    const opened = window.open(printHref, "_blank");
-    setPrinted(opened ? ["comprovante", "requerimento"] : ["comprovante"]);
-    setSheetBlocked(!opened);
+  function markEmitted(mode: EmitMode) {
+    setEmitted((current) => {
+      const next = { ...current };
+      for (const doc of chosen) next[doc.key] = mode;
+      return next;
+    });
   }
 
   return (
@@ -1142,36 +1164,69 @@ function SuccessScreen({ state }: { state: SuccessState }) {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border bg-card">
+      {/* One form, one submit, one PDF with every ticked document (decision
+          of 19/11/2026). Two tabs from one click was the old way, and the
+          browser blocked the second: only the receipt came out. A submit
+          button is the strongest gesture there is, and the key travels in
+          the body, never in a URL. */}
+      <form
+        method="post"
+        action={printHref}
+        target="_blank"
+        rel="noopener"
+        className="overflow-hidden rounded-xl border bg-card"
+      >
+        <input type="hidden" name="chave" value={state.accessKey} />
+        {chosen.map((doc) => (
+          <input key={doc.key} type="hidden" name="documento" value={doc.key} />
+        ))}
         <div className="flex flex-wrap items-center gap-3 p-5">
           <div className="min-w-0 flex-1">
             <h4 className="text-base font-semibold text-foreground">
               Emitir agora
             </h4>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Cada emissão fica registrada na auditoria, com quem emitiu e
-              quando.
+              Marque o que quer emitir: sai um PDF só, na ordem abaixo. Cada
+              emissão fica registrada na auditoria, com quem emitiu e quando.
             </p>
           </div>
           <Badge className="bg-muted text-muted-foreground tabular-nums">
-            {printed.length} de {docs.length}
+            {emittedCount} de {docs.length}
           </Badge>
-          <Button type="button" onClick={printBoth}>
-            <AdminIcon name="printer" className="size-4" strokeWidth={2} />
-            Emitir os dois
-          </Button>
+          <div className="flex flex-wrap gap-2 max-sm:w-full">
+            <Button
+              type="submit"
+              name="modo"
+              value="imprimir"
+              disabled={chosen.length === 0}
+              onClick={() => markEmitted("imprimir")}
+              className="max-sm:flex-1"
+            >
+              <AdminIcon name="printer" className="size-4" strokeWidth={2} />
+              {emitLabel("Imprimir", chosen, docs.length)}
+            </Button>
+            <Button
+              type="submit"
+              name="modo"
+              value="baixar"
+              variant="outline"
+              disabled={chosen.length === 0}
+              onClick={() => markEmitted("baixar")}
+              className="max-sm:flex-1"
+            >
+              <AdminIcon name="download" className="size-4" strokeWidth={2} />
+              {emitLabel("Baixar", chosen, docs.length)}
+            </Button>
+          </div>
         </div>
 
         {docs.map((doc) => (
           <PrintableRow
             key={doc.key}
             doc={doc}
-            printed={printed.includes(doc.key)}
-            blocked={doc.key === "requerimento" && sheetBlocked}
-            printHref={printHref}
-            accessKey={state.accessKey}
-            receiptFormRef={receiptFormRef}
-            onPrint={() => markPrinted(doc.key)}
+            checked={selected.includes(doc.key)}
+            emitted={emitted[doc.key]}
+            onToggle={(on) => toggle(doc.key, on)}
           />
         ))}
 
@@ -1204,7 +1259,7 @@ function SuccessScreen({ state }: { state: SuccessState }) {
               : "O comprovante ainda não saiu. Finalizar agora apaga a chave, e o cidadão fica sem acesso."}
           </span>
         </div>
-      </section>
+      </form>
 
       {/* The way out of the wizard, and the only one: the pedido is already
           filed, so this closes the counter's turn rather than saving
@@ -1221,48 +1276,41 @@ function SuccessScreen({ state }: { state: SuccessState }) {
   );
 }
 
+type EmitMode = "imprimir" | "baixar";
+
 /**
- * One document's row. The two halves reach the same route by different verbs,
- * so the control differs: the requerimento is a plain link (GET, nothing to
- * send), and the receipt is a real submit button inside its own POST form,
- * because the key has to travel in the body. That is the same shape the
- * public site already uses to hand a PDF over (see protocol-lookup.tsx): a
- * submit button inside the form is the strongest user gesture there is, and
- * it needs no script to fire.
+ * One document's row: a tick to include it in the emission, and once it went
+ * out, how (sent to the printer or saved). The whole row is the label, so a
+ * click anywhere on it ticks or unticks.
  */
 function PrintableRow({
   doc,
-  printed,
-  blocked,
-  printHref,
-  accessKey,
-  receiptFormRef,
-  onPrint,
+  checked,
+  emitted,
+  onToggle,
 }: {
   doc: Printable;
-  printed: boolean;
-  /** The browser refused the tab this document was sent to. */
-  blocked?: boolean;
-  printHref: string;
-  accessKey: string;
-  receiptFormRef: React.RefObject<HTMLFormElement | null>;
-  onPrint: () => void;
+  checked: boolean;
+  emitted?: EmitMode;
+  onToggle: (on: boolean) => void;
 }) {
-  // The receipt is saved, the others are printed from a tab: the verb on the
-  // button and the tick beside the title both say which.
-  const downloads = doc.key === "comprovante";
-  const label = downloads
-    ? printed
-      ? "Baixar de novo"
-      : "Baixar"
-    : printed
-      ? "Imprimir de novo"
-      : "Imprimir";
   const leaves = doc.tagTone === "leaves";
-  const href = doc.query ? `${printHref}?${doc.query}` : printHref;
+  const id = `emitir-${doc.key}`;
 
   return (
-    <div className="flex items-start gap-3 border-t px-5 py-4">
+    <label
+      htmlFor={id}
+      className={cn(
+        "flex cursor-pointer items-start gap-3 border-t px-5 py-4 transition-colors hover:bg-muted/40",
+        !checked && "opacity-70",
+      )}
+    >
+      <Checkbox
+        id={id}
+        checked={checked}
+        onCheckedChange={(value) => onToggle(value === true)}
+        className="mt-2"
+      />
       <span
         className={`mt-0.5 flex size-8 flex-none items-center justify-center rounded-md ${
           leaves ? "bg-warning-soft" : "bg-muted"
@@ -1273,8 +1321,8 @@ function PrintableRow({
           className={`size-4 ${leaves ? "text-warning-text" : "text-primary"}`}
         />
       </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-foreground">
             {doc.title}
           </span>
@@ -1287,51 +1335,17 @@ function PrintableRow({
           >
             {doc.tag}
           </Badge>
-          {printed && (
+          {emitted && (
             <span className="flex items-center gap-1 text-xs font-medium text-success-text">
               <AdminIcon name="check" className="size-3" strokeWidth={3} />
-              {downloads ? "Baixado" : "Enviado para impressão"}
+              {emitted === "baixar" ? "Baixado" : "Enviado para impressão"}
             </span>
           )}
-        </div>
-        <p className="mt-1 text-xs leading-snug text-muted-foreground">
+        </span>
+        <span className="mt-1 block text-xs leading-snug text-muted-foreground">
           {doc.description}
-        </p>
-        {blocked && (
-          <p className="mt-1.5 text-xs leading-snug font-medium text-destructive">
-            O navegador bloqueou a aba deste documento. Use o botão ao lado para
-            abri-lo.
-          </p>
-        )}
-      </div>
-      {doc.key === "comprovante" ? (
-        <form
-          ref={receiptFormRef}
-          method="post"
-          action={printHref}
-          target="_blank"
-          rel="noopener"
-          className="shrink-0"
-        >
-          <input type="hidden" name="chave" value={accessKey} />
-          <Button type="submit" variant="outline" size="sm" onClick={onPrint}>
-            {label}
-          </Button>
-        </form>
-      ) : (
-        <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
-          onClick={onPrint}
-          className={cn(
-            buttonVariants({ variant: "outline", size: "sm" }),
-            "shrink-0",
-          )}
-        >
-          {label}
-        </a>
-      )}
-    </div>
+        </span>
+      </span>
+    </label>
   );
 }
