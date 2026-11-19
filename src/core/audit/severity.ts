@@ -70,6 +70,8 @@ const EXACT: Record<string, AuditLevel> = {
   // A portaria attached becomes public: worth a look.
   "team.portaria-attach": "atencao",
   "team.import-signers": "atencao",
+  // A PDF attached to a post becomes public: worth a look.
+  "news.pdf-set": "atencao",
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",

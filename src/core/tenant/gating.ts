@@ -19,6 +19,8 @@ const SECTION_REQUIRES: Record<Section, Attribution[] | "always"> = {
   "centrais-contato": "always",
   // Every office has a team; the page lists whoever the Tabelião marked.
   equipe: "always",
+  // Every office can post news; the page lists whatever the panel published.
+  noticias: "always",
 };
 
 /**
@@ -39,6 +41,7 @@ export const SECTION_ROUTES: Record<Section, string> = {
   "selo-tjrn": "/selo",
   "centrais-contato": "/centrais",
   equipe: "/equipe",
+  noticias: "/noticias",
 };
 
 /** Navigation label of each section, as the citizen reads it. */
@@ -54,6 +57,7 @@ export const SECTION_LABELS: Record<Section, string> = {
   "selo-tjrn": "Selo digital",
   "centrais-contato": "Centrais e contato",
   equipe: "Nossa equipe",
+  noticias: "Notícias e eventos",
 };
 
 /**
@@ -76,6 +80,7 @@ export const SECTION_DESCRIPTIONS: Record<Section, string> = {
   // has its own line in sectionNavLinks.
   "centrais-contato": "Links oficiais de cada serviço, sem sites falsos",
   equipe: "Quem atende você, do titular aos colaboradores",
+  noticias: "Casamentos comunitários, eventos e correições",
 };
 
 /**

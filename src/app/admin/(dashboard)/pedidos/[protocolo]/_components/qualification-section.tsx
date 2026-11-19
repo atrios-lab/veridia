@@ -63,7 +63,13 @@ export async function QualificationSection({
       )}
       <Link
         href={`${base}/nova?pedido=${encodeURIComponent(protocol)}`}
-        className={`${buttonVariants({ variant: "outline", size: "sm" })} mt-3`}
+        className={`${buttonVariants({ variant: "outline", size: "sm" })} mt-3 ${
+          linked.length
+            ? ""
+            : // Nobody has qualified this título yet: the button calls the
+              // clerk's eye, softly and only where motion is welcome.
+              "border-primary font-semibold text-primary motion-safe:animate-attention-pulse-light"
+        }`}
       >
         {linked.length
           ? "Abrir outra qualificação"

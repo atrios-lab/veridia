@@ -39,6 +39,8 @@ import {
   messengerMembers,
   messengerMessages,
   messengerProfiles,
+  officeNews,
+  officeNewsFiles,
   officePublications,
   officeStaff,
   paperOrders,
@@ -190,6 +192,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     reason:
       "equipe do cartório, fechada aos participantes (só o Tabelião edita)",
   },
+  {
+    table: officeNews,
+    reason: "notícias do cartório, fechadas aos participantes",
+  },
+  { table: officeNewsFiles, reason: "arquivos das notícias do cartório" },
 ];
 
 /** The keys of `tenant_content` that belong to the platform, not to the

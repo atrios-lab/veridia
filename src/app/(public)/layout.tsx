@@ -12,6 +12,7 @@ import {
 import { jsonLdScript, organizationJsonLd } from "@/core/tenant/seo.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
+import { publicNewsList } from "@/lib/news.ts";
 import { rootMetadata } from "@/lib/root-metadata.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { publicTeam } from "@/lib/team.ts";
@@ -75,7 +76,14 @@ const NAV_GROUPS = [
   {
     title: "Cidadão",
     slug: "cidadao",
-    hrefs: ["/lgpd", "/ouvidoria", "/transparencia", "/equipe", "/contato"],
+    hrefs: [
+      "/lgpd",
+      "/ouvidoria",
+      "/transparencia",
+      "/noticias",
+      "/equipe",
+      "/contato",
+    ],
   },
 ];
 
@@ -100,9 +108,16 @@ export default async function PublicLayout({
   // section: that attribute is what the gating e2e reads off the footer.
   // The team's page joins the menus only once someone is published on it:
   // an empty "Nossa equipe" is not worth a link.
-  const hasTeam = (await publicTeam(tenant.slug)).groups.length > 0;
+  // The same for the notice board: no link until something is published.
+  const [team, news] = await Promise.all([
+    publicTeam(tenant.slug),
+    publicNewsList(tenant.slug),
+  ]);
+  const hasTeam = team.groups.length > 0;
+  const hasNews = news.length > 0;
   const links = enabledSections(tenant)
     .filter((section) => section !== "equipe" || hasTeam)
+    .filter((section) => section !== "noticias" || hasNews)
     .flatMap((section) =>
       sectionNavLinks(section).map((link) => ({ ...link, section })),
     );
