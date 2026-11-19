@@ -598,6 +598,9 @@ export async function countByStatus(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
         eq(serviceRequests.kind, "service-request"),
+        // The same queue the list shows: a request for a guia is worked in
+        // Utilitários, and a stage counting it would open on an empty list.
+        notTaxGuide(),
       ),
     )
     .groupBy(serviceRequests.status);

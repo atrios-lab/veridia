@@ -11,6 +11,7 @@ import {
   prenotationNotice,
 } from "@/core/fees/prenotation.ts";
 import {
+  GUIDE_MAX_FILES,
   guideFromRequest,
   type PublicGuideRequest,
   PublicGuideRequestSchema,
@@ -228,9 +229,21 @@ export async function submitServiceRequest(
   const accessKey = generateAccessKey();
 
   try {
-    const attachments = await collectAttachments(formData, "anexos", {
+    const ownAttachments = await collectAttachments(formData, "anexos", {
       tenantSlug: tenant.slug,
     });
+    // The guia's documents, by party (vendedor, comprador, imóvel,
+    // procuração: decision of 19/11/2026), each named by its group.
+    const attachments = act.taxGuide
+      ? [
+          ...ownAttachments,
+          ...(await collectAttachments(formData, "guiaAnexos", {
+            tenantSlug: tenant.slug,
+            limit: GUIDE_MAX_FILES,
+            startIndex: ownAttachments.length,
+          })),
+        ]
+      : ownAttachments;
 
     // The consent is stamped at the moment it is given, into the record it
     // belongs to: the proof of consent is the controller's to keep (LGPD
@@ -338,7 +351,10 @@ export async function submitServiceRequest(
       try {
         await issueGuideForRequest(
           tenant.slug,
-          guideFromRequest(guideRequest, await getGuideSettings(tenant)),
+          guideFromRequest(guideRequest, await getGuideSettings(tenant), {
+            name: parsed.data.applicantName,
+            cpf: parsed.data.cpf,
+          }),
           requestId,
         );
       } catch (error) {

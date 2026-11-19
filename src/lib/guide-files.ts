@@ -20,6 +20,7 @@ import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { officeIdentification } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { splitBold } from "@/core/text/rich.ts";
 import {
   BRASAO_PNG_BASE64,
   BRASAO_SIZE,
@@ -243,7 +244,10 @@ export async function renderDocumentDocx(
           alignment: AlignmentType.JUSTIFIED,
           spacing: { after: 120, line: 360 },
           indent: { firstLine: 709 },
-          children: [run(paragraph)],
+          // The names come marked for bold (core/text/rich.ts).
+          children: splitBold(paragraph).map((piece) =>
+            run(piece.text, { bold: piece.bold }),
+          ),
         }),
       );
     }

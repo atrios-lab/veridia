@@ -589,7 +589,11 @@ test("o sinal muda com mensagem e reação, mostra quem digita e não oscila com
     "escrevente",
     "titular",
   );
-  const t0 = new Date("2026-11-19T15:00:00Z");
+  // Anchored to the real clock: an earlier test leaves this conversation
+  // read "now", and reading only moves forward, so fixed dates would break
+  // once the real day passed them.
+  const t0 = new Date(Math.ceil(Date.now() / 1000) * 1000 + 60_000);
+  const at = (seconds: number) => new Date(t0.getTime() + seconds * 1000);
   const first = await messengerSignalWith(db, "titular", t0);
 
   const id = await sendMessageWith(
@@ -598,82 +602,50 @@ test("o sinal muda com mensagem e reação, mostra quem digita e não oscila com
     conversation,
     "escrevente",
     { kind: "texto", body: "Chegou um pedido no balcão." },
-    new Date("2026-11-19T15:00:01Z"),
+    at(1),
   );
   const afterMessage = await messengerSignalWith(db, "titular", t0);
   assert.notEqual(afterMessage.version, first.version);
 
   // Reading the new message moves the version once; reading again with
   // nothing new does not, so two open screens never wake each other.
-  await markReadWith(
-    db,
-    conversation,
-    "titular",
-    new Date("2026-11-19T15:00:02Z"),
-  );
+  await markReadWith(db, conversation, "titular", at(2));
   const forEscrevente = await messengerSignalWith(db, "escrevente", t0);
-  await markReadWith(
-    db,
-    conversation,
-    "titular",
-    new Date("2026-11-19T15:00:03Z"),
-  );
+  await markReadWith(db, conversation, "titular", at(3));
   assert.equal(
     (await messengerSignalWith(db, "escrevente", t0)).version,
     forEscrevente.version,
   );
   assert.deepEqual(
     await conversationReceiptsWith(db, conversation, "escrevente"),
-    { readAt: new Date("2026-11-19T15:00:02Z"), seenAt: null },
+    { readAt: at(2), seenAt: null },
   );
 
-  await reactWith(
-    db,
-    OFFICE,
-    id,
-    "titular",
-    "🙏",
-    new Date("2026-11-19T15:00:04Z"),
-  );
+  await reactWith(db, OFFICE, id, "titular", "🙏", at(4));
   assert.notEqual(
     (await messengerSignalWith(db, "escrevente", t0)).version,
     forEscrevente.version,
   );
 
   // Digitando: shown while fresh, gone after the time, gone when sent.
-  const typingAt = new Date("2026-11-19T15:01:00Z");
+  const typingAt = at(60);
   await setTypingWith(db, OFFICE, "escrevente", conversation, typingAt);
+  assert.deepEqual((await messengerSignalWith(db, "titular", at(62))).typing, [
+    { userId: "escrevente", conversationId: conversation },
+  ]);
   assert.deepEqual(
-    (await messengerSignalWith(db, "titular", new Date("2026-11-19T15:01:02Z")))
-      .typing,
-    [{ userId: "escrevente", conversationId: conversation }],
-  );
-  assert.deepEqual(
-    (await messengerSignalWith(db, "titular", new Date("2026-11-19T15:01:30Z")))
-      .typing,
+    (await messengerSignalWith(db, "titular", at(90))).typing,
     [],
   );
   // Not to oneself, and not into a conversation one is not in.
   assert.deepEqual(
-    (
-      await messengerSignalWith(
-        db,
-        "escrevente",
-        new Date("2026-11-19T15:01:02Z"),
-      )
-    ).typing,
+    (await messengerSignalWith(db, "escrevente", at(62))).typing,
     [],
   );
   const notMine = await openDirectWith(db, OFFICE, "titular", "auxiliar");
   await setTypingWith(db, OFFICE, "escrevente", notMine, typingAt);
   assert.deepEqual(
-    (
-      await messengerSignalWith(
-        db,
-        "auxiliar",
-        new Date("2026-11-19T15:01:02Z"),
-      )
-    ).typing,
+    (await messengerSignalWith(db, "auxiliar", at(62))).typing,
     [],
   );
 });

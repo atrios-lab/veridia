@@ -150,13 +150,24 @@ export function useAttachmentPrepare() {
 export function useAttachmentUpload(action: (data: FormData) => void) {
   const { prepare, uploading, error, setError } = useAttachmentPrepare();
 
+  /**
+   * One field, or several each with its own limit: the guia's documents,
+   * kept by party apart from the request's own attachments (decision of
+   * 19/11/2026), go to the store the same way.
+   */
   async function send(
     form: HTMLFormElement,
-    field: string,
+    field: string | { field: string; limit: number }[],
     limit = MAX_ATTACHMENTS,
   ) {
-    const data = await prepare(new FormData(form), field, limit);
-    if (data) startTransition(() => action(data));
+    const fields = typeof field === "string" ? [{ field, limit }] : field;
+    let data: FormData | undefined = new FormData(form);
+    for (const entry of fields) {
+      if (!data) return;
+      data = await prepare(data, entry.field, entry.limit);
+    }
+    const ready = data;
+    if (ready) startTransition(() => action(ready));
   }
 
   return { send, uploading, error, setError };

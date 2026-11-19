@@ -96,6 +96,12 @@ export const GuidePartySchema = z.object({
   marriageRegime: z.enum(MARRIAGE_REGIMES).optional(),
   /** Where and when the marriage was registered, as the deed cites it. */
   marriageRecord: text(400),
+  /**
+   * The spouse, as the deed names them ("JOÃO EXEMPLO, inscrito no CPF sob
+   * o nº ..."): asked whenever the party is married (decision of
+   * 19/11/2026). Empty for the guias issued before.
+   */
+  spouse: text(400).default(""),
   /** CPC, art. 319, II: whether the party lives in união estável. */
   // "declara-*": the declaration made under the penalties of the law, as the
   // registry asks of anyone not married (solteiro, viúvo, separado,
@@ -130,8 +136,40 @@ export const GuidePropertySchema = z.object({
 });
 export type GuideProperty = z.infer<typeof GuidePropertySchema>;
 
+/**
+ * Who asked for the guia (decision of 19/11/2026): one of the parties
+ * (the buyer or the seller), or someone else acting for them, by mandato.
+ * The paper names them apart from the parties, so the fisco reads who
+ * requests and who transmits and acquires.
+ */
+export const GUIDE_REQUESTER_ROLES = [
+  "adquirente",
+  "transmitente",
+  "terceiro",
+  "nao-informado",
+] as const;
+export type GuideRequesterRole = (typeof GUIDE_REQUESTER_ROLES)[number];
+
+export const GuideRequesterSchema = z.object({
+  role: z.enum(GUIDE_REQUESTER_ROLES),
+  name: text(160),
+  taxId,
+  /** The mandato: procuração (where, book, page, date) or the representation. */
+  mandate: text(LONG_TEXT_MAX),
+});
+export type GuideRequester = z.infer<typeof GuideRequesterSchema>;
+
+export const NO_REQUESTER: GuideRequester = {
+  role: "nao-informado",
+  name: "",
+  taxId: "",
+  mandate: "",
+};
+
 export const GuideSchema = z.object({
   kind: z.enum(GUIDE_KINDS),
+  /** Who asked for it; "nao-informado" on the guias issued before. */
+  requester: GuideRequesterSchema.default(NO_REQUESTER),
   parties: z
     .array(GuidePartySchema)
     .min(1, "Informe ao menos uma parte.")
@@ -270,6 +308,7 @@ export function emptyParty(role: GuideParty["role"]): GuideParty {
     civilStatus: undefined,
     marriageRegime: undefined,
     marriageRecord: "",
+    spouse: "",
     stableUnion: "nao-informado",
     profession: "",
     taxId: "",
@@ -294,6 +333,7 @@ export function rateFor(kind: GuideKind, settings: GuideSettings): number {
 export function emptyGuide(settings: GuideSettings): Guide {
   return {
     kind: "itiv",
+    requester: NO_REQUESTER,
     parties: [emptyParty("transmitente"), emptyParty("adquirente")],
     property: {
       type: "urbano",

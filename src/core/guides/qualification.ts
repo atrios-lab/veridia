@@ -79,11 +79,19 @@ function formatTaxId(value: string): string {
   return value.trim();
 }
 
-/** "MARIA EXEMPLO DA SILVA, brasileira, solteira, ..." */
-export function qualify(party: GuideParty): string {
+/**
+ * "MARIA EXEMPLO DA SILVA, brasileira, solteira, ..." With `boldName`, the
+ * name comes marked for bold (`**NAME**`, see core/text/rich.ts): how the
+ * guia's paper sets the names apart (decision of 19/11/2026).
+ */
+export function qualify(
+  party: GuideParty,
+  options: { boldName?: boolean } = {},
+): string {
   const f = party.gender === "feminino";
   const g = (feminine: string, masculine: string) => (f ? feminine : masculine);
-  const name = party.name.trim().toLocaleUpperCase("pt-BR");
+  const plainName = party.name.trim().toLocaleUpperCase("pt-BR");
+  const name = options.boldName && plainName ? `**${plainName}**` : plainName;
   const parts: string[] = [];
 
   if (party.personType === "juridica") {
@@ -102,6 +110,10 @@ export function qualify(party: GuideParty): string {
   if (party.nationality.trim()) parts.push(party.nationality.trim());
   if (party.civilStatus) {
     const status = CIVIL[party.civilStatus][f ? 0 : 1];
+    const spouse =
+      party.civilStatus === "casado" && party.spouse?.trim()
+        ? ` com ${party.spouse.trim()}`
+        : "";
     const regime =
       party.civilStatus === "casado" && party.marriageRegime
         ? ` sob o regime da ${MARRIAGE_REGIME_LABELS[party.marriageRegime]}`
@@ -109,7 +121,7 @@ export function qualify(party: GuideParty): string {
     const record = party.marriageRecord.trim()
       ? `, ${party.marriageRecord.trim()}`
       : "";
-    parts.push(`${status}${regime}${record}`);
+    parts.push(`${status}${spouse}${regime}${record}`);
   }
   const union = STABLE_UNION_TEXT[party.stableUnion];
   if (union) parts.push(union);
@@ -154,6 +166,9 @@ export function missingQualification(party: GuideParty): string[] {
   if (!party.civilStatus) missing.push("estado civil");
   if (party.civilStatus === "casado" && !party.marriageRegime) {
     missing.push("regime de bens");
+  }
+  if (party.civilStatus === "casado" && !party.spouse?.trim()) {
+    missing.push("cônjuge");
   }
   if (!party.profession.trim()) missing.push("profissão");
   if (
