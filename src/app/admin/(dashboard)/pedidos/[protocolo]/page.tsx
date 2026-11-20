@@ -533,6 +533,13 @@ export default async function ServiceRequestDetailPage({
                             ...(check.returnedReason
                               ? { returnedReason: check.returnedReason }
                               : {}),
+                            history: (check.history ?? []).map((entry) => ({
+                              change: entry.change,
+                              previousReason: entry.previousReason,
+                              atLabel: formatOfficeDayMonthTime(
+                                new Date(entry.at),
+                              ),
+                            })),
                           }
                         : null
                     }

@@ -21,6 +21,10 @@ const EXACT: Record<string, string> = {
     "Conferência do requerimento assinado enviado pelo site",
   "service-request.signed-form-returned":
     "Devolveu o requerimento assinado ao solicitante",
+  "service-request.signed-form-return-edited":
+    "Alterou o motivo da devolução do requerimento assinado",
+  "service-request.signed-form-return-withdrawn":
+    "Desfez a devolução do requerimento assinado",
   "service-request.delivery-signed":
     "Assinou digitalmente um documento entregue",
   "service-request.delivery-rename": "Renomeou um documento entregue",
@@ -433,6 +437,10 @@ const EXPLANATIONS: Record<string, string> = {
     "O sistema leu o requerimento assinado enviado pelo solicitante: aceito (requerimento deste protocolo com assinatura digital) ou enviado para conferência da serventia (foto, escaneado ou sem assinatura digital reconhecida).",
   "service-request.signed-form-returned":
     "A serventia conferiu o requerimento enviado pelo solicitante e o devolveu, com o motivo, pedindo outro arquivo. O solicitante foi avisado por e-mail.",
+  "service-request.signed-form-return-edited":
+    "A serventia corrigiu o motivo da devolução do requerimento assinado. O solicitante passa a ler o texto novo; o anterior fica guardado no histórico do pedido.",
+  "service-request.signed-form-return-withdrawn":
+    "A serventia desfez a devolução do requerimento assinado: o arquivo voltou para a conferência e o motivo saiu da tela do solicitante. Nada foi apagado; o motivo fica no histórico do pedido.",
   "request.status": "O andamento de um pedido mudou.",
   "service-request.edit": "Os dados de um pedido foram corrigidos.",
   "service-request.amount": "O valor cobrado num pedido foi alterado.",

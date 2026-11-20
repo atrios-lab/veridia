@@ -5,7 +5,12 @@ import { toast } from "sonner";
 import { Button } from "../../../../_ui/button.tsx";
 import { Label } from "../../../../_ui/label.tsx";
 import { Textarea } from "../../../../_ui/textarea.tsx";
-import { type ActionState, returnSignedFormAction } from "../actions.ts";
+import {
+  type ActionState,
+  editSignedFormReturnAction,
+  returnSignedFormAction,
+  withdrawSignedFormReturnAction,
+} from "../actions.ts";
 
 /**
  * The signed requerimento of a pedido from the site, before it reaches the
@@ -24,6 +29,193 @@ const RETURN_REASONS = [
   "Não é o requerimento deste protocolo.",
   "O arquivo está ilegível ou incompleto.",
 ] as const;
+interface ReturnHistoryEntry {
+  change: "edited" | "withdrawn";
+  previousReason: string;
+  atLabel: string;
+}
+
+/**
+ * A devolução already made, with its options (decision of 20/11/2026):
+ * edit the reason, or "apagar" it, which puts the file back to "a
+ * conferir". Nothing leaves the database; the old texts stay listed below.
+ */
+function ReturnedNotice({
+  requestId,
+  checkedAtLabel,
+  reason,
+}: {
+  requestId: string;
+  checkedAtLabel: string;
+  reason: string;
+}) {
+  const [mode, setMode] = useState<"view" | "edit" | "withdraw">("view");
+  const [draft, setDraft] = useState(reason);
+  const [editState, editAction, editing] = useActionState<
+    ActionState,
+    FormData
+  >(editSignedFormReturnAction, { status: "idle" });
+  const [withdrawState, withdrawAction, withdrawing] = useActionState<
+    ActionState,
+    FormData
+  >(withdrawSignedFormReturnAction, { status: "idle" });
+  useEffect(() => {
+    if (editState.status === "success") {
+      toast.success("Motivo da devolução alterado.");
+      if (editState.emailWarning) toast.warning(editState.emailWarning);
+      setMode("view");
+    }
+  }, [editState]);
+  useEffect(() => {
+    if (withdrawState.status === "success") {
+      toast.success("Devolução desfeita. O arquivo voltou para a conferência.");
+      setMode("view");
+    }
+  }, [withdrawState]);
+
+  if (mode === "edit") {
+    return (
+      <form
+        action={editAction}
+        className="flex flex-col gap-2 rounded-lg bg-muted px-4 py-3"
+      >
+        <input type="hidden" name="requestId" value={requestId} />
+        <Label htmlFor="sf-motivo-editar">Motivo da devolução</Label>
+        <Textarea
+          id="sf-motivo-editar"
+          name="motivo"
+          rows={3}
+          maxLength={5000}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        <label className="flex items-center gap-2 text-sm text-foreground">
+          <input
+            type="checkbox"
+            name="avisar"
+            defaultChecked
+            className="checkbox-admin"
+          />
+          Avisar o solicitante por e-mail
+        </label>
+        {editState.status === "error" && (
+          <p role="alert" className="text-sm font-semibold text-destructive">
+            {editState.message}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button type="submit" size="sm" disabled={editing}>
+            {editing ? "Salvando..." : "Salvar motivo"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={editing}
+            onClick={() => {
+              setDraft(reason);
+              setMode("view");
+            }}
+          >
+            Cancelar
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg bg-muted px-4 py-3 text-sm text-foreground">
+      <p>
+        <strong className="font-semibold">Devolvido</strong> em {checkedAtLabel}
+        : {reason.replace(/\.+$/, "")}. Aguardando o novo arquivo do
+        solicitante.
+      </p>
+      {mode === "withdraw" ? (
+        <form
+          action={withdrawAction}
+          className="flex flex-col gap-2 rounded-lg border border-destructive/30 bg-card px-3 py-2.5"
+        >
+          <input type="hidden" name="requestId" value={requestId} />
+          <p>
+            Apagar a devolução? O arquivo volta para a conferência, como antes
+            de devolver, e o motivo sai da tela do solicitante. O texto fica
+            guardado no histórico do pedido.
+          </p>
+          {withdrawState.status === "error" && (
+            <p role="alert" className="font-semibold text-destructive">
+              {withdrawState.message}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              variant="destructive"
+              disabled={withdrawing}
+            >
+              {withdrawing ? "Apagando..." : "Sim, apagar a devolução"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={withdrawing}
+              onClick={() => setMode("view")}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setDraft(reason);
+              setMode("edit");
+            }}
+          >
+            Editar motivo
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setMode("withdraw")}
+          >
+            Apagar devolução
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReturnHistory({ entries }: { entries: ReturnHistoryEntry[] }) {
+  if (!entries.length) return null;
+  return (
+    <details className="text-xs text-muted-foreground">
+      <summary className="cursor-pointer font-medium text-foreground">
+        Histórico da devolução ({entries.length})
+      </summary>
+      <ul className="mt-1.5 flex flex-col gap-1">
+        {[...entries].reverse().map((entry, index) => (
+          <li key={`${entry.atLabel}-${index}`}>
+            {entry.atLabel}:{" "}
+            {entry.change === "edited"
+              ? "motivo alterado"
+              : "devolução apagada"}
+            . Texto anterior: "{entry.previousReason}"
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
 export function SignedFormReview({
   requestId,
   check,
@@ -35,6 +227,7 @@ export function SignedFormReview({
     reason: string;
     checkedAtLabel: string;
     returnedReason?: string;
+    history?: ReturnHistoryEntry[];
   } | null;
   hasFile: boolean;
 }) {
@@ -69,11 +262,11 @@ export function SignedFormReview({
           O solicitante ainda não enviou o requerimento assinado.
         </p>
       ) : check.verdict === "returned" ? (
-        <p className="rounded-lg bg-muted px-4 py-3 text-sm text-foreground">
-          <strong className="font-semibold">Devolvido</strong> em{" "}
-          {check.checkedAtLabel}: {check.returnedReason?.replace(/\.+$/, "")}.
-          Aguardando o novo arquivo do solicitante.
-        </p>
+        <ReturnedNotice
+          requestId={requestId}
+          checkedAtLabel={check.checkedAtLabel}
+          reason={check.returnedReason ?? ""}
+        />
       ) : (
         <>
           <p className="rounded-lg bg-warning-soft px-4 py-3 text-sm text-warning-text">
@@ -135,6 +328,8 @@ export function SignedFormReview({
           </form>
         </>
       )}
+
+      <ReturnHistory entries={check?.history ?? []} />
 
       <p className="text-xs text-muted-foreground">
         Devolver pede outro arquivo e mantém o pedido. Para recusar o pedido de
