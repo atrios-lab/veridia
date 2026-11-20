@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  editReturnReason,
   judgeSignedForm,
   readSignedFormCheck,
+  SignedFormCheckError,
   waitsOnSignedForm,
+  withdrawReturn,
 } from "./signed-form-check.ts";
 
 const OURS =
@@ -159,4 +162,60 @@ test("mesa: balcão, chat, consulta e pedido já em andamento não esperam reque
   );
   assert.equal(waitsOnSignedForm({ ...base, consultation: true }), false);
   assert.equal(waitsOnSignedForm({ ...base, status: "in-review" }), false);
+});
+
+test("a devolução se edita e se apaga, e o texto antigo fica no histórico", () => {
+  const returned = {
+    verdict: "returned" as const,
+    reason: "Requerimento deste protocolo, sem assinatura digital reconhecida.",
+    checkedAt: "2026-11-20T14:32:00.000Z",
+    returnedReason: "A assinatura não é válida.",
+  };
+  const edited = editReturnReason(
+    returned,
+    "  Assine pelo gov.br e envie de novo.  ",
+    new Date("2026-11-20T15:00:00Z"),
+  );
+  assert.equal(edited.returnedReason, "Assine pelo gov.br e envie de novo.");
+  assert.deepEqual(edited.history, [
+    {
+      change: "edited",
+      previousReason: "A assinatura não é válida.",
+      at: "2026-11-20T15:00:00.000Z",
+    },
+  ]);
+  // The same text again changes nothing.
+  assert.equal(
+    editReturnReason(edited, "Assine pelo gov.br e envie de novo.", new Date()),
+    edited,
+  );
+  assert.throws(
+    () => editReturnReason(returned, "ok", new Date()),
+    SignedFormCheckError,
+  );
+
+  const withdrawn = withdrawReturn(edited, new Date("2026-11-20T16:00:00Z"));
+  assert.equal(withdrawn.verdict, "review");
+  assert.equal(withdrawn.returnedReason, undefined);
+  assert.equal(withdrawn.reason, returned.reason);
+  assert.equal(withdrawn.history?.length, 2);
+  assert.deepEqual(withdrawn.history?.[1], {
+    change: "withdrawn",
+    previousReason: "Assine pelo gov.br e envie de novo.",
+    at: "2026-11-20T16:00:00.000Z",
+  });
+  // Saved and read back, the history is kept.
+  assert.deepEqual(
+    readSignedFormCheck({ signedFormCheck: withdrawn })?.history,
+    withdrawn.history,
+  );
+  // Only a devolução can be edited or withdrawn.
+  assert.throws(
+    () => withdrawReturn(withdrawn, new Date()),
+    SignedFormCheckError,
+  );
+  assert.throws(
+    () => editReturnReason(null, "Motivo novo", new Date()),
+    SignedFormCheckError,
+  );
 });

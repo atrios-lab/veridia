@@ -16,6 +16,18 @@ Regra do dono do projeto, acima de qualquer outra instrução:
   pedirem num comentário da PR.
 - Nunca rode migração ou script contra a Supabase de produção. Fora dela, só no banco local de teste.
 
+## Tudo o que se cria tem editar, alterar e apagar
+
+Regra do dono do projeto (20/11/2026): toda funcionalidade nova que grava algo (um texto, um motivo,
+uma devolução, um registro, um anexo, uma configuração) já nasce com as opções de **editar/alterar**
+e de **apagar** na tela, para quem tem permissão.
+
+- "Apagar" nunca tira a linha do banco: desfaz, oculta ou cancela (`deletedAt`, `withdrawn`, estado
+  novo), e o texto anterior fica num histórico e na auditoria.
+- Editar guarda o valor anterior (histórico ou auditoria com o texto antigo).
+- Cada uma pede confirmação quando o efeito chega ao cidadão, e aparece na auditoria com rótulo em
+  português.
+
 ## Antes de abrir qualquer PR
 
 Rode a mesma bateria do CI (`.github/workflows/verify.yml`), nesta ordem, e só abra a PR com tudo

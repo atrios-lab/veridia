@@ -81,8 +81,93 @@ export const signedFormCheckSchema = z.object({
   checkedAt: z.string(),
   /** The office's reason when it sent the file back. */
   returnedReason: z.string().max(5000).optional(),
+  /**
+   * What the office changed in a devolução (decision of 20/11/2026): each
+   * edited or withdrawn reason stays here, so nothing it wrote is lost.
+   */
+  history: z
+    .array(
+      z.object({
+        change: z.enum(["edited", "withdrawn"]),
+        /** The reason as it read before the change. */
+        previousReason: z.string().max(5000),
+        at: z.string(),
+      }),
+    )
+    .max(200)
+    .optional(),
 });
 export type SignedFormCheck = z.infer<typeof signedFormCheckSchema>;
+
+export class SignedFormCheckError extends Error {}
+
+/** The smallest reason the citizen can make sense of. */
+export const MIN_RETURN_REASON = 3;
+
+function returnedOrThrow(check: SignedFormCheck | null): SignedFormCheck {
+  if (check?.verdict !== "returned") {
+    throw new SignedFormCheckError(
+      "Este requerimento não está devolvido: não há motivo para alterar.",
+    );
+  }
+  return check;
+}
+
+/**
+ * Edits the reason of a devolução (decision of 20/11/2026). The citizen
+ * reads the new text; the old one goes to the history.
+ */
+export function editReturnReason(
+  check: SignedFormCheck | null,
+  reason: string,
+  now: Date,
+): SignedFormCheck {
+  const current = returnedOrThrow(check);
+  const next = reason.trim().slice(0, 5000);
+  if (next.length < MIN_RETURN_REASON) {
+    throw new SignedFormCheckError(
+      "Escreva o motivo da devolução, para o solicitante entender.",
+    );
+  }
+  if (next === (current.returnedReason ?? "").trim()) return current;
+  return {
+    ...current,
+    returnedReason: next,
+    history: [
+      ...(current.history ?? []),
+      {
+        change: "edited",
+        previousReason: current.returnedReason ?? "",
+        at: now.toISOString(),
+      },
+    ],
+  };
+}
+
+/**
+ * "Apagar" a devolução (decision of 20/11/2026): the file goes back to
+ * "a conferir", as before it was returned, and the reason leaves the
+ * citizen's screen. Nothing is erased: the reason stays in the history.
+ */
+export function withdrawReturn(
+  check: SignedFormCheck | null,
+  now: Date,
+): SignedFormCheck {
+  const current = returnedOrThrow(check);
+  const { returnedReason, ...rest } = current;
+  return {
+    ...rest,
+    verdict: "review",
+    history: [
+      ...(current.history ?? []),
+      {
+        change: "withdrawn",
+        previousReason: returnedReason ?? "",
+        at: now.toISOString(),
+      },
+    ],
+  };
+}
 
 export function readSignedFormCheck(details: unknown): SignedFormCheck | null {
   const raw = (details as { signedFormCheck?: unknown } | null)

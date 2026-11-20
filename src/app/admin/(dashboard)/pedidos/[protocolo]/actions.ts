@@ -51,7 +51,12 @@ import {
   closingStage,
 } from "@/core/request/pickup.ts";
 import { requirementTextSchema } from "@/core/request/requirement.ts";
-import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
+import {
+  editReturnReason,
+  readSignedFormCheck,
+  SignedFormCheckError,
+  withdrawReturn,
+} from "@/core/request/signed-form-check.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -1720,6 +1725,97 @@ export async function returnSignedFormAction(
   }
   revalidateAdmin();
   return { status: "success", emailWarning };
+}
+
+/**
+ * Edits the reason of a devolução (decision of 20/11/2026): the citizen
+ * reads the new text, and is told by e-mail when the office asks for it.
+ * The previous reason stays in the pedido's history and in the audit.
+ */
+export async function editSignedFormReturnAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  const reason = String(formData.get("motivo") ?? "");
+  const notify = formData.get("avisar") === "on";
+  let emailWarning: string | null = null;
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    const current = readSignedFormCheck(request.details);
+    const next = editReturnReason(current, reason, new Date());
+    if (next === current) return { status: "success", emailWarning: null };
+    await saveSignedFormCheckWith(
+      db,
+      tenant.slug,
+      requestId,
+      next,
+      session.user.id,
+      "service-request.signed-form-return-edited",
+    );
+    if (notify) {
+      emailWarning = await notifyCitizen({
+        tenant,
+        contact: request.contact,
+        protocolNumber: request.protocolNumber,
+        subject: "Motivo da devolução atualizado",
+        body: "O cartório atualizou o motivo da devolução do seu requerimento. Consulte o protocolo com a sua chave de acesso para ler o texto novo e enviar o requerimento correto.",
+      });
+    }
+  } catch (error) {
+    if (error instanceof SignedFormCheckError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.edit-signed-form-return", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning };
+}
+
+/**
+ * "Apagar" a devolução (decision of 20/11/2026): the file goes back to
+ * "a conferir" and the reason leaves the citizen's screen. Nothing leaves
+ * the database: the reason stays in the history and in the audit.
+ */
+export async function withdrawSignedFormReturnAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    if (request.status !== "awaiting-signed-form") {
+      return {
+        status: "error",
+        message: "Este pedido não está aguardando o requerimento assinado.",
+      };
+    }
+    await saveSignedFormCheckWith(
+      db,
+      tenant.slug,
+      requestId,
+      withdrawReturn(readSignedFormCheck(request.details), new Date()),
+      session.user.id,
+      "service-request.signed-form-return-withdrawn",
+    );
+  } catch (error) {
+    if (error instanceof SignedFormCheckError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.withdraw-signed-form-return", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning: null };
 }
 
 export type ReissueKeyState =

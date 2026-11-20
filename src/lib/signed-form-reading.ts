@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import {
   judgeSignedForm,
+  readSignedFormCheck,
   type SignedFormCheck,
   type SignedFormVerdict,
 } from "@/core/request/signed-form-check.ts";
@@ -57,26 +58,41 @@ export async function saveSignedFormCheckWith(
   requestId: string,
   check: SignedFormCheck,
   actorId: string | null,
+  /** What the audit records; by default, read from the verdict. */
+  auditAction?:
+    | "service-request.signed-form-return-edited"
+    | "service-request.signed-form-return-withdrawn",
 ): Promise<void> {
+  const where = and(
+    eq(serviceRequests.tenantSlug, tenantSlug),
+    eq(serviceRequests.id, requestId),
+  );
+  // The history of edited and withdrawn devoluções goes on with every new
+  // check (decision of 20/11/2026): a new file never wipes it.
+  if (!check.history) {
+    const [row] = await database
+      .select({ details: serviceRequests.details })
+      .from(serviceRequests)
+      .where(where)
+      .limit(1);
+    const history = readSignedFormCheck(row?.details)?.history;
+    if (history?.length) check = { ...check, history };
+  }
   await database
     .update(serviceRequests)
     .set({
       details: sql`${serviceRequests.details} || ${JSON.stringify({ signedFormCheck: check })}::jsonb`,
       updatedAt: new Date(),
     })
-    .where(
-      and(
-        eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.id, requestId),
-      ),
-    );
+    .where(where);
   await recordAuditWith(database, {
     tenantSlug,
     actorId,
     action:
-      check.verdict === "returned"
+      auditAction ??
+      (check.verdict === "returned"
         ? "service-request.signed-form-returned"
-        : "service-request.signed-form-check",
+        : "service-request.signed-form-check"),
     targetType: "service-request",
     targetId: requestId,
     ...(check.returnedReason ? { reason: check.returnedReason } : {}),
