@@ -554,6 +554,13 @@
       "when": 1795093741242,
       "tag": "0078_chat_instantaneo",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1795232444574,
+      "tag": "0079_analise_de_cedulas",
+      "breakpoints": true
     }
   ]
 }

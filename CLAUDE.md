@@ -28,6 +28,18 @@ e de **apagar** na tela, para quem tem permissão.
 - Cada uma pede confirmação quando o efeito chega ao cidadão, e aparece na auditoria com rótulo em
   português.
 
+## Lei que mudou e tabela de emolumentos
+
+Regras do dono do projeto (21/11/2026), para toda tela, documento ou texto do sistema:
+
+- Quando disser que uma norma mudou ou foi revogada, diga também **qual é a regra vigente**, com o
+  artigo, e **como fazer agora**, passo a passo. Nunca pare em "foi revogado". Confira no texto
+  oficial (planalto.gov.br, CNJ, Corregedoria) antes de escrever.
+- Use sempre a **tabela de emolumentos vigente** como referência: a primeira "Tabela de emolumentos"
+  publicada em Transparência (`currentFeeTableWith`, em `src/lib/fee-tables.ts`). Onde a tabela for
+  citada, mostre o lembrete para conferir se a tabela cadastrada é mesmo a vigente e, se não for, o
+  link "clique aqui para atualizar", que leva a Transparência.
+
 ## Antes de abrir qualquer PR
 
 Rode a mesma bateria do CI (`.github/workflows/verify.yml`), nesta ordem, e só abra a PR com tudo

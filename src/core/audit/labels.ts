@@ -72,6 +72,21 @@ const EXACT: Record<string, string> = {
   "rcpn.record.restore":
     "Estornou o cancelamento de um registro do Registro Civil",
   "rcpn.habilitacao.create": "Abriu um processo de habilitação de casamento",
+  "cedula.create": "Abriu uma análise de cédula de crédito",
+  "cedula.update": "Conferiu e alterou os dados de uma análise de cédula",
+  "cedula.model": "Editou o modelo de um ato na análise de cédula",
+  "cedula.model-reset":
+    "Voltou ao texto gerado de um modelo da análise de cédula",
+  "cedula.remove": "Apagou uma análise de cédula (fica guardada)",
+  "cedula.restore": "Restaurou uma análise de cédula apagada",
+  "cedula.link": "Ligou uma análise de cédula a um pedido",
+  "cedula.unlink": "Desfez o vínculo de uma análise de cédula com o pedido",
+  "cedula.learn": "A análise de cédulas aprendeu a espécie de um título",
+  "cedula.learned-edit": "Alterou a espécie aprendida de um título de cédula",
+  "cedula.learned-remove":
+    "Apagou um aprendizado da análise de cédulas (fica guardado)",
+  "cedula.learned-restore": "Restaurou um aprendizado da análise de cédulas",
+  "cedula.charge-notes": "Alterou as notas de cobrança dos atos das cédulas",
   "titularidade.create":
     "Lançou um ato de mudança de titularidade para comunicar à prefeitura",
   "titularidade.edit":
@@ -526,6 +541,29 @@ const EXPLANATIONS: Record<string, string> = {
     "O cancelamento de um registro do Registro Civil foi desfeito (estorno), com justificativa.",
   "rcpn.habilitacao.create":
     "Um processo de habilitação para o casamento foi aberto no painel, com número do ano.",
+  "cedula.create":
+    "Uma cédula de crédito foi analisada em Utilitários: espécie, livro e atos sugeridos. Os arquivos foram lidos e descartados; ficaram os dados e os modelos.",
+  "cedula.update":
+    "Os dados de uma análise de cédula foram conferidos e alterados. Os dados anteriores ficam no histórico da análise.",
+  "cedula.model":
+    "O texto de um modelo de ato (registro, averbação, certidão) foi editado na análise de cédula. O texto anterior fica no histórico.",
+  "cedula.model-reset":
+    "Um modelo de ato da análise de cédula voltou ao texto gerado pelo sistema. O texto editado fica no histórico.",
+  "cedula.remove":
+    "Uma análise de cédula foi apagada, com motivo. Ela não sai do banco e pode ser restaurada.",
+  "cedula.restore": "Uma análise de cédula apagada foi restaurada.",
+  "cedula.link": "Uma análise de cédula foi ligada ao protocolo de um pedido.",
+  "cedula.unlink":
+    "O vínculo entre uma análise de cédula e um pedido foi desfeito.",
+  "cedula.learn":
+    "Ao corrigir a espécie de uma cédula, o sistema guardou só as palavras do título (sem número nem nome) para acertar a espécie na próxima vez.",
+  "cedula.learned-edit": "A espécie ligada a um título aprendido foi alterada.",
+  "cedula.learned-remove":
+    "Um aprendizado da análise de cédulas foi apagado. Ele fica guardado e pode ser restaurado.",
+  "cedula.learned-restore":
+    "Um aprendizado da análise de cédulas foi restaurado.",
+  "cedula.charge-notes":
+    "A serventia alterou as notas que dizem como cobrar cada tipo de ato das cédulas, conforme a tabela de emolumentos do Estado.",
   "titularidade.create":
     "Um ato que mudou o dono de um imóvel foi lançado para a comunicação mensal à prefeitura (Código Nacional de Normas, art. 184-A).",
   "titularidade.edit":
@@ -846,6 +884,7 @@ export function auditActionExplanation(code: string): string {
 /** Settings keys, as the office calls them. */
 const SETTINGS: Record<string, string> = {
   "office-alerts": "configuração de notificações",
+  "office-cedulas": "notas de cobrança das cédulas",
   "office-access-codes": "verificação em duas etapas",
   "office-role-permissions": "permissões dos cargos",
   "office-numbering": "numeração dos documentos",

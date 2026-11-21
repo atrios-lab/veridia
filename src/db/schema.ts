@@ -2700,6 +2700,80 @@ export const qualificationDocumentReviews = pgTable(
 );
 
 /**
+ * The analysis of a cédula de crédito (decision of 21/11/2026, change
+ * analise-de-cedulas): the data read from the cédula and its aditivos,
+ * checked by the clerk, and the models of the acts as the office edited
+ * them. The files are read and dropped (only their names are kept); a
+ * pedido's attachments stay in the pedido. Edits keep the previous value
+ * in `history`; "apagar" is a mark, never a deleted row.
+ */
+export const cedulaAnalyses = pgTable(
+  "cedula_analyses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id").references(() => serviceRequests.id, {
+      onDelete: "set null",
+    }),
+    /** core/cedulas CedulaKind, kept for the list. */
+    kind: text("kind").notNull(),
+    title: text("title").notNull().default(""),
+    /** core/cedulas CedulaData. */
+    data: jsonb("data").notNull(),
+    /** The models the office edited, by id: { [id]: text }. */
+    models: jsonb("models").notNull().default({}),
+    /** [{ at, by, what, previous }], newest last, at most 50. */
+    history: jsonb("history").notNull().default([]),
+    /** The names of the files read, never the files. */
+    files: jsonb("files").notNull().default([]),
+    /** "assistente" | "leitura" | "manual": how the data was read. */
+    source: text("source").notNull(),
+    /** Why the assistente virtual did not read it, when it did not. */
+    aiNote: text("ai_note"),
+    /** What the reading suggested, for the learning: the kind and its cue. */
+    detectedKind: text("detected_kind"),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedBy: text("updated_by"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+    removedReason: text("removed_reason"),
+  },
+  (t) => [
+    index("cedula_analyses_tenant").on(t.tenantSlug, t.createdAt),
+    index("cedula_analyses_request").on(t.requestId),
+  ],
+);
+
+/**
+ * What the office taught by correcting a cédula's kind (decision of
+ * 21/11/2026: "salvar o que aprendeu"): only the words of the title that
+ * say the kind (core/cedulas cueOf), no number, no name. Excluded by a
+ * mark, like the rest.
+ */
+export const cedulaLearnedCues = pgTable(
+  "cedula_learned_cues",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    cue: text("cue").notNull(),
+    kind: text("kind").notNull(),
+    uses: integer("uses").notNull().default(1),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+  },
+  (t) => [uniqueIndex("cedula_learned_cues_cue").on(t.tenantSlug, t.cue)],
+);
+
+/**
  * What the AI asks the office for the legal base (decision of 15/11/2026:
  * "caso ela precise, ela pergunte se o cartório gostaria de inserir um
  * documento, leis etc. atualizada, mas que ela sempre busque na base legal
