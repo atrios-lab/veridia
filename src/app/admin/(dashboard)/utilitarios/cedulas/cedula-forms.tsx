@@ -11,6 +11,7 @@ import {
   CHANGE_KINDS,
   CHANGE_LABELS,
   HERE_OPTIONS,
+  NEW_MONEY_LABELS,
   PERSON_ROLE_LABELS,
   PERSON_ROLES,
 } from "@/core/cedulas/analise.ts";
@@ -243,6 +244,8 @@ const emptyAddendum = (n: number): CedulaAddendum => ({
   newAmount: "",
   guaranteeChange: "",
   description: "",
+  newMoney: "nao-sei",
+  newMoneyAmount: "",
 });
 
 function Section({
@@ -718,6 +721,43 @@ export function CedulaDataForm({
                   }
                 />
               </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <NativeSelect
+                  aria-label="Houve liberação de dinheiro novo?"
+                  value={a.newMoney}
+                  onChange={(e) =>
+                    setItem("addenda", i, {
+                      newMoney: e.target.value as CedulaAddendum["newMoney"],
+                    })
+                  }
+                >
+                  {(
+                    Object.keys(
+                      NEW_MONEY_LABELS,
+                    ) as CedulaAddendum["newMoney"][]
+                  ).map((k) => (
+                    <NativeSelectOption key={k} value={k}>
+                      {k === "nao-sei"
+                        ? "Dinheiro novo: o aditivo não diz"
+                        : `Dinheiro novo: ${NEW_MONEY_LABELS[k]}`}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+                <Input
+                  aria-label="Valor do dinheiro novo (crédito suplementar)"
+                  placeholder="Valor do dinheiro novo, se houve"
+                  value={a.newMoneyAmount}
+                  onChange={(e) =>
+                    setItem("addenda", i, { newMoneyAmount: e.target.value })
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Só dinheiro novo (crédito suplementar) é cobrado pelo valor. Se
+                o novo valor é o saldo antigo com juros, é averbação sem
+                conteúdo econômico (Lei nº 10.169/2000, art. 2º, § 2º, II, b e
+                c).
+              </p>
               <Textarea
                 aria-label="Bens incluídos, substituídos ou liberados"
                 placeholder="Bens incluídos, substituídos ou liberados"

@@ -15,6 +15,7 @@ import {
   getChargeNotesWith,
 } from "@/lib/cedulas.ts";
 import { modelsOf } from "@/lib/cedulas-files.ts";
+import { feeActItemsWith } from "@/lib/fee-tables.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { FeeTableReminder } from "../../../../_components/fee-table-reminder.tsx";
@@ -79,16 +80,18 @@ export default async function CedulaAnalysisPage({
   const tenant = await getTenant();
   const analysis = await getAnalysisWith(db, tenant.slug, (await params).id);
   if (!analysis) notFound();
-  const [notes, feeTable] = await Promise.all([
+  const [notes, feeTable, fees] = await Promise.all([
     getChargeNotesWith(db, tenant.slug),
     feeTableReferenceWith(db, tenant.slug),
+    // The codes of the table in force, read from its PDF (21/11/2026).
+    feeActItemsWith(db, tenant.slug),
   ]);
   const canUpdateTable = can(
     session.user.role ?? "",
     "transparency.manage",
     session.user.permissions,
   );
-  const plan = planActs(analysis.data);
+  const plan = planActs(analysis.data, { fees: fees ?? undefined });
   const info = KIND_INFO[analysis.kind];
   const models = modelsOf(tenant, analysis);
   const suggestions = suggestRequirements(analysis.data, plan);
@@ -220,6 +223,12 @@ export default async function CedulaAnalysisPage({
                   <span className="text-xs text-muted-foreground">
                     Fundamento: {act.basis}
                   </span>
+                  {act.summary && (
+                    <p className="mt-1 rounded-lg border border-primary/25 bg-primary/5 px-3 py-2 text-sm text-foreground">
+                      <strong className="font-semibold">Em resumo:</strong>{" "}
+                      {act.summary}
+                    </p>
+                  )}
                   <span className="text-xs text-foreground">
                     <strong className="font-semibold">Cobrança:</strong>{" "}
                     {CHARGE_LABELS[act.charge]}

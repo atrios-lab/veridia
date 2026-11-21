@@ -432,6 +432,7 @@ const PROPOSE = (input: ProposalInput) =>
     "- Antes de responder, confira se a norma citada continua em vigor no texto que você leu; norma revogada não fundamenta exigência.",
     '- Se faltar na base uma norma de que precisa, liste em "fontesFaltando" com o endereço oficial, para a serventia inserir.',
     '- Sem exigência, o resultado é "positiva".',
+    "- Se o título for aditivo de cédula de crédito, diga no resumo, em linguagem simples, se houve liberação de dinheiro novo (crédito suplementar) e como se cobra: com dinheiro novo, averbação com valor declarado sobre ele (Lei nº 10.169/2000, art. 2º, § 2º, II, b, no crédito rural); se o novo valor é só o saldo antigo com juros, ou se o aditivo muda só prazo ou encargos, averbação sem conteúdo econômico (art. 2º, § 2º, II, c). Se o aditivo não deixa claro, proponha exigência para que o requerente esclareça.",
     "- Não repita dados pessoais além do necessário para identificar a exigência.",
     ...(input.previous.length
       ? [
@@ -875,6 +876,7 @@ const READ_CEDULA = (input: CedulaReadingInput) =>
     '- Em cada garantia, "here" é sempre "nao-sei": a serventia confirma a circunscrição.',
     '- Pessoas: "role" entre emitente, credor, avalista, interveniente, fiel-depositario, conjuge; "qualification" com nacionalidade, estado civil, profissão e endereço como escritos.',
     '- Cada aditivo, menção adicional ou termo de aditamento vira um item de "addenda", com "changes" entre: prazo, valor-aumento, valor-reducao, encargos, garantia-inclusao, garantia-substituicao, garantia-liberacao, partes, rerratificacao, outro. Diga o vencimento e o valor de antes e de depois quando o aditivo trouxer, e descreva os bens incluídos, substituídos ou liberados.',
+    '- Em cada aditivo que muda o valor, diga em "newMoney" se houve liberação de dinheiro novo: "sim" quando o aditivo libera crédito suplementar (novos recursos), com o valor liberado em "newMoneyAmount"; "nao" quando o novo valor é só o saldo devedor anterior atualizado (juros, encargos, consolidação, renegociação), sem dinheiro novo; "nao-sei" quando o aditivo não diz. Não presuma: dinheiro novo só com cláusula que o libere.',
     '- Em "notes", em até 5 frases, aponte o que a serventia deve conferir (divergências entre documentos, garantia sem matrícula, falta de assinatura, valores que não batem).',
     "",
     "Base jurídica (trechos, para entender o documento):",
@@ -883,7 +885,7 @@ const READ_CEDULA = (input: CedulaReadingInput) =>
       .map((p) => `[${p.reference} ${p.heading}]\n${p.text.slice(0, 1500)}`),
     "",
     "Responda só com um JSON, sem texto antes ou depois, neste formato:",
-    '{"kind": "", "title": "", "number": "", "issuedOn": "", "issuePlace": "", "amount": "", "dueOn": "", "paymentPlace": "", "paymentTerms": "", "charges": "", "product": "", "series": "", "custodian": "", "ruralCredit": false, "people": [{"role": "", "name": "", "taxId": "", "qualification": ""}], "guarantees": [{"kind": "", "grade": "", "description": "", "registration": "", "location": "", "municipality": "", "here": "nao-sei", "owner": ""}], "addenda": [{"title": "", "date": "", "changes": [], "previousDue": "", "newDue": "", "previousAmount": "", "newAmount": "", "guaranteeChange": "", "description": ""}], "notes": ""}',
+    '{"kind": "", "title": "", "number": "", "issuedOn": "", "issuePlace": "", "amount": "", "dueOn": "", "paymentPlace": "", "paymentTerms": "", "charges": "", "product": "", "series": "", "custodian": "", "ruralCredit": false, "people": [{"role": "", "name": "", "taxId": "", "qualification": ""}], "guarantees": [{"kind": "", "grade": "", "description": "", "registration": "", "location": "", "municipality": "", "here": "nao-sei", "owner": ""}], "addenda": [{"title": "", "date": "", "changes": [], "previousDue": "", "newDue": "", "previousAmount": "", "newAmount": "", "guaranteeChange": "", "description": "", "newMoney": "nao-sei", "newMoneyAmount": ""}], "notes": ""}',
   ]
     .filter((line) => line !== undefined)
     .join("\n");

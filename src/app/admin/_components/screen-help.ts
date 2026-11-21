@@ -878,7 +878,7 @@ ENTRIES["/admin/utilitarios/cedulas"] = {
     {
       term: "Aditivo",
       meaning:
-        "Mudou o valor do crédito (para mais ou para menos)? É averbação com valor declarado: cobra-se pelo valor (Lei nº 10.169/2000, art. 2º, III, b); no crédito rural, a base é o crédito suplementar (§ 2º, II, b). Só prazo, encargos ou retificação: averbação sem valor declarado (§ 2º, II, c). Bem novo em garantia pede também o registro da garantia. Cada ato tem o Como fazer, passo a passo.",
+        "Houve liberação de dinheiro novo (crédito suplementar)? Então é averbação com valor declarado, sobre o dinheiro novo (Lei nº 10.169/2000, art. 2º, § 2º, II, b). Se o novo valor é só o saldo antigo com juros, ou o aditivo muda prazo, encargos ou reduz o valor, é averbação sem conteúdo econômico (§ 2º, II, c). Se o aditivo não diz, confira ou abra exigência. Bem novo em garantia pede também o registro da garantia. Cada ato tem o resumo da cobrança, com o código da tabela vigente, e o Como fazer.",
     },
   ],
 };

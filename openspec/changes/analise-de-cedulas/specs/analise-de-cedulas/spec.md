@@ -99,15 +99,24 @@ Na tela do pedido, a qualificação do título SHALL vir no topo, porque é ela 
 
 ### Requirement: Valor declarado, o que mudou e como fazer
 
-Todo ato sugerido SHALL trazer o "Como fazer", passo a passo: o que conferir, como cobrar, onde lançar, o modelo e o prazo, cada passo com a fonte jurídica. O ato SHALL ser classificado assim:
-- aditivo que muda o valor do crédito, para mais ou para menos: averbação com valor declarado, com o valor anterior, o novo e a diferença (Lei 10.169/2000, art. 2º, III, b); no crédito rural, a base é o crédito suplementar (§ 2º, II, b);
-- aditivo sem mudança de valor: averbação sem valor declarado (§ 2º, II, c).
+Todo ato sugerido SHALL trazer o "Como fazer", passo a passo: o que conferir, como cobrar, onde lançar, o modelo e o prazo, cada passo com a fonte jurídica, e o resumo da cobrança numa frase simples. O ato SHALL ser classificado assim:
+- aditivo que libera dinheiro novo (crédito suplementar): averbação com valor declarado, com base no dinheiro novo (Lei 10.169/2000, art. 2º, § 2º, II, b, no crédito rural; art. 2º, III, b, nos demais);
+- aditivo sem dinheiro novo (o novo valor é o saldo antigo com juros, ou muda só prazo ou encargos, ou reduz o valor): averbação sem conteúdo econômico (§ 2º, II, c);
+- aditivo que muda o valor sem dizer se houve dinheiro novo: a conferir, com a exigência "Liberação de crédito suplementar no aditivo".
 
-O modelo SHALL dizer "VALOR DECLARADO" ou "ATO SEM VALOR DECLARADO". A tela SHALL dizer o que cada aditivo mudou. Quando o aditivo não deixar claro o que muda, a tela SHALL orientar a abrir a nota de exigência para ciência do requerente e SHALL sugerir a exigência "Alterações do aditivo".
+O resumo SHALL citar o código do item da tabela de emolumentos vigente, quando a tabela publicada em Transparência o trouxer. O modelo SHALL dizer "VALOR DECLARADO" ou "ATO SEM VALOR DECLARADO". A tela SHALL dizer o que cada aditivo mudou e se houve dinheiro novo. Quando o aditivo não deixar claro o que muda, a tela SHALL orientar a abrir a nota de exigência para ciência do requerente e SHALL sugerir a exigência "Alterações do aditivo". A qualificação aberta da análise, ou com o mesmo protocolo, SHALL mostrar o resumo da cobrança de cada ato.
+
+#### Scenario: Saldo antigo com juros
+- **WHEN** o aditivo leva o crédito para R$ 605.165,59, que é o saldo devedor anterior atualizado com juros, sem liberação de crédito suplementar
+- **THEN** a análise diz "Neste aditivo não houve liberação de dinheiro novo. Os R$ 605.165,59 são o saldo antigo com juros, não crédito suplementar. Então a cobrança é averbação sem conteúdo econômico", com o código da tabela vigente, e o modelo traz "ATO SEM VALOR DECLARADO"
+
+#### Scenario: Crédito suplementar
+- **WHEN** o aditivo de cédula rural libera R$ 150.000,00 de crédito suplementar
+- **THEN** a análise indica averbação com valor declarado sobre os R$ 150.000,00, e o modelo traz "VALOR DECLARADO"
 
 #### Scenario: Redução de valor
 - **WHEN** o aditivo reduz o crédito de R$ 600.000,00 para R$ 500.000,00
-- **THEN** a análise indica averbação com valor declarado, mostra a redução de R$ 100.000,00, e o modelo traz "VALOR DECLARADO"
+- **THEN** a análise indica averbação sem conteúdo econômico, porque não houve dinheiro novo, e mostra a redução de R$ 100.000,00
 
 #### Scenario: Aditivo sem clareza
 - **WHEN** o aditivo não tem nenhuma mudança marcada ou descrita

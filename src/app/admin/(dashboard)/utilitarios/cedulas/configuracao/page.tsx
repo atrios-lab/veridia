@@ -23,9 +23,11 @@ const LAW: Record<(typeof CHARGE_BASES)[number], string> = {
   "valor-suplementar":
     "Aditivo do crédito rural que libera crédito suplementar: averbação com valor declarado, base de cálculo no crédito suplementar (art. 2º, § 2º, II, b).",
   "conteudo-financeiro":
-    "Aditivo que muda o valor do crédito (para mais ou para menos): averbação com valor declarado, cobra-se pelo valor (art. 2º, III, b). Escreva aqui se o item da tabela usa o valor alterado ou o novo valor total.",
+    "Aditivo (fora do crédito rural) que libera dinheiro novo: averbação com valor declarado, base no valor liberado (art. 2º, III, b). Escreva aqui como o item da tabela do seu estado cobra.",
   "sem-conteudo":
-    "Aditivo que não muda o valor (prazo, encargos, retificação): averbação sem valor declarado, ato sem conteúdo econômico (art. 2º, III, a, e § 2º, II, c).",
+    "Aditivo sem dinheiro novo (prazo, encargos, retificação, redução, ou o saldo antigo atualizado com juros): averbação sem valor declarado, ato sem conteúdo econômico (art. 2º, III, a, e § 2º, II, c).",
+  "a-conferir":
+    "O valor mudou, mas o aditivo não diz se houve dinheiro novo: o funcionário confere antes de cobrar e, se não ficar claro, abre exigência para ciência do requerente.",
   nenhum: "Ato que cabe a outro cartório ou órgão: nada a cobrar aqui.",
 };
 

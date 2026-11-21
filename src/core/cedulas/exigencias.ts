@@ -4,6 +4,7 @@ import {
   type QualificationData,
 } from "../qualificacao/qualificacao.ts";
 import {
+  addendumCharge,
   addendumUnclear,
   type CedulaData,
   type CedulaGuarantee,
@@ -232,6 +233,26 @@ export function suggestRequirements(
           : KIND_INFO[data.kind].family === "rural"
             ? "Decreto-Lei nº 167/1967, art. 12; Lei nº 6.015/1973, arts. 198 e 246."
             : "Lei nº 6.015/1973, arts. 198 e 246.",
+      reference: name,
+    });
+  }
+
+  // 8b. The value changed but the aditivo does not say whether new money
+  // was released: that decides the charge (Lei 10.169/2000, art. 2º, § 2º,
+  // II, b and c), so the requerente is asked (decision of 21/11/2026).
+  for (const [index, a] of data.addenda.entries()) {
+    if (addendumUnclear(a) || addendumCharge(data, a) !== "a-conferir") {
+      continue;
+    }
+    const name = a.title || `${index + 1}º aditivo`;
+    out.push({
+      key: `a${index}-dinheiro-novo`,
+      title: "Liberação de crédito suplementar no aditivo",
+      description: `O ${name} altera o valor do crédito${a.newAmount ? ` para ${a.newAmount}` : ""}, mas não diz se houve liberação de crédito suplementar (dinheiro novo) ou se o novo valor é o saldo devedor anterior atualizado. A cobrança depende disso: com crédito suplementar, averbação com valor declarado sobre ele; sem, ato sem conteúdo econômico.`,
+      howToComply:
+        "Apresentar declaração do credor, ou o aditivo com cláusula expressa, informando se houve liberação de crédito suplementar e, se houve, o valor liberado.",
+      basis:
+        "Lei nº 10.169/2000, art. 2º, § 2º, II, b e c (incluídos pela Lei nº 13.986/2020); Lei nº 6.015/1973, art. 198.",
       reference: name,
     });
   }

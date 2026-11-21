@@ -39,7 +39,7 @@ import {
   type TitleFile,
 } from "./ai.ts";
 import { recordAuditWith } from "./audit.ts";
-import { feeTableReferenceWith } from "./fee-tables.ts";
+import { feeActItemsWith, feeTableReferenceWith } from "./fee-tables.ts";
 import { pdfText } from "./guide-reading.ts";
 import { searchKnowledgeWith } from "./knowledge.ts";
 import { docxText } from "./titularidade-reading.ts";
@@ -515,6 +515,38 @@ export async function getAnalysisWith(
     .limit(1);
   if (!row) return null;
   return viewOf(row, await protocolOf(database, tenantSlug, row.requestId));
+}
+
+/**
+ * The cédula analyses behind a qualificação (decision of 21/11/2026:
+ * "também analisar dessa forma para facilitar para o funcionário e
+ * qualificação"): the ones whose nota de exigência it is, or with the same
+ * protocol. Removed analyses are left out.
+ */
+export async function analysesForQualificationWith(
+  database: Database,
+  tenantSlug: string,
+  qualificationId: string,
+  protocol: string,
+): Promise<AnalysisView[]> {
+  const byNote = sql`${cedulaAnalyses.data}->'noteIds' @> ${JSON.stringify([qualificationId])}::jsonb`;
+  const wanted = protocol.trim()
+    ? sql`(${byNote} or ${cedulaAnalyses.data}->>'protocolNumber' = ${protocol.trim()})`
+    : byNote;
+  const rows = await database
+    .select()
+    .from(cedulaAnalyses)
+    .where(
+      and(
+        eq(cedulaAnalyses.tenantSlug, tenantSlug),
+        isNull(cedulaAnalyses.removedAt),
+        wanted,
+      ),
+    )
+    .orderBy(desc(cedulaAnalyses.createdAt))
+    .limit(5)
+    .catch(() => []);
+  return rows.map((row) => viewOf(row));
 }
 
 export async function listAnalysesWith(
@@ -1124,4 +1156,4 @@ export async function cedulaInRequestWith(
 }
 
 /** The fee table in force, re-exported for the cédulas' screens. */
-export { feeTableReferenceWith };
+export { feeActItemsWith, feeTableReferenceWith };

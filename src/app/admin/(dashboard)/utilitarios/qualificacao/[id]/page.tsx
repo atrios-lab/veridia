@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can, type Role } from "@/core/auth/roles.ts";
+import { planActs } from "@/core/cedulas/analise.ts";
 import { requirementTextFromNote } from "@/core/qualificacao/documents.ts";
 import { qualificationDeadline, ruleFor } from "@/core/qualificacao/prazos.ts";
 import {
@@ -20,7 +21,8 @@ import {
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
-import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
+import { analysesForQualificationWith } from "@/lib/cedulas.ts";
+import { feeActItemsWith, feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import {
   getDeadlineSettingsWith,
   getQualificationWith,
@@ -87,6 +89,8 @@ export default async function QualificationPage({
     linkedRequest,
     certificates,
     feeTable,
+    cedulas,
+    feeActs,
   ] = await Promise.all([
     listNotesWith(db, tenant.slug, q.id),
     listLibraryWith(db, tenant.slug, q.data.attribution),
@@ -99,6 +103,10 @@ export default async function QualificationPage({
     certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
     // The fee table in force, for reference (decision of 21/11/2026).
     feeTableReferenceWith(db, tenant.slug),
+    // The cédula analyses behind this título, with the charge of each act
+    // in plain words and the table's code (decision of 21/11/2026).
+    analysesForQualificationWith(db, tenant.slug, q.id, q.data.protocol),
+    feeActItemsWith(db, tenant.slug),
   ]);
   const round = currentRound(q.data);
   // The Tabelião's validation of the notes with the Assistente Virtual's
@@ -185,6 +193,39 @@ export default async function QualificationPage({
             session.user.permissions,
           )}
         />
+        {cedulas.map((analysis) => {
+          const acts = planActs(analysis.data, {
+            fees: feeActs ?? undefined,
+          }).acts.filter((act) => act.summary);
+          if (acts.length === 0) return null;
+          return (
+            <section
+              key={analysis.id}
+              className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 px-5 py-4"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <h2 className="text-base font-semibold text-foreground">
+                  Análise da cédula: o que cobrar
+                </h2>
+                <Link
+                  href={`/admin/utilitarios/cedulas/${analysis.id}`}
+                  className="text-sm font-medium text-primary underline underline-offset-4"
+                >
+                  Abrir a análise e o passo a passo
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">{analysis.title}</p>
+              <ul className="flex flex-col gap-2 text-sm text-foreground">
+                {acts.map((act) => (
+                  <li key={act.id}>
+                    <strong className="font-semibold">{act.title}.</strong>{" "}
+                    {act.summary}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
         {q.removedAt && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted px-5 py-3 text-sm text-foreground">
             <span>
