@@ -42,6 +42,7 @@ As leis das cédulas mudaram muito em 2020 e 2022 (Leis 13.986/2020 e 14.421/202
   - aceita uma nota de cobrança escrita pela serventia para cada tipo de ato, que aponta o item da tabela do Estado.
 - **Lei que mudou** (pedido de 21/11/2026): o aviso mostra como era, o que vale hoje (a norma vigente, com o artigo) e como fazer agora, passo a passo.
 - **Tabela vigente**: a cobrança cita a tabela de emolumentos vigente publicada em Transparência, sempre com o lembrete para conferir se ela é mesmo a vigente e com o link "clique aqui para atualizar".
+- **Nota de exigência**: depois da análise, a tela sugere as exigências do que falta, com fundamento. O funcionário confere, edita ou acrescenta, e a nota abre na Qualificação de títulos para ser numerada, assinada e entregue.
 - **Arquivos não ficam guardados**: os documentos da cédula são lidos e descartados. Ficam a análise (dados e modelos) e os nomes dos arquivos. Os arquivos que vieram de um pedido continuam no pedido.
 - **Aprendizado sem dados pessoais**: quando o funcionário corrige a espécie, o sistema guarda só a expressão do título, sem números nem nomes. Na próxima cédula com aquele título, a espécie certa vem primeiro.
 - **Documentos que ensinam** (leis, provimentos, cadernos, modelos) continuam indo para a Base jurídica, que guarda o texto e descarta o arquivo. A ferramenta consulta a Base jurídica nos fundamentos.

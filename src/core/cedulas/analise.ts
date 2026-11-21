@@ -139,6 +139,8 @@ export const CedulaDataSchema = z.object({
   protocolNumber: text(40),
   protocolDate: text(40),
   notes: text(5000),
+  /** The qualificações (notas de exigência) opened from this analysis. */
+  noteIds: z.array(z.string().uuid()).max(30).default([]),
 });
 export type CedulaData = z.infer<typeof CedulaDataSchema>;
 
@@ -924,6 +926,9 @@ export function coerceCedulaData(
     people: keep(PersonSchema, list("people")),
     guarantees: keep(GuaranteeSchema, list("guarantees")),
     addenda: keep(AddendumSchema, addenda),
+    noteIds: list("noteIds").filter(
+      (v): v is string => typeof v === "string" && /^[0-9a-f-]{36}$/i.test(v),
+    ),
   });
   return parsed.success ? parsed.data : emptyCedula(kind);
 }

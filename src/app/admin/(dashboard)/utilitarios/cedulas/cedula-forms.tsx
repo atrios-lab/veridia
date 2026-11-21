@@ -33,6 +33,7 @@ import {
   type CedulaState,
   changeLearnedAction,
   createCedulaAnalysisAction,
+  createCedulaNoteAction,
   linkCedulaRequestAction,
   removeCedulaAnalysisAction,
   restoreCedulaAnalysisAction,
@@ -1118,6 +1119,186 @@ export function ChargeNotesForm({
       <Button type="submit" disabled={pending} className="self-start">
         {pending ? "Salvando..." : "Salvar notas de cobrança"}
       </Button>
+    </form>
+  );
+}
+
+// ------------------------------------------------- nota de exigência
+
+export interface RequirementDraft {
+  key: string;
+  title: string;
+  description: string;
+  howToComply: string;
+  basis: string;
+  reference: string;
+}
+
+/**
+ * The exigências the analysis found, for the clerk to check (decision of
+ * 21/11/2026): each one marked, editable and removable, more can be
+ * added, and the note opens in the Qualificação de títulos.
+ */
+export function RequirementsPanel({
+  id,
+  suggestions,
+  presenter,
+  canQualify,
+  disabled,
+}: {
+  id: string;
+  suggestions: RequirementDraft[];
+  presenter: string;
+  canQualify: boolean;
+  disabled?: boolean;
+}) {
+  const [items, setItems] = useState(
+    suggestions.map((s) => ({ ...s, kept: true })),
+  );
+  const [who, setWho] = useState(presenter);
+  const [state, action, pending] = useActionState(createCedulaNoteAction, IDLE);
+  const kept = items.filter((i) => i.kept);
+  const set = (index: number, patch: Partial<(typeof items)[number]>) =>
+    setItems((list) =>
+      list.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
+  const presenterId = `apresentante-${id}`;
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <input type="hidden" name="id" value={id} />
+      <input
+        type="hidden"
+        name="exigencias"
+        value={JSON.stringify(
+          kept.map(({ title, description, howToComply, basis, reference }) => ({
+            title,
+            description,
+            howToComply,
+            basis,
+            reference,
+          })),
+        )}
+      />
+      {suggestions.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          A análise não encontrou nada faltando. Se você viu alguma falha no
+          título, acrescente a exigência abaixo.
+        </p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          O que a análise encontrou faltando. Desmarque o que não se aplica,
+          ajuste o texto e acrescente o que mais tiver visto.
+        </p>
+      )}
+      <fieldset disabled={disabled || pending} className="flex flex-col gap-3">
+        {items.map((item, i) => (
+          <div
+            key={item.key}
+            className={cn(
+              "flex flex-col gap-2 rounded-lg border border-border p-3",
+              !item.kept && "opacity-60",
+            )}
+          >
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                className="checkbox-admin"
+                checked={item.kept}
+                onChange={(e) => set(i, { kept: e.target.checked })}
+              />
+              Incluir na nota
+            </label>
+            <Input
+              aria-label="Título da exigência"
+              value={item.title}
+              onChange={(e) => set(i, { title: e.target.value })}
+              placeholder="Título da exigência"
+            />
+            <Textarea
+              aria-label="O que falta ou está errado"
+              rows={2}
+              value={item.description}
+              onChange={(e) => set(i, { description: e.target.value })}
+              placeholder="O que falta ou está errado"
+            />
+            <Textarea
+              aria-label="Como cumprir"
+              rows={2}
+              value={item.howToComply}
+              onChange={(e) => set(i, { howToComply: e.target.value })}
+              placeholder="Como cumprir"
+            />
+            <div className="grid gap-2 md:grid-cols-2">
+              <Input
+                aria-label="Fundamento"
+                value={item.basis}
+                onChange={(e) => set(i, { basis: e.target.value })}
+                placeholder="Fundamento (lei e artigo)"
+              />
+              <Input
+                aria-label="A que se refere"
+                value={item.reference}
+                onChange={(e) => set(i, { reference: e.target.value })}
+                placeholder="A que se refere (título, bem, pessoa)"
+              />
+            </div>
+          </div>
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() =>
+            setItems((list) => [
+              ...list,
+              {
+                key: `nova-${list.length + 1}`,
+                title: "",
+                description: "",
+                howToComply: "",
+                basis: "",
+                reference: "",
+                kept: true,
+              },
+            ])
+          }
+        >
+          Acrescentar exigência
+        </Button>
+        <div className={field}>
+          <Label htmlFor={presenterId}>Quem apresentou o título</Label>
+          <Input
+            id={presenterId}
+            name="apresentante"
+            value={who}
+            onChange={(e) => setWho(e.target.value)}
+          />
+        </div>
+      </fieldset>
+      <ErrorLine state={state} />
+      {canQualify ? (
+        <Button
+          type="submit"
+          disabled={disabled || pending || kept.length === 0}
+          className="self-start"
+        >
+          {pending
+            ? "Abrindo a nota..."
+            : `Criar a nota de exigência (${kept.length})`}
+        </Button>
+      ) : (
+        <p className="text-sm text-warning-text">
+          A nota de exigência é emitida pela Qualificação de títulos. Peça ao
+          Tabelião essa permissão em Perfis e permissões.
+        </p>
+      )}
+      <p className="text-xs text-muted-foreground">
+        A nota abre na Qualificação de títulos (Registro de Imóveis), com as
+        exigências de uma só vez e fundamentadas. Lá ela é numerada, assinada,
+        impressa ou baixada em Word e entregue; também dá para editar,
+        acrescentar da biblioteca e fazer o reexame.
+      </p>
     </form>
   );
 }

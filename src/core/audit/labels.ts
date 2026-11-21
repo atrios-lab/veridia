@@ -87,6 +87,8 @@ const EXACT: Record<string, string> = {
     "Apagou um aprendizado da análise de cédulas (fica guardado)",
   "cedula.learned-restore": "Restaurou um aprendizado da análise de cédulas",
   "cedula.charge-notes": "Alterou as notas de cobrança dos atos das cédulas",
+  "cedula.note":
+    "Abriu a nota de exigência de uma cédula na Qualificação de títulos",
   "titularidade.create":
     "Lançou um ato de mudança de titularidade para comunicar à prefeitura",
   "titularidade.edit":
@@ -562,6 +564,8 @@ const EXPLANATIONS: Record<string, string> = {
     "Um aprendizado da análise de cédulas foi apagado. Ele fica guardado e pode ser restaurado.",
   "cedula.learned-restore":
     "Um aprendizado da análise de cédulas foi restaurado.",
+  "cedula.note":
+    "Depois da análise da cédula, a equipe conferiu as exigências sugeridas e abriu a nota de exigência na Qualificação de títulos, onde ela é numerada, assinada e entregue.",
   "cedula.charge-notes":
     "A serventia alterou as notas que dizem como cobrar cada tipo de ato das cédulas, conforme a tabela de emolumentos do Estado.",
   "titularidade.create":

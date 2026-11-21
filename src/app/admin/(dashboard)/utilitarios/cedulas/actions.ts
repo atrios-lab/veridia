@@ -2,9 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { can } from "@/core/auth/roles.ts";
-import { CedulaDataSchema, inferChanges } from "@/core/cedulas/analise.ts";
+import {
+  CedulaDataSchema,
+  inferChanges,
+  planActs,
+} from "@/core/cedulas/analise.ts";
 import { isCedulaKind } from "@/core/cedulas/especies.ts";
+import { qualificationFromCedula } from "@/core/cedulas/exigencias.ts";
+import { requirementProblems } from "@/core/qualificacao/qualificacao.ts";
 import { MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -13,7 +20,9 @@ import {
   CedulaError,
   changeLearnedWith,
   createAnalysisWith,
+  getAnalysisWith,
   type IncomingFile,
+  linkNoteWith,
   linkRequestWith,
   readCedulaDocumentsWith,
   removeAnalysisWith,
@@ -23,8 +32,12 @@ import {
   saveModelWith,
   updateDataWith,
 } from "@/lib/cedulas.ts";
+import {
+  createQualificationWith,
+  QualificationError,
+} from "@/lib/qualificacao.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 
 export type CedulaState =
   | { status: "idle" }
@@ -342,4 +355,108 @@ export async function saveChargeNotesAction(
   } catch (error) {
     return fail(error, "cedulas.charge");
   }
+}
+
+const ChosenSchema = z
+  .array(
+    z.object({
+      title: z.string().max(300),
+      description: z.string().max(5000),
+      howToComply: z.string().max(5000),
+      basis: z.string().max(2000),
+      reference: z.string().max(500),
+    }),
+  )
+  .max(60);
+
+/**
+ * The nota de exigência after the analysis (decision of 21/11/2026): the
+ * exigências the clerk kept open a qualificação of Registro de Imóveis,
+ * where the note is numbered, signed, printed and delivered.
+ */
+export async function createCedulaNoteAction(
+  _previous: CedulaState,
+  formData: FormData,
+): Promise<CedulaState> {
+  const ctx = await access();
+  if (!ctx) return { status: "error", message: NO_PERMISSION };
+  if (
+    !can(
+      ctx.session.user.role ?? "",
+      "qualificacao.manage",
+      ctx.session.user.permissions,
+    )
+  ) {
+    return {
+      status: "error",
+      message:
+        "A nota de exigência é emitida pela Qualificação de títulos. Peça ao Tabelião essa permissão em Perfis e permissões.",
+    };
+  }
+  const id = String(formData.get("id") ?? "");
+  const presenter = String(formData.get("apresentante") ?? "").trim();
+  let chosen: z.infer<typeof ChosenSchema>;
+  try {
+    chosen = ChosenSchema.parse(
+      JSON.parse(String(formData.get("exigencias") ?? "[]")),
+    );
+  } catch {
+    return { status: "error", message: "As exigências não vieram completas." };
+  }
+  if (chosen.length === 0) {
+    return {
+      status: "error",
+      message: "Marque ou escreva ao menos uma exigência para a nota.",
+    };
+  }
+  if (!presenter) {
+    return { status: "error", message: "Informe quem apresentou o título." };
+  }
+  let qualificationId: string;
+  try {
+    const analysis = await getAnalysisWith(db, ctx.tenant.slug, id);
+    if (!analysis)
+      return { status: "error", message: "Análise não encontrada." };
+    if (analysis.removedAt) {
+      return {
+        status: "error",
+        message: "Restaure a análise antes de abrir a nota.",
+      };
+    }
+    const data = qualificationFromCedula({
+      data: analysis.data,
+      plan: planActs(analysis.data),
+      presenter,
+      protocol: analysis.protocolNumber ?? "",
+      today: today(),
+      requirements: chosen,
+      newId: () => crypto.randomUUID(),
+    });
+    const problems = (data.rounds[0]?.requirements ?? []).flatMap(
+      requirementProblems,
+    );
+    if (problems.length > 0) {
+      return { status: "error", message: problems.join(" ") };
+    }
+    qualificationId = await createQualificationWith(
+      db,
+      ctx.tenant.slug,
+      data,
+      ctx.session.user.id,
+    );
+    await linkNoteWith(
+      db,
+      ctx.tenant.slug,
+      id,
+      qualificationId,
+      ctx.session.user.id,
+    );
+  } catch (error) {
+    if (error instanceof QualificationError) {
+      return { status: "error", message: error.message };
+    }
+    return fail(error, "cedulas.note");
+  }
+  revalidatePath(`${BASE}/${id}`);
+  redirect(`/admin/utilitarios/qualificacao/${qualificationId}`);
 }

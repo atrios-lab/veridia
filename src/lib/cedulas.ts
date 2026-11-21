@@ -580,7 +580,14 @@ export async function updateDataWith(
     .set({
       kind: data.kind,
       title: data.title || KIND_INFO[data.kind].label,
-      data,
+      // The notes opened from here are kept whatever the form sent.
+      data: {
+        ...data,
+        noteIds: coerceCedulaData(
+          row.data,
+          isCedulaKind(row.kind) ? row.kind : data.kind,
+        ).noteIds,
+      },
       history: pushHistory(row.history, {
         at: now.toISOString(),
         by: actorId,
@@ -966,4 +973,43 @@ export async function feeTableReferenceWith(
         year: table.document.yearLabel,
       }
     : null;
+}
+
+/**
+ * Records the nota de exigência opened from the analysis (decision of
+ * 21/11/2026): the qualificação's id goes into the analysis, which lists
+ * it; the note itself lives, numbered, in the Qualificação de títulos.
+ */
+export async function linkNoteWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  qualificationId: string,
+  actorId: string,
+): Promise<void> {
+  const row = await rowOf(database, tenantSlug, id);
+  const kind = isCedulaKind(row.kind) ? row.kind : "credito-bancario";
+  const data = coerceCedulaData(row.data, kind);
+  const now = new Date();
+  await database
+    .update(cedulaAnalyses)
+    .set({
+      data: { ...data, noteIds: [...data.noteIds, qualificationId].slice(-30) },
+      history: pushHistory(row.history, {
+        at: now.toISOString(),
+        by: actorId,
+        what: "nota",
+        previous: data.noteIds,
+      }),
+      updatedBy: actorId,
+      updatedAt: now,
+    })
+    .where(eq(cedulaAnalyses.id, row.id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "cedula.note",
+    targetType: "cedula-analysis",
+    targetId: row.id,
+  });
 }
