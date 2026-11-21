@@ -28,7 +28,15 @@ export function FeeTableReminder({
             <strong className="font-semibold">Tabela de referência:</strong>{" "}
             {table.title}
             {table.year ? ` (${table.year})` : ""}, a vigente cadastrada em
-            Transparência.
+            Transparência.{" "}
+            <a
+              href={`/transparencia/documento/${table.id}`}
+              target="_blank"
+              rel="noopener"
+              className="font-semibold underline underline-offset-4"
+            >
+              Abrir a tabela
+            </a>
           </p>
           <p>
             Confira se esta é de fato a tabela de emolumentos vigente do Estado.

@@ -183,6 +183,23 @@ export function addendumChanges(a: CedulaAddendum): string[] {
   return lines;
 }
 
+/** The declared value of an aditivo, as the averbação states it. */
+function declaredValue(
+  a: CedulaAddendum | null,
+  charge: PlannedAct["charge"],
+): string {
+  if (!a) return "[preencher: valor]";
+  const before = moneyCents(a.previousAmount);
+  const after = moneyCents(a.newAmount);
+  if (before === null || after === null) {
+    return "[preencher: valor alterado pelo aditivo]";
+  }
+  const diff = formatMoney(Math.abs(after - before));
+  return charge === "valor-suplementar"
+    ? `${diff}, crédito suplementar (o crédito passou de ${formatMoney(before)} para ${formatMoney(after)})`
+    : `${formatMoney(after)}, novo valor do crédito (${after > before ? "acréscimo" : "redução"} de ${diff} sobre ${formatMoney(before)})`;
+}
+
 /** The model of one planned act; null for an act with no paper here. */
 export function modelFor(
   data: CedulaData,
@@ -309,6 +326,11 @@ export function modelFor(
           `ADITIVO: nos termos do ${fill(a?.title ?? "", "aditivo")}, de ${fill(a?.date ?? "", "data do aditivo")}, à ${titleLine(data)}, ${
             a ? addendumChanges(a).join("; ") : "[preencher: o que mudou]"
           }. Permanecem inalteradas as demais condições.`,
+          // Said in the act itself (decision of 21/11/2026): a change of
+          // value is an averbação com valor declarado.
+          act.charge === "sem-conteudo"
+            ? "ATO SEM VALOR DECLARADO."
+            : `VALOR DECLARADO: ${declaredValue(a, act.charge)}.`,
           `PROTOCOLO: nº ${fill(data.protocolNumber, "número do protocolo")}, de ${fill(data.protocolDate, "data do protocolo")}.`,
           `FUNDAMENTO: ${act.basis}`,
           "",

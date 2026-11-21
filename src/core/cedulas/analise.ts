@@ -164,10 +164,13 @@ export const CHARGE_BASES = [
 export type ChargeBasis = (typeof CHARGE_BASES)[number];
 
 export const CHARGE_LABELS: Record<ChargeBasis, string> = {
-  "valor-credito": "Com valor: base no valor do crédito garantido",
-  "valor-suplementar": "Com valor: base no crédito suplementar do aditivo",
-  "conteudo-financeiro": "Com conteúdo financeiro (faixa da tabela)",
-  "sem-conteudo": "Sem conteúdo econômico (valor fixo da tabela)",
+  "valor-credito":
+    "Registro com valor declarado: base no valor do crédito garantido",
+  "valor-suplementar":
+    "Averbação com valor declarado: base no crédito suplementar (crédito rural)",
+  "conteudo-financeiro":
+    "Averbação com valor declarado: cobra-se pelo valor que o aditivo altera",
+  "sem-conteudo": "Averbação sem valor declarado (sem conteúdo econômico)",
   nenhum: "Sem ato a cobrar nesta serventia",
 };
 
@@ -233,6 +236,13 @@ export interface PlannedAct {
   model?: ModelKind;
   guaranteeIndex?: number;
   addendumIndex?: number;
+  /**
+   * How to do it, step by step (decision of 21/11/2026: "sempre ensinar o
+   * funcionário como fazer"): what to check, how to charge, where to
+   * write it, the model and the deadline, each with its source. Filled
+   * by `planActs`.
+   */
+  how?: string[];
 }
 
 export interface Plan {
@@ -537,7 +547,7 @@ export function planAddendum(
         family === "industrial"
           ? "Decreto-Lei nº 413/1969, art. 50, § 2º; Lei nº 6.015/1973, art. 167, I."
           : "Lei nº 6.015/1973, art. 167, I (itens 2, 15 e 35, conforme a garantia).",
-      charge: rural ? "valor-credito" : "conteudo-financeiro",
+      charge: "valor-credito",
       optional: false,
       elsewhere: false,
       model: "aditivo-garantia-nova",
@@ -545,19 +555,26 @@ export function planAddendum(
     });
   }
 
-  const suplementar = changes.has("valor-aumento");
-  const charge: ChargeBasis = suplementar
-    ? rural
+  // Any change in the value of the credit is charged by the value
+  // (decision of 21/11/2026: "se a cédula mudar o valor, cobra-se pelo
+  // valor"): averbação com valor declarado. In the crédito rural the base
+  // is the supplementary credit (Lei 10.169/2000, art. 2º, § 2º, II, b).
+  const raised = changes.has("valor-aumento");
+  const valueChanged = raised || changes.has("valor-reducao");
+  const charge: ChargeBasis =
+    rural && raised
       ? "valor-suplementar"
-      : "conteudo-financeiro"
-    : "sem-conteudo";
-  const chargeBasis = suplementar
-    ? rural
-      ? "Lei nº 10.169/2000, art. 2º, § 2º, II, b: base de cálculo no crédito suplementar."
-      : "Lei nº 10.169/2000, art. 2º, III, b."
-    : rural
-      ? "Lei nº 10.169/2000, art. 2º, § 2º, II, c: sem mudança no valor do crédito, ato sem conteúdo econômico."
-      : "Lei nº 10.169/2000, art. 2º, III, a.";
+      : valueChanged
+        ? "conteudo-financeiro"
+        : "sem-conteudo";
+  const chargeBasis =
+    charge === "valor-suplementar"
+      ? "Lei nº 10.169/2000, art. 2º, § 2º, II, b: averbação com valor declarado, base de cálculo no crédito suplementar."
+      : charge === "conteudo-financeiro"
+        ? "Lei nº 10.169/2000, art. 2º, III, b: o aditivo muda o valor do crédito, averbação com valor declarado (ato com conteúdo financeiro)."
+        : rural
+          ? "Lei nº 10.169/2000, art. 2º, § 2º, II, c: sem mudança no valor do crédito, averbação sem valor declarado (ato sem conteúdo econômico)."
+          : "Lei nº 10.169/2000, art. 2º, III, a: sem mudança no valor do crédito, averbação sem valor declarado.";
   const prazoOnly =
     changes.size > 0 && [...changes].every((c) => c === "prazo");
   const ruralProrogation = family === "rural" && prazoOnly;
@@ -607,6 +624,44 @@ export function planAddendum(
   return acts;
 }
 
+/**
+ * What an aditivo changes, in words, for the "Como fazer" (decision of
+ * 21/11/2026: "dizer sempre o que mudou"). Empty when nothing is known.
+ */
+export function changeSummary(a: CedulaAddendum): string[] {
+  const changes = inferChanges(a);
+  const lines: string[] = [];
+  for (const change of changes) {
+    if (change === "prazo") {
+      lines.push(
+        `prazo: o vencimento passou ${a.previousDue ? `de ${a.previousDue} ` : ""}para ${a.newDue || "a nova data do aditivo"}`,
+      );
+    } else if (change === "valor-aumento" || change === "valor-reducao") {
+      lines.push(
+        `valor: o crédito passou ${a.previousAmount ? `de ${a.previousAmount} ` : ""}para ${a.newAmount || "o novo valor do aditivo"}`,
+      );
+    } else if (change.startsWith("garantia")) {
+      lines.push(
+        `${CHANGE_LABELS[change].toLocaleLowerCase("pt-BR")}${a.guaranteeChange ? `: ${a.guaranteeChange}` : ""}`,
+      );
+    } else {
+      lines.push(
+        `${CHANGE_LABELS[change].toLocaleLowerCase("pt-BR")}${a.description ? `: ${a.description}` : ""}`,
+      );
+    }
+  }
+  return lines;
+}
+
+/** Whether the aditivo leaves unclear what it changes. */
+export function addendumUnclear(a: CedulaAddendum): boolean {
+  const changes = inferChanges(a);
+  return (
+    changes.length === 0 ||
+    (changes.length === 1 && changes[0] === "outro" && !a.description.trim())
+  );
+}
+
 /** What changed, read from the before and after the clerk typed. */
 export function inferChanges(addendum: CedulaAddendum): ChangeKind[] {
   const found = new Set(addendum.changes);
@@ -645,6 +700,124 @@ export function formatMoney(cents: number): string {
   });
 }
 
+const RURAL_CAP_STEP =
+  "Crédito rural: os emolumentos da garantia não passam de 0,3% do valor do crédito (incluída a taxa de fiscalização) nem do valor da tabela estadual; cobre o menor (Lei nº 10.169/2000, art. 2º, § 2º, I e II).";
+
+const TABLE_STEP = (item: string) =>
+  `Na tabela de emolumentos vigente, use o item de ${item}; confira antes se a tabela cadastrada em Transparência é mesmo a vigente.`;
+
+/** The values an aditivo states, in words, for the charging step. */
+function addendumValues(a: CedulaAddendum): string {
+  const before = moneyCents(a.previousAmount);
+  const after = moneyCents(a.newAmount);
+  if (before === null || after === null) {
+    return "Anote, do aditivo, o valor anterior e o novo valor do crédito: sem eles não há base.";
+  }
+  const diff = Math.abs(after - before);
+  return `Valores do aditivo: antes ${formatMoney(before)}, depois ${formatMoney(after)}, ${after > before ? "acréscimo" : "redução"} de ${formatMoney(diff)}.`;
+}
+
+/** The step-by-step of one act (decision of 21/11/2026). */
+function teach(
+  data: CedulaData,
+  act: PlannedAct,
+  deadline: string,
+  deadlineBasis: string,
+): string[] {
+  const rural = isRuralCredit(data);
+  const a =
+    act.addendumIndex === undefined ? null : data.addenda[act.addendumIndex];
+  const deadlineStep = `Prazo: ${deadline} a contar do protocolo (${deadlineBasis.replace(/\.$/, "")}).`;
+  if (act.elsewhere || act.nature === "fora") {
+    return [
+      "Não pratique este ato nesta serventia.",
+      act.where === "entidade-registradora"
+        ? "Oriente o apresentante: o registro ou depósito é feito pelo credor na entidade autorizada pelo Banco Central; aqui vão só as garantias."
+        : act.where === "rtd"
+          ? "Oriente o apresentante a levar o título ao Registro de Títulos e Documentos do domicílio do devedor (veículo: órgão de trânsito)."
+          : "Oriente o apresentante a levar o título ao Registro de Imóveis da situação do bem, com a certidão do que foi feito aqui.",
+      `Fundamento: ${act.basis}`,
+    ];
+  }
+  const steps: string[] = [];
+  const write =
+    act.where === "livro-3"
+      ? act.nature === "averbacao"
+        ? "Lance a averbação à margem do registro no Livro nº 3, Registro Auxiliar"
+        : "Lance o registro no Livro nº 3, Registro Auxiliar"
+      : act.nature === "averbacao"
+        ? "Lance a averbação na matrícula (ou no registro da garantia)"
+        : "Lance o registro na matrícula do imóvel";
+  if (act.charge === "valor-credito") {
+    steps.push(
+      `Confira no título as partes, o valor, o vencimento e o bem (matrícula ou local).`,
+      `Cobra-se pelo valor: registro com valor declarado, base no valor do crédito garantido${data.amount ? ` (${data.amount})` : ""} (Lei nº 10.169/2000, art. 2º, III, b).`,
+      ...(rural ? [RURAL_CAP_STEP] : []),
+      TABLE_STEP("registro com valor declarado, na faixa desse valor"),
+    );
+  } else if (act.charge === "valor-suplementar" && a) {
+    steps.push(
+      "O aditivo muda o valor do crédito: é averbação com valor declarado.",
+      addendumValues(a),
+      "No crédito rural, a base de cálculo é o crédito suplementar, ou seja, o acréscimo (Lei nº 10.169/2000, art. 2º, § 2º, II, b).",
+      RURAL_CAP_STEP,
+      TABLE_STEP(
+        "averbação com valor declarado, na faixa do crédito suplementar",
+      ),
+    );
+  } else if (act.charge === "conteudo-financeiro" && a) {
+    steps.push(
+      "O aditivo muda o valor do crédito: é averbação com valor declarado, e cobra-se pelo valor (Lei nº 10.169/2000, art. 2º, III, b).",
+      addendumValues(a),
+      TABLE_STEP(
+        "averbação com valor declarado, pela base que o item define (o valor alterado ou o novo valor); a nota de cobrança da serventia diz qual",
+      ),
+    );
+  } else if (act.charge === "sem-conteudo") {
+    steps.push(
+      act.model === "remissao" || act.model === "averbacao-localizacao-penhor"
+        ? "Ato sem valor declarado."
+        : `O aditivo não muda o valor do crédito: é averbação sem valor declarado (Lei nº 10.169/2000, art. 2º, III, a${rural ? ", e § 2º, II, c" : ""}).`,
+      TABLE_STEP("averbação sem valor declarado"),
+    );
+  }
+  // Always say what the aditivo changes, or that it is not known
+  // (decision of 21/11/2026: "ensinar sempre e dizer o que mudou, ou mandar
+  // abrir exigência para ciência do requerente").
+  if (a && act.model === "aditivo") {
+    const summary = changeSummary(a);
+    if (addendumUnclear(a)) {
+      steps.unshift(
+        "O que mudou: não está claro no aditivo (nenhuma mudança marcada ou descrita).",
+        "Sem mudança no valor do crédito, a averbação é sem valor declarado. Se o aditivo não deixa claro o que altera, não averbe no escuro: abra a nota de exigência (cartão Nota de exigência, abaixo) para ciência do requerente, pedindo que esclareça ou apresente o aditivo com as alterações.",
+      );
+    } else {
+      steps.unshift(`O que mudou: ${summary.join("; ")}.`);
+    }
+  }
+  if (act.optional && a) {
+    steps.unshift(
+      "A lei dispensa o aditivo de prorrogação da cédula rural: basta a anotação do credor no título (Decreto-Lei nº 167/1967, art. 62). Averbe só se o interessado pedir.",
+    );
+  }
+  if (a?.changes.includes("garantia-liberacao")) {
+    steps.push(
+      "Liberação de garantia é cancelamento: exija a autorização ou a quitação do credor, em instrumento público ou particular (Lei nº 6.015/1973, arts. 250 e 251), e faça em 5 dias (art. 188, § 1º, I).",
+    );
+  }
+  if (act.model === "averbacao-emissao-cci") {
+    steps.push(
+      "Confira o número, a série e a instituição custodiante da CCI: só eles constam da averbação (Lei nº 10.931/2004, art. 18, § 5º).",
+      "Pedidos juntos, o registro da garantia e a averbação da CCI contam como ato único para emolumentos (art. 18, § 6º).",
+    );
+  }
+  steps.push(
+    `${write}, com o modelo do botão "${act.title}" (abra em Modelos e complete o que estiver em [preencher]).`,
+  );
+  if (act.nature !== "remissao") steps.push(deadlineStep);
+  return steps;
+}
+
 /** The whole plan: the cédula, each guarantee, the remissões, the aditivos. */
 export function planActs(data: CedulaData): Plan {
   const info = KIND_INFO[data.kind];
@@ -652,11 +825,15 @@ export function planActs(data: CedulaData): Plan {
     ...cedulaActs(data),
     ...data.guarantees.flatMap((g, i) => guaranteeActs(data, g, i)),
   ];
+  const deadline = deadlineText(info.deadline);
   const acts = [
     ...base,
     ...remissionActs(base),
     ...data.addenda.flatMap((a, i) => planAddendum(data, a, i)),
-  ];
+  ].map((act) => ({
+    ...act,
+    how: teach(data, act, deadline, info.deadline.basis),
+  }));
 
   const warnings: string[] = [];
   const real = data.guarantees.filter((g) => g.kind !== "pessoal");
@@ -728,7 +905,7 @@ export function planActs(data: CedulaData): Plan {
     cedulaAct: info.cedulaAct.text,
     cedulaBasis: info.cedulaAct.basis,
     acts,
-    deadline: deadlineText(info.deadline),
+    deadline,
     deadlineBasis: info.deadline.basis,
     warnings,
     rules,

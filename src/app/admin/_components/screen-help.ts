@@ -878,7 +878,7 @@ ENTRIES["/admin/utilitarios/cedulas"] = {
     {
       term: "Aditivo",
       meaning:
-        "Mudança de prazo, encargos ou valor é averbação; bem novo em garantia pede também o registro da garantia. No crédito rural, aditivo sem mudança de valor é ato sem conteúdo econômico, e o crédito suplementar é a base de cálculo (Lei nº 10.169/2000, art. 2º, § 2º).",
+        "Mudou o valor do crédito (para mais ou para menos)? É averbação com valor declarado: cobra-se pelo valor (Lei nº 10.169/2000, art. 2º, III, b); no crédito rural, a base é o crédito suplementar (§ 2º, II, b). Só prazo, encargos ou retificação: averbação sem valor declarado (§ 2º, II, c). Bem novo em garantia pede também o registro da garantia. Cada ato tem o Como fazer, passo a passo.",
     },
   ],
 };

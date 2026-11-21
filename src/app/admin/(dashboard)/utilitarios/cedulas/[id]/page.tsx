@@ -17,6 +17,7 @@ import {
 import { modelsOf } from "@/lib/cedulas-files.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
+import { FeeTableReminder } from "../../../../_components/fee-table-reminder.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { requireCedulas } from "../_access.ts";
 import {
@@ -27,7 +28,6 @@ import {
   RequirementsPanel,
   RestoreAnalysis,
 } from "../cedula-forms.tsx";
-import { FeeTableReminder } from "../fee-table-reminder.tsx";
 
 export const metadata = { title: "Análise de cédula" };
 
@@ -228,6 +228,18 @@ export default async function CedulaAnalysisPage({
                       : ""}
                     {notes[act.charge] ? ` · ${notes[act.charge]}` : ""}
                   </span>
+                  {(act.how ?? []).length > 0 && (
+                    <details className="mt-1 text-sm" open={!act.elsewhere}>
+                      <summary className="cursor-pointer font-medium text-foreground">
+                        Como fazer
+                      </summary>
+                      <ol className="mt-1 flex list-decimal flex-col gap-1 pl-5 text-muted-foreground">
+                        {(act.how ?? []).map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ol>
+                    </details>
+                  )}
                 </li>
               ))}
             </ol>

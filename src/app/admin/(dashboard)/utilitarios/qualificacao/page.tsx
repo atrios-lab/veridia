@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { can } from "@/core/auth/roles.ts";
 import { qualificationDeadline } from "@/core/qualificacao/prazos.ts";
 import {
   ATTRIBUTIONS,
@@ -9,11 +10,13 @@ import {
 } from "@/core/qualificacao/qualificacao.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
+import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import {
   getDeadlineSettingsWith,
   listQualificationsWith,
 } from "@/lib/qualificacao.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
+import { FeeTableReminder } from "../../../_components/fee-table-reminder.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { TirarDuvida } from "../../../_components/tirar-duvida.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
@@ -38,17 +41,18 @@ export default async function QualificationsPage({
     situacao?: string;
   }>;
 }) {
-  await requireQualificacao();
+  const session = await requireQualificacao();
   const { atribuicao = "", excluidas, situacao = "" } = await searchParams;
   const attribution = isAttribution(atribuicao) ? atribuicao : undefined;
   const removedView = excluidas === "1";
   const tenant = await getTenant();
-  const [all, deadlines] = await Promise.all([
+  const [all, deadlines, feeTable] = await Promise.all([
     listQualificationsWith(db, tenant.slug, {
       attribution,
       removed: removedView,
     }),
     getDeadlineSettingsWith(db, tenant.slug),
+    feeTableReferenceWith(db, tenant.slug),
   ]);
   const holidays = officeHolidays(tenant);
   const now = today();
@@ -86,6 +90,14 @@ export default async function QualificationsPage({
       />
       <main className="flex max-w-[1100px] flex-col gap-6 px-4 py-7 md:px-8">
         <TirarDuvida topic="qualificacao" />
+        <FeeTableReminder
+          table={feeTable}
+          canUpdate={can(
+            session.user.role ?? "",
+            "transparency.manage",
+            session.user.permissions,
+          )}
+        />
         <div className="flex flex-wrap gap-2">
           <Link href={`${BASE}/nova`} className={buttonVariants()}>
             Nova qualificação

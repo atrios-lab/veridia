@@ -294,3 +294,24 @@ export async function readNewFeeTable(
   const items = trustedItems(await readPrenotationFromPdf(tenant, documentId));
   await saveFeeTableItems(tenant.slug, documentId, items, "pdf", null);
 }
+
+/**
+ * The fee table to refer to (decision of 21/11/2026: "sempre pegue a
+ * tabela vigente como referência"): the one in force in Transparência,
+ * the same the public site shows. Null when none is published.
+ */
+export async function feeTableReferenceWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<{ id: string; title: string; year: string } | null> {
+  const table = await currentFeeTableWith(database, tenantSlug).catch(
+    () => undefined,
+  );
+  return table
+    ? {
+        id: table.document.id,
+        title: table.document.title,
+        year: table.document.yearLabel,
+      }
+    : null;
+}

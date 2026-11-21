@@ -177,3 +177,66 @@ test("a nota vira uma qualificação de Registro de Imóveis já conferida", () 
   assert.equal(isoDay("5/1/2027"), "2027-01-05");
   assert.equal(isoDay("sem data"), "");
 });
+
+test("aditivo que não diz o que muda: sem valor declarado e exigência para ciência do requerente", () => {
+  const data = cedula({
+    addenda: [
+      {
+        title: "2º aditivo",
+        date: "",
+        changes: [],
+        previousDue: "",
+        newDue: "",
+        previousAmount: "",
+        newAmount: "",
+        guaranteeChange: "",
+        description: "",
+      },
+    ],
+  });
+  const plan = planActs(data);
+  const act = plan.acts.find((a) => a.addendumIndex === 0);
+  assert.equal(act?.charge, "sem-conteudo");
+  assert.match(act?.how?.[0] ?? "", /O que mudou: não está claro/);
+  assert.match(
+    act?.how?.[1] ?? "",
+    /sem valor declarado.*abra a nota de exigência.*ciência do requerente/,
+  );
+  const req = suggestRequirements(data, plan).find(
+    (r) => r.key === "a0-esclarecer",
+  );
+  assert.equal(req?.title, "Alterações do aditivo");
+  assert.match(req?.basis ?? "", /Lei nº 6\.015\/1973, arts\. 198 e 246/);
+});
+
+test("aditivo claro diz o que mudou e não gera exigência", () => {
+  const data = cedula({
+    addenda: [
+      {
+        title: "1º aditivo",
+        date: "",
+        changes: ["prazo"],
+        previousDue: "10/11/2030",
+        newDue: "10/11/2031",
+        previousAmount: "",
+        newAmount: "",
+        guaranteeChange: "",
+        description: "",
+      },
+    ],
+  });
+  const plan = planActs(data);
+  const act = plan.acts.find((a) => a.addendumIndex === 0);
+  assert.ok(
+    act?.how?.some(
+      (s) =>
+        s ===
+        "O que mudou: prazo: o vencimento passou de 10/11/2030 para 10/11/2031.",
+    ),
+  );
+  assert.ok(act?.how?.some((s) => /averbação sem valor declarado/.test(s)));
+  assert.deepEqual(
+    suggestRequirements(data, plan).map((r) => r.key),
+    [],
+  );
+});

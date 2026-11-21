@@ -9,23 +9,23 @@ import {
 } from "@/lib/cedulas.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
+import { FeeTableReminder } from "../../../../_components/fee-table-reminder.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { requireCedulas } from "../_access.ts";
 import { ChargeNotesForm, LearnedRow } from "../cedula-forms.tsx";
-import { FeeTableReminder } from "../fee-table-reminder.tsx";
 
 export const metadata = { title: "Aprendizado e cobrança das cédulas" };
 
 /** The federal rule behind each charging basis (Lei nº 10.169/2000). */
 const LAW: Record<(typeof CHARGE_BASES)[number], string> = {
   "valor-credito":
-    "Registro de garantia: ato com conteúdo financeiro (art. 2º, III, b). No crédito rural, teto de 0,3% do crédito e da tabela estadual (art. 2º, § 2º, I e II).",
+    "Registro da garantia: ato com valor declarado, base no valor do crédito garantido (art. 2º, III, b). No crédito rural, cobra-se o menor entre 0,3% do crédito e a tabela estadual (art. 2º, § 2º, I e II).",
   "valor-suplementar":
-    "Aditivo de garantia real com crédito suplementar, no crédito rural: base de cálculo no crédito suplementar (art. 2º, § 2º, II, b).",
+    "Aditivo do crédito rural que libera crédito suplementar: averbação com valor declarado, base de cálculo no crédito suplementar (art. 2º, § 2º, II, b).",
   "conteudo-financeiro":
-    "Aditivo que muda o valor, fora do crédito rural: ato com conteúdo financeiro, por faixas da tabela (art. 2º, III, b).",
+    "Aditivo que muda o valor do crédito (para mais ou para menos): averbação com valor declarado, cobra-se pelo valor (art. 2º, III, b). Escreva aqui se o item da tabela usa o valor alterado ou o novo valor total.",
   "sem-conteudo":
-    "Aditivo sem mudança no valor do crédito (prazo, encargos, retificação): ato sem conteúdo econômico (art. 2º, III, a, e § 2º, II, c).",
+    "Aditivo que não muda o valor (prazo, encargos, retificação): averbação sem valor declarado, ato sem conteúdo econômico (art. 2º, III, a, e § 2º, II, c).",
   nenhum: "Ato que cabe a outro cartório ou órgão: nada a cobrar aqui.",
 };
 
