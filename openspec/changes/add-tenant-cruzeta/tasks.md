@@ -4,7 +4,7 @@
   `cartorio-cruzeta`, hosts `["cartoriocruzetarn.com.br", "cruzeta.localhost"]`, name
   "Cartório de Cruzeta", subtitle "Ofício Único de Cruzeta / RN", `about` no molde dos ofícios
   únicos, cns `"095547"`, as seis atribuições, `municipality` "CRUZETA", endereço "Rua João
-  Lopes de Araújo, 215, Centro, Cruzeta - RN, 59375-000", contatos ((84) 99111-6958 como
+  Lopes de Araújo, 215, Centro, Cruzeta - RN, 59375-000", contatos ((84) 4042-0744 como
   telefone e WhatsApp, `contato@cartoriocruzetarn.com.br`), `openingHours` "Segunda a sexta, das
   8h às 12h e das 14h às 17h" com `counterHours` 8–17 e intervalo 12h–14h, titular Ivanka Franci
   Delgado Dantas Nobre Costa com status `provido`, dpo com o mesmo nome em
@@ -13,8 +13,8 @@
   `2026-11-20`) e `legalFooter` no mesmo texto das demais serventias
 - [x] 1.2 Comentar no arquivo a fonte (cadastro do CNJ no Justiça Aberta, 20/11/2026); deixar sem
   `heroImage`, sem `pix` e sem `emailFrom` até a verificação do domínio no Postmark; registrar em
-  comentário o Gmail do cadastro do CNJ e o celular da lista oficial; marcar com `ponytail:` o
-  WhatsApp, o horário e a alíquota de ISS
+  comentário o Gmail e o celular do cadastro do CNJ e o celular da lista oficial; marcar com
+  `ponytail:` o horário e a alíquota de ISS
 - [x] 1.3 Registrar o tenant em `src/core/tenant/resolve.ts` (import + entrada em `TENANTS`)
 
 ## 2. Verificação
@@ -32,4 +32,4 @@
   redirecionamento do domínio sem `www` para `www`, como nos demais), verificação do domínio no
   Postmark seguida do preenchimento de `emailFrom`, criação das caixas `contato@`, `dpo@` e
   `nao-responda@`, `pnpm db:seed` da primeira conta e envio do convite
-- [x] 3.2 Anotar no PR o que falta o cartório confirmar: WhatsApp, horário, ISS e logos
+- [x] 3.2 Anotar no PR o que falta o cartório confirmar: horário, ISS e logos

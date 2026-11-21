@@ -35,9 +35,10 @@ e documentos e pessoas jurídicas.
 `openingHours` carrega o texto e `counterHours` o intervalo de 12h às 14h, como em Brejinho e
 Canguaretama. Marcado `ponytail:`.
 
-**4. Um só telefone.** O CNJ traz apenas o celular (84) 99111-6958; entra como `phone` e
-`whatsapp`. A lista oficial do RN traz outro celular em nome da titular, (84) 99408-8998.
-Marcado `ponytail:`.
+**4. Telefone informado pelo responsável do projeto.** O número (84) 4042-0744, passado em
+20/11/2026, entra como `phone` e `whatsapp`, como a linha 4042 de Ruy Barbosa. O CNJ traz o
+celular (84) 99111-6958 e a lista oficial do RN outro, (84) 99408-8998, em nome da titular; os
+dois ficam registrados em comentário.
 
 **5. Contato institucional no domínio novo.** `contato@cartoriocruzetarn.com.br` e DPO em
 `dpo@cartoriocruzetarn.com.br`, mesma regra das demais: o Gmail do cadastro do CNJ não é

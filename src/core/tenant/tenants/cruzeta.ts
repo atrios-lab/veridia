@@ -23,12 +23,12 @@ export const cartorioCruzeta: Tenant = parseTenant({
   // notas, protesto, imóveis, títulos e documentos e pessoas jurídicas.
   attributions: ["RCPN", "NOTAS", "RI", "PROTESTO", "RTD", "RCPJ"],
   contacts: {
-    // The CNJ record carries a single number, a mobile, so it doubles as the
-    // WhatsApp. (The official list of RN offices carries another mobile,
-    // (84) 99408-8998, under the titular's name.)
-    // ponytail: confirm the WhatsApp number with the office.
-    phone: "(84) 99111-6958",
-    whatsapp: "(84) 99111-6958",
+    // Number given by the project owner on 20/11/2026, used as phone and
+    // WhatsApp (same as Ruy Barbosa's 4042 line). The CNJ record carries a
+    // mobile, (84) 99111-6958, and the official list of RN offices another,
+    // (84) 99408-8998, under the titular's name.
+    phone: "(84) 4042-0744",
+    whatsapp: "(84) 4042-0744",
     // Institutional mailbox on the office's own domain, not the Gmail
     // address (cartoriounicocruzeta@gmail.com) the CNJ record carries; not
     // created yet, same as the DPO one below.
