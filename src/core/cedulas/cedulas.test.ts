@@ -7,11 +7,14 @@ import {
   detectChanges,
   detectGuarantees,
   detectKind,
+  detectNewMoney,
   inferChanges,
+  inferNewMoney,
   moneyCents,
   planActs,
 } from "./analise.ts";
 import { KIND_INFO } from "./especies.ts";
+import { suggestRequirements } from "./exigencias.ts";
 import { addendumChanges, allModels, laterModels } from "./minutas.ts";
 
 // Fictitious data only (LGPD): no client of any office.
@@ -164,6 +167,8 @@ test("aditivo só de prazo na cédula rural: averbação sem conteúdo econômic
           newAmount: "",
           guaranteeChange: "",
           description: "",
+          newMoney: "nao-sei" as const,
+          newMoneyAmount: "",
         },
       ],
     }),
@@ -187,6 +192,8 @@ test("aditivo com crédito suplementar e bem novo: registro da garantia e base n
     newAmount: "R$ 750.000,00",
     guaranteeChange: "imóvel da matrícula nº 7.777",
     description: "",
+    newMoney: "sim" as const,
+    newMoneyAmount: "",
   };
   assert.deepEqual(inferChanges(addendum), [
     "valor-aumento",
@@ -209,7 +216,7 @@ test("aditivo com crédito suplementar e bem novo: registro da garantia e base n
   );
 });
 
-test("aditivo de CCB comum com aumento: ato com conteúdo financeiro; na industrial, à margem da inscrição", () => {
+test("aditivo de CCB comum que libera dinheiro novo: ato com conteúdo financeiro; na industrial, à margem da inscrição", () => {
   const addendum = {
     title: "aditivo",
     date: "",
@@ -219,7 +226,9 @@ test("aditivo de CCB comum com aumento: ato com conteúdo financeiro; na industr
     previousAmount: "",
     newAmount: "",
     guaranteeChange: "",
-    description: "",
+    description: "libera crédito adicional ao emitente",
+    newMoney: "nao-sei" as const,
+    newMoneyAmount: "",
   };
   const ccb = planActs(
     cedula({ kind: "credito-bancario", addenda: [addendum] }),
@@ -312,7 +321,7 @@ test("os modelos saem preenchidos e marcam o que falta, sem inventar", () => {
   }
 });
 
-test("mudou o valor: averbação com valor declarado, com os valores e o passo a passo", () => {
+test("só dinheiro novo é cobrado pelo valor; saldo antigo com juros é sem conteúdo econômico", () => {
   const addendum = (over: Partial<CedulaData["addenda"][number]>) => ({
     title: "1º aditivo",
     date: "01/12/2026",
@@ -323,42 +332,130 @@ test("mudou o valor: averbação com valor declarado, com os valores e o passo a
     newAmount: "R$ 500.000,00",
     guaranteeChange: "",
     description: "",
+    newMoney: "nao-sei" as const,
+    newMoneyAmount: "",
     ...over,
   });
-  // A reduction also changes the value: charged by the value.
+  const fees = {
+    tableTitle: "Tabela de emolumentos 2026 (fictícia)",
+    items: {
+      "averbacao-sem-valor": [
+        {
+          code: "1200135",
+          description: "Averbação sem conteúdo econômico",
+          totalCents: 5000,
+        },
+      ],
+      "averbacao-com-valor": [
+        {
+          code: "1200136",
+          description: "Averbação com conteúdo econômico",
+          totalCents: 0,
+        },
+      ],
+    },
+  };
+
+  // The example of the office: the new amount is the old balance with
+  // interest, no new money (fictitious values).
+  const balance = cedula({
+    addenda: [
+      addendum({
+        changes: ["valor-aumento", "prazo"],
+        previousAmount: "R$ 480.000,00",
+        newAmount: "R$ 605.165,59",
+        previousDue: "15/09/2030",
+        newDue: "15/09/2033",
+        description:
+          "O saldo devedor, atualizado com os juros e encargos, é consolidado e renegociado.",
+      }),
+    ],
+  });
+  assert.equal(inferNewMoney(balance.addenda[0] as never), "nao");
+  const balanceAct = planActs(balance, { fees }).acts.find(
+    (a) => a.addendumIndex === 0,
+  );
+  assert.equal(balanceAct?.charge, "sem-conteudo");
+  assert.match(balanceAct?.basis ?? "", /§ 2º, II, c/);
+  assert.equal(
+    balanceAct?.summary,
+    "Neste aditivo não houve liberação de dinheiro novo. Os R$\u00a0605.165,59 são o saldo antigo com juros, não crédito suplementar. Então a cobrança é averbação sem conteúdo econômico (código 1200135).",
+  );
+  const balanceHow = balanceAct?.how?.join(" ") ?? "";
+  assert.match(balanceHow, /Dinheiro novo: não/);
+  assert.match(
+    balanceHow,
+    /use o código 1200135: Averbação sem conteúdo econômico \(total R\$\s50,00\)/,
+  );
+  const balanceModel =
+    allModels(balance, place).find((m) => m.id === balanceAct?.id)?.text ?? "";
+  assert.match(balanceModel, /ATO SEM VALOR DECLARADO/);
+  assert.match(balanceModel, /saldo anterior atualizado com juros/);
+
+  // A reduction never releases money.
   const reduced = cedula({
     kind: "credito-industrial",
     addenda: [addendum({ changes: ["valor-reducao"] })],
   });
   const act = planActs(reduced).acts.find((a) => a.addendumIndex === 0);
-  assert.equal(act?.charge, "conteudo-financeiro");
-  assert.match(act?.basis ?? "", /art\. 2º, III, b/);
+  assert.equal(act?.charge, "sem-conteudo");
+  assert.match(
+    act?.summary ?? "",
+    /diminuiu.*não houve liberação de dinheiro novo/,
+  );
   const how = act?.how?.join(" ") ?? "";
-  assert.match(how, /averbação com valor declarado, e cobra-se pelo valor/);
   assert.match(
     how,
     /antes R\$\s600\.000,00, depois R\$\s500\.000,00, redução de R\$\s100\.000,00/,
   );
   assert.match(how, /à margem do registro no Livro nº 3/);
   assert.match(how, /Prazo: 3 dias úteis/);
-  const model = allModels(reduced, place).find((m) => m.id === act?.id);
+
+  // Rural with supplementary credit: the base is the new money.
+  const rural = cedula({
+    addenda: [
+      addendum({
+        changes: ["valor-aumento"],
+        newAmount: "R$ 750.000,00",
+        description: "Fica liberado crédito suplementar ao emitente.",
+      }),
+    ],
+  });
+  const ruralAct = planActs(rural, { fees }).acts.find(
+    (a) => a.addendumIndex === 0,
+  );
+  assert.equal(ruralAct?.charge, "valor-suplementar");
   assert.match(
-    model?.text ?? "",
-    /VALOR DECLARADO: R\$\s500\.000,00, novo valor do crédito \(redução de R\$\s100\.000,00/,
+    ruralAct?.summary ?? "",
+    /houve liberação de dinheiro novo: R\$\s150\.000,00 de crédito suplementar.*sobre os R\$\s150\.000,00 \(código 1200136\)/,
+  );
+  assert.match(ruralAct?.how?.join(" ") ?? "", /0,3% do valor do crédito/);
+  assert.match(
+    allModels(rural, place).find((m) => m.id === ruralAct?.id)?.text ?? "",
+    /VALOR DECLARADO: R\$\s150\.000,00, crédito suplementar liberado/,
   );
 
-  // Rural with supplementary credit: the base is the supplement.
-  const rural = cedula({
+  // The value rose and the aditivo does not say why: to check, with the
+  // exigência for the requerente.
+  const unknown = cedula({
     addenda: [
       addendum({ changes: ["valor-aumento"], newAmount: "R$ 750.000,00" }),
     ],
   });
-  const ruralAct = planActs(rural).acts.find((a) => a.addendumIndex === 0);
-  assert.equal(ruralAct?.charge, "valor-suplementar");
-  assert.match(ruralAct?.how?.join(" ") ?? "", /0,3% do valor do crédito/);
+  const plan = planActs(unknown);
+  const unknownAct = plan.acts.find((a) => a.addendumIndex === 0);
+  assert.equal(unknownAct?.charge, "a-conferir");
   assert.match(
-    allModels(rural, place).find((m) => m.id === ruralAct?.id)?.text ?? "",
-    /VALOR DECLARADO: R\$\s150\.000,00, crédito suplementar/,
+    unknownAct?.summary ?? "",
+    /não diz se houve liberação de dinheiro novo/,
+  );
+  assert.ok(
+    plan.warnings.some((w) => /não se sabe se houve dinheiro novo/.test(w)),
+  );
+  assert.ok(
+    suggestRequirements(unknown, plan).some(
+      (r) => r.key === "a0-dinheiro-novo",
+    ),
   );
 
   // Only the due date: no declared value, and the rural law dispenses it.
@@ -372,8 +469,21 @@ test("mudou o valor: averbação com valor declarado, com os valores e o passo a
   assert.match(dueAct?.how?.[0] ?? "", /dispensa o aditivo de prorrogação/);
   assert.match(
     allModels(due, place).find((m) => m.id === dueAct?.id)?.text ?? "",
-    /ATO SEM VALOR DECLARADO\./,
+    /ATO SEM VALOR DECLARADO/,
   );
+});
+
+test("o texto do aditivo diz se houve dinheiro novo", () => {
+  assert.equal(detectNewMoney("saldo devedor consolidado com juros"), "nao");
+  assert.equal(
+    detectNewMoney("não houve liberação de crédito suplementar"),
+    "nao",
+  );
+  assert.equal(
+    detectNewMoney("fica liberado crédito suplementar de R$ 10,00"),
+    "sim",
+  );
+  assert.equal(detectNewMoney("prorroga o vencimento"), "nao-sei");
 });
 
 test("todo ato traz o como fazer; ato de outro órgão orienta o apresentante", () => {

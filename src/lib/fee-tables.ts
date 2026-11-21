@@ -2,6 +2,11 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
+import {
+  type ActItem,
+  type ActItemKind,
+  findActItems,
+} from "@/core/fees/act-items.ts";
 import { type PdfTextPiece, rowsOfPage } from "@/core/fees/pdf-rows.ts";
 import {
   type FeeItem,
@@ -314,4 +319,43 @@ export async function feeTableReferenceWith(
         year: table.document.yearLabel,
       }
     : null;
+}
+
+/** Read tables by document and file, so a page does not read the PDF on
+ * every visit. A new table is a new document; a replaced file a new path. */
+const actItemsCache = new Map<
+  string,
+  Partial<Record<ActItemKind, ActItem[]>>
+>();
+
+/**
+ * The items of the table in force that price the acts of a cédula, with
+ * the table's name (decision of 21/11/2026: "a cobrança é averbação sem
+ * conteúdo econômico (código ...)"). Null when no table is published or it
+ * cannot be read; the clerk then looks the item up by hand, as before.
+ */
+export async function feeActItemsWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<{
+  tableTitle: string;
+  items: Partial<Record<ActItemKind, ActItem[]>>;
+} | null> {
+  const table = await currentFeeTableWith(database, tenantSlug).catch(
+    () => undefined,
+  );
+  const document = table?.document;
+  if (!document || document.fileMimeType !== "application/pdf") return null;
+  const key = `${document.id}:${document.filePath}`;
+  let items = actItemsCache.get(key);
+  if (!items) {
+    try {
+      items = findActItems(await pdfTableText(await documentBytes(document)));
+    } catch (error) {
+      console.error("fee-table.act-items", document.id, error);
+      return null;
+    }
+    actItemsCache.set(key, items);
+  }
+  return { tableTitle: document.title, items };
 }

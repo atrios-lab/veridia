@@ -96,6 +96,12 @@ export const CHANGE_LABELS: Record<ChangeKind, string> = {
   outro: "Outra alteração",
 };
 
+export const NEW_MONEY_LABELS: Record<CedulaAddendum["newMoney"], string> = {
+  sim: "Sim: houve liberação de dinheiro novo (crédito suplementar)",
+  nao: "Não: o valor é o saldo antigo atualizado (juros, encargos, renegociação)",
+  "nao-sei": "O aditivo não diz",
+};
+
 export const AddendumSchema = z.object({
   /** "1º termo aditivo", as in the paper. */
   title: text(200),
@@ -109,6 +115,16 @@ export const AddendumSchema = z.object({
   guaranteeChange: text(3000),
   /** Every other change, in the paper's words. */
   description: text(3000),
+  /**
+   * Whether the aditivo released new money (crédito suplementar), or the
+   * new amount is only the old balance with interest (decision of
+   * 21/11/2026: "não houve liberação de dinheiro novo, os R$ são o saldo
+   * antigo com juros"). It decides the charge (Lei 10.169/2000, art. 2º,
+   * § 2º, II, b and c).
+   */
+  newMoney: z.enum(["sim", "nao", "nao-sei"]).default("nao-sei"),
+  /** The new money released, when the aditivo says it. */
+  newMoneyAmount: text(80),
 });
 export type CedulaAddendum = z.infer<typeof AddendumSchema>;
 
@@ -159,6 +175,7 @@ export const CHARGE_BASES = [
   "valor-suplementar",
   "conteudo-financeiro",
   "sem-conteudo",
+  "a-conferir",
   "nenhum",
 ] as const;
 export type ChargeBasis = (typeof CHARGE_BASES)[number];
@@ -169,8 +186,10 @@ export const CHARGE_LABELS: Record<ChargeBasis, string> = {
   "valor-suplementar":
     "Averbação com valor declarado: base no crédito suplementar (crédito rural)",
   "conteudo-financeiro":
-    "Averbação com valor declarado: cobra-se pelo valor que o aditivo altera",
+    "Averbação com valor declarado: base no dinheiro novo que o aditivo libera",
   "sem-conteudo": "Averbação sem valor declarado (sem conteúdo econômico)",
+  "a-conferir":
+    "A conferir: houve dinheiro novo? (com valor declarado só se houve)",
   nenhum: "Sem ato a cobrar nesta serventia",
 };
 
@@ -243,6 +262,43 @@ export interface PlannedAct {
    * by `planActs`.
    */
   how?: string[];
+  /**
+   * The charge in one plain sentence, as the clerk would say it (decision
+   * of 21/11/2026): "Neste aditivo não houve liberação de dinheiro novo.
+   * Os R$ ... são o saldo antigo com juros, não crédito suplementar. Então
+   * a cobrança é averbação sem conteúdo econômico (código ...)". Filled by
+   * `planActs`.
+   */
+  summary?: string;
+}
+
+/** The kinds of item of the fee table a planned act is charged by. */
+export type FeeQuery =
+  | "registro-com-valor"
+  | "averbacao-com-valor"
+  | "averbacao-sem-valor";
+
+export interface FeeHintItem {
+  code: string;
+  description: string;
+  /** 0 when the row has no total to read. */
+  totalCents: number;
+}
+
+/** The items of the fee table in force that fit each kind of act, read
+ * from its PDF (best effort: the clerk confirms). */
+export interface FeeHints {
+  tableTitle: string;
+  items: Partial<Record<FeeQuery, FeeHintItem[]>>;
+}
+
+export function feeQueryOf(charge: ChargeBasis): FeeQuery | null {
+  if (charge === "valor-credito") return "registro-com-valor";
+  if (charge === "valor-suplementar" || charge === "conteudo-financeiro") {
+    return "averbacao-com-valor";
+  }
+  if (charge === "sem-conteudo") return "averbacao-sem-valor";
+  return null;
 }
 
 export interface Plan {
@@ -555,26 +611,22 @@ export function planAddendum(
     });
   }
 
-  // Any change in the value of the credit is charged by the value
-  // (decision of 21/11/2026: "se a cédula mudar o valor, cobra-se pelo
-  // valor"): averbação com valor declarado. In the crédito rural the base
-  // is the supplementary credit (Lei 10.169/2000, art. 2º, § 2º, II, b).
-  const raised = changes.has("valor-aumento");
-  const valueChanged = raised || changes.has("valor-reducao");
-  const charge: ChargeBasis =
-    rural && raised
-      ? "valor-suplementar"
-      : valueChanged
-        ? "conteudo-financeiro"
-        : "sem-conteudo";
+  // Charged by the value only when the aditivo releases new money
+  // (decisions of 21/11/2026: "se a cédula mudar o valor, cobra-se pelo
+  // valor" and "não houve liberação de dinheiro novo, os R$ são o saldo
+  // antigo com juros, não crédito suplementar: averbação sem conteúdo
+  // econômico"). Lei 10.169/2000, art. 2º, § 2º, II, b and c.
+  const charge = addendumCharge(data, addendum);
   const chargeBasis =
     charge === "valor-suplementar"
-      ? "Lei nº 10.169/2000, art. 2º, § 2º, II, b: averbação com valor declarado, base de cálculo no crédito suplementar."
+      ? "Lei nº 10.169/2000, art. 2º, § 2º, II, b (incluído pela Lei nº 13.986/2020): aditivo com liberação de crédito suplementar, averbação com valor declarado, base de cálculo no valor desse crédito."
       : charge === "conteudo-financeiro"
-        ? "Lei nº 10.169/2000, art. 2º, III, b: o aditivo muda o valor do crédito, averbação com valor declarado (ato com conteúdo financeiro)."
-        : rural
-          ? "Lei nº 10.169/2000, art. 2º, § 2º, II, c: sem mudança no valor do crédito, averbação sem valor declarado (ato sem conteúdo econômico)."
-          : "Lei nº 10.169/2000, art. 2º, III, a: sem mudança no valor do crédito, averbação sem valor declarado.";
+        ? "Lei nº 10.169/2000, art. 2º, III, b: o aditivo libera dinheiro novo, averbação com valor declarado (ato com conteúdo financeiro) sobre esse valor."
+        : charge === "a-conferir"
+          ? "Lei nº 10.169/2000, art. 2º, § 2º, II, b e c: só a liberação de crédito suplementar é cobrada pelo valor; saldo antigo atualizado é ato sem conteúdo econômico."
+          : rural
+            ? "Lei nº 10.169/2000, art. 2º, § 2º, II, c (incluído pela Lei nº 13.986/2020): sem mudança no valor do crédito concedido, averbação sem valor declarado (ato sem conteúdo econômico)."
+            : "Lei nº 10.169/2000, art. 2º, III, a: sem dinheiro novo, averbação sem valor declarado (ato sem conteúdo financeiro).";
   const prazoOnly =
     changes.size > 0 && [...changes].every((c) => c === "prazo");
   const ruralProrogation = family === "rural" && prazoOnly;
@@ -662,6 +714,64 @@ export function addendumUnclear(a: CedulaAddendum): boolean {
   );
 }
 
+/** Whether the aditivo released new money, from what the clerk marked or,
+ * failing that, from the aditivo's words. A reduction never does. */
+export function inferNewMoney(a: CedulaAddendum): CedulaAddendum["newMoney"] {
+  if (a.newMoney !== "nao-sei") return a.newMoney;
+  if (moneyCents(a.newMoneyAmount) !== null) return "sim";
+  const said = detectNewMoney(`${a.description} ${a.guaranteeChange}`);
+  if (said !== "nao-sei") return said;
+  const changes = inferChanges(a);
+  return changes.includes("valor-aumento") ? "nao-sei" : "nao";
+}
+
+/** The new money the aditivo releases, in cents: what it says, or the
+ * increase from the old to the new amount. Null when unknown. */
+export function newMoneyCents(a: CedulaAddendum): number | null {
+  const said = moneyCents(a.newMoneyAmount);
+  if (said !== null) return said;
+  const before = moneyCents(a.previousAmount);
+  const after = moneyCents(a.newAmount);
+  return before !== null && after !== null && after > before
+    ? after - before
+    : null;
+}
+
+/** How one aditivo is charged (Lei 10.169/2000, art. 2º, § 2º, II, b, c). */
+export function addendumCharge(
+  data: CedulaData,
+  a: CedulaAddendum,
+): ChargeBasis {
+  const money = inferNewMoney(a);
+  if (money === "sim") {
+    return isRuralCredit(data) ? "valor-suplementar" : "conteudo-financeiro";
+  }
+  return money === "nao-sei" ? "a-conferir" : "sem-conteudo";
+}
+
+/** What the aditivo's words say about new money. */
+export function detectNewMoney(textValue: string): CedulaAddendum["newMoney"] {
+  const folded = fold(textValue);
+  if (
+    /(nao|sem) (ha |houve )?(liberacao de )?(novo credito|credito novo|credito suplementar|recursos? novos?|dinheiro novo)/.test(
+      folded,
+    ) ||
+    /saldo devedor|saldo atualizado|saldo remanescente|consolida(cao|da|do)|confissao de divida|renegocia|repactua|recomposi|composicao (da|de) divida|juros capitalizados|capitaliza(cao|dos) (dos|de) juros/.test(
+      folded,
+    )
+  ) {
+    return "nao";
+  }
+  if (
+    /credito suplementar|libera(cao|do|da)? (de )?(novo credito|credito novo|recursos? novos?|recursos? adiciona|valor adicional|credito adicional)|credito adicional|reforco (de|do) credito|novos recursos/.test(
+      folded,
+    )
+  ) {
+    return "sim";
+  }
+  return "nao-sei";
+}
+
 /** What changed, read from the before and after the clerk typed. */
 export function inferChanges(addendum: CedulaAddendum): ChangeKind[] {
   const found = new Set(addendum.changes);
@@ -703,8 +813,87 @@ export function formatMoney(cents: number): string {
 const RURAL_CAP_STEP =
   "Crédito rural: os emolumentos da garantia não passam de 0,3% do valor do crédito (incluída a taxa de fiscalização) nem do valor da tabela estadual; cobre o menor (Lei nº 10.169/2000, art. 2º, § 2º, I e II).";
 
-const TABLE_STEP = (item: string) =>
-  `Na tabela de emolumentos vigente, use o item de ${item}; confira antes se a tabela cadastrada em Transparência é mesmo a vigente.`;
+/** The table's item for a kind of act, when the table in force has one. */
+function feeHint(
+  fees: FeeHints | undefined,
+  query: FeeQuery | null,
+): FeeHintItem | null {
+  return (query && fees?.items[query]?.[0]) || null;
+}
+
+const TABLE_STEP = (
+  item: string,
+  fees?: FeeHints,
+  query: FeeQuery | null = null,
+) => {
+  const hint = feeHint(fees, query);
+  return hint && fees
+    ? `Na tabela de emolumentos vigente (${fees.tableTitle}), use o código ${hint.code}: ${hint.description}${hint.totalCents ? ` (total ${formatMoney(hint.totalCents)})` : ""}. Confira se é o item de ${item} da sua atribuição e se a tabela cadastrada em Transparência é mesmo a vigente.`
+    : `Na tabela de emolumentos vigente, use o item de ${item}; confira antes se a tabela cadastrada em Transparência é mesmo a vigente.`;
+};
+
+/** " (código 2500135)" when the table in force has the item. */
+function codeNote(fees: FeeHints | undefined, charge: ChargeBasis): string {
+  const hint = feeHint(fees, feeQueryOf(charge));
+  return hint ? ` (código ${hint.code})` : "";
+}
+
+/**
+ * The charge of one act in one plain sentence, for the clerk and the
+ * qualificação (decision of 21/11/2026). Empty when there is nothing to
+ * charge here.
+ */
+export function chargeSummary(
+  data: CedulaData,
+  act: PlannedAct,
+  fees?: FeeHints,
+): string {
+  if (act.elsewhere || act.nature === "fora" || act.charge === "nenhum") {
+    return "";
+  }
+  const code = codeNote(fees, act.charge);
+  const a =
+    act.addendumIndex === undefined ? null : data.addenda[act.addendumIndex];
+  if (act.charge === "valor-credito") {
+    return `Cobra-se pelo valor: registro com valor declarado${data.amount ? `, sobre ${data.amount}` : ""}${code}.`;
+  }
+  if (!a || act.model !== "aditivo") {
+    return act.charge === "sem-conteudo"
+      ? `Ato sem valor declarado${code}.`
+      : "";
+  }
+  const before = moneyCents(a.previousAmount);
+  const after = moneyCents(a.newAmount);
+  const changes = inferChanges(a);
+  const newMoney = newMoneyCents(a);
+  const from =
+    before !== null && after !== null
+      ? ` (o crédito passou de ${formatMoney(before)} para ${formatMoney(after)})`
+      : "";
+  if (
+    act.charge === "valor-suplementar" ||
+    act.charge === "conteudo-financeiro"
+  ) {
+    return `Neste aditivo houve liberação de dinheiro novo${newMoney !== null ? `: ${formatMoney(newMoney)}` : ""}${act.charge === "valor-suplementar" ? " de crédito suplementar" : ""}${from}. Então a cobrança é averbação com valor declarado${newMoney !== null ? `, sobre os ${formatMoney(newMoney)}` : ", sobre o valor liberado"}${code}.`;
+  }
+  if (act.charge === "a-conferir") {
+    return `O valor passou${before !== null ? ` de ${formatMoney(before)}` : ""}${after !== null ? ` para ${formatMoney(after)}` : ""}, mas o aditivo não diz se houve liberação de dinheiro novo (crédito suplementar) ou se é o saldo antigo com juros. Confira no aditivo e marque a resposta: com dinheiro novo, averbação com valor declarado sobre ele; sem dinheiro novo, averbação sem conteúdo econômico. Se o aditivo não deixar claro, abra a nota de exigência para ciência do requerente.`;
+  }
+  // Sem conteúdo econômico.
+  if (addendumUnclear(a)) {
+    return `O aditivo não deixa claro o que mudou. Sem mudança no valor do crédito, a cobrança é averbação sem conteúdo econômico${code}; antes de averbar, abra a nota de exigência para ciência do requerente.`;
+  }
+  if (changes.includes("valor-aumento") && after !== null) {
+    return `Neste aditivo não houve liberação de dinheiro novo. Os ${formatMoney(after)} são o saldo antigo com juros, não crédito suplementar. Então a cobrança é averbação sem conteúdo econômico${code}.`;
+  }
+  if (changes.includes("valor-reducao")) {
+    return `Neste aditivo o valor do crédito diminuiu${from}: não houve liberação de dinheiro novo. Então a cobrança é averbação sem conteúdo econômico${code}.`;
+  }
+  const what = changeSummary(a)
+    .map((line) => line.split(":")[0])
+    .join(", ");
+  return `Neste aditivo não houve liberação de dinheiro novo e o valor do crédito não mudou${what ? ` (mudou: ${what})` : ""}. Então a cobrança é averbação sem conteúdo econômico${code}.`;
+}
 
 /** The values an aditivo states, in words, for the charging step. */
 function addendumValues(a: CedulaAddendum): string {
@@ -714,7 +903,8 @@ function addendumValues(a: CedulaAddendum): string {
     return "Anote, do aditivo, o valor anterior e o novo valor do crédito: sem eles não há base.";
   }
   const diff = Math.abs(after - before);
-  return `Valores do aditivo: antes ${formatMoney(before)}, depois ${formatMoney(after)}, ${after > before ? "acréscimo" : "redução"} de ${formatMoney(diff)}.`;
+  const oldBalance = after > before && inferNewMoney(a) === "nao";
+  return `Valores do aditivo: antes ${formatMoney(before)}, depois ${formatMoney(after)}, ${after > before ? "acréscimo" : "redução"} de ${formatMoney(diff)}${oldBalance ? " (juros e encargos sobre o saldo antigo, não dinheiro novo)" : ""}.`;
 }
 
 /** The step-by-step of one act (decision of 21/11/2026). */
@@ -723,6 +913,7 @@ function teach(
   act: PlannedAct,
   deadline: string,
   deadlineBasis: string,
+  fees?: FeeHints,
 ): string[] {
   const rural = isRuralCredit(data);
   const a =
@@ -748,37 +939,67 @@ function teach(
       : act.nature === "averbacao"
         ? "Lance a averbação na matrícula (ou no registro da garantia)"
         : "Lance o registro na matrícula do imóvel";
+  const query = feeQueryOf(act.charge);
   if (act.charge === "valor-credito") {
     steps.push(
       `Confira no título as partes, o valor, o vencimento e o bem (matrícula ou local).`,
       `Cobra-se pelo valor: registro com valor declarado, base no valor do crédito garantido${data.amount ? ` (${data.amount})` : ""} (Lei nº 10.169/2000, art. 2º, III, b).`,
       ...(rural ? [RURAL_CAP_STEP] : []),
-      TABLE_STEP("registro com valor declarado, na faixa desse valor"),
-    );
-  } else if (act.charge === "valor-suplementar" && a) {
-    steps.push(
-      "O aditivo muda o valor do crédito: é averbação com valor declarado.",
-      addendumValues(a),
-      "No crédito rural, a base de cálculo é o crédito suplementar, ou seja, o acréscimo (Lei nº 10.169/2000, art. 2º, § 2º, II, b).",
-      RURAL_CAP_STEP,
       TABLE_STEP(
-        "averbação com valor declarado, na faixa do crédito suplementar",
+        "registro com valor declarado, na faixa desse valor",
+        fees,
+        query,
       ),
     );
-  } else if (act.charge === "conteudo-financeiro" && a) {
+  } else if (
+    (act.charge === "valor-suplementar" ||
+      act.charge === "conteudo-financeiro") &&
+    a
+  ) {
+    const money = newMoneyCents(a);
     steps.push(
-      "O aditivo muda o valor do crédito: é averbação com valor declarado, e cobra-se pelo valor (Lei nº 10.169/2000, art. 2º, III, b).",
+      "Houve liberação de dinheiro novo: confira no aditivo a cláusula que libera o crédito suplementar e o valor liberado.",
       addendumValues(a),
+      money !== null
+        ? `Base de cálculo: o dinheiro novo, ${formatMoney(money)}; não o saldo total do crédito.`
+        : "Base de cálculo: o dinheiro novo liberado; anote o valor dele no aditivo.",
+      act.charge === "valor-suplementar"
+        ? "No crédito rural, a averbação de aditivo com liberação de crédito suplementar tem como base de cálculo o valor desse crédito (Lei nº 10.169/2000, art. 2º, § 2º, II, b, incluído pela Lei nº 13.986/2020)."
+        : "Ato com conteúdo financeiro: cobra-se pela faixa do valor liberado (Lei nº 10.169/2000, art. 2º, III, b); confira a nota da tabela do seu estado.",
+      ...(act.charge === "valor-suplementar" ? [RURAL_CAP_STEP] : []),
       TABLE_STEP(
-        "averbação com valor declarado, pela base que o item define (o valor alterado ou o novo valor); a nota de cobrança da serventia diz qual",
+        "averbação com valor declarado, na faixa do dinheiro novo",
+        fees,
+        query,
       ),
+    );
+  } else if (act.charge === "a-conferir" && a) {
+    steps.push(
+      addendumValues(a),
+      'Antes de cobrar, leia o aditivo e responda: houve liberação de dinheiro novo (crédito suplementar)? Procure palavras como "crédito suplementar", "liberação de novos recursos" (dinheiro novo) ou "saldo devedor", "consolidação", "renegociação", "juros capitalizados" (saldo antigo).',
+      "Se houve: averbação com valor declarado, base no dinheiro novo (Lei nº 10.169/2000, art. 2º, § 2º, II, b, no crédito rural; art. 2º, III, b, nos demais).",
+      "Se não houve (o valor é o saldo antigo com juros): averbação sem conteúdo econômico (art. 2º, § 2º, II, c, no crédito rural; art. 2º, III, a, nos demais).",
+      "Marque a resposta no aditivo (Editar dados) e a análise se refaz. Se o aditivo não deixa claro, abra a nota de exigência (cartão Nota de exigência, abaixo) para ciência do requerente.",
     );
   } else if (act.charge === "sem-conteudo") {
+    if (
+      a &&
+      moneyCents(a.previousAmount) !== null &&
+      moneyCents(a.newAmount) !== null
+    ) {
+      steps.push(addendumValues(a));
+    }
     steps.push(
       act.model === "remissao" || act.model === "averbacao-localizacao-penhor"
         ? "Ato sem valor declarado."
-        : `O aditivo não muda o valor do crédito: é averbação sem valor declarado (Lei nº 10.169/2000, art. 2º, III, a${rural ? ", e § 2º, II, c" : ""}).`,
-      TABLE_STEP("averbação sem valor declarado"),
+        : a && inferChanges(a).includes("valor-aumento")
+          ? `Não houve liberação de dinheiro novo: o novo valor é o saldo antigo atualizado (juros e encargos), não crédito suplementar. É averbação sem valor declarado, ato sem conteúdo econômico (Lei nº 10.169/2000, art. 2º, ${rural ? "§ 2º, II, c" : "III, a"}).`
+          : `O aditivo não libera dinheiro novo: é averbação sem valor declarado, ato sem conteúdo econômico (Lei nº 10.169/2000, art. 2º, ${rural ? "§ 2º, II, c" : "III, a"}).`,
+      TABLE_STEP(
+        "averbação sem valor declarado (sem conteúdo econômico)",
+        fees,
+        query,
+      ),
     );
   }
   // Always say what the aditivo changes, or that it is not known
@@ -792,7 +1013,15 @@ function teach(
         "Sem mudança no valor do crédito, a averbação é sem valor declarado. Se o aditivo não deixa claro o que altera, não averbe no escuro: abra a nota de exigência (cartão Nota de exigência, abaixo) para ciência do requerente, pedindo que esclareça ou apresente o aditivo com as alterações.",
       );
     } else {
-      steps.unshift(`O que mudou: ${summary.join("; ")}.`);
+      const money = inferNewMoney(a);
+      steps.unshift(
+        `O que mudou: ${summary.join("; ")}.`,
+        money === "sim"
+          ? "Dinheiro novo: sim, o aditivo libera crédito suplementar."
+          : money === "nao"
+            ? "Dinheiro novo: não. Saldo antigo atualizado, prazo ou encargos não são crédito suplementar."
+            : "Dinheiro novo: o aditivo não diz. Confira antes de cobrar.",
+      );
     }
   }
   if (act.optional && a) {
@@ -819,7 +1048,10 @@ function teach(
 }
 
 /** The whole plan: the cédula, each guarantee, the remissões, the aditivos. */
-export function planActs(data: CedulaData): Plan {
+export function planActs(
+  data: CedulaData,
+  options: { fees?: FeeHints } = {},
+): Plan {
   const info = KIND_INFO[data.kind];
   const base = [
     ...cedulaActs(data),
@@ -832,7 +1064,8 @@ export function planActs(data: CedulaData): Plan {
     ...data.addenda.flatMap((a, i) => planAddendum(data, a, i)),
   ].map((act) => ({
     ...act,
-    how: teach(data, act, deadline, info.deadline.basis),
+    how: teach(data, act, deadline, info.deadline.basis, options.fees),
+    summary: chargeSummary(data, act, options.fees),
   }));
 
   const warnings: string[] = [];
@@ -889,6 +1122,11 @@ export function planActs(data: CedulaData): Plan {
     );
   }
   for (const [i, a] of data.addenda.entries()) {
+    if (addendumCharge(data, a) === "a-conferir") {
+      warnings.push(
+        `${a.title || `${i + 1}º aditivo`}: o valor mudou, mas não se sabe se houve dinheiro novo. Responda no aditivo para saber se cobra com ou sem valor declarado.`,
+      );
+    }
     if (a.changes.length === 0) {
       warnings.push(
         `${a.title || `${i + 1}º aditivo`}: marque o que mudou (prazo, valor, garantia...) para saber se é averbação ou registro e como cobrar.`,

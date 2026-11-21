@@ -191,6 +191,8 @@ test("aditivo que não diz o que muda: sem valor declarado e exigência para ci�
         newAmount: "",
         guaranteeChange: "",
         description: "",
+        newMoney: "nao-sei" as const,
+        newMoneyAmount: "",
       },
     ],
   });
@@ -222,6 +224,8 @@ test("aditivo claro diz o que mudou e não gera exigência", () => {
         newAmount: "",
         guaranteeChange: "",
         description: "",
+        newMoney: "nao-sei" as const,
+        newMoneyAmount: "",
       },
     ],
   });

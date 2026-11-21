@@ -6,7 +6,9 @@ import {
   CHANGE_LABELS,
   formatMoney,
   inferChanges,
+  inferNewMoney,
   moneyCents,
+  newMoneyCents,
   type PersonRole,
   type PlannedAct,
   planActs,
@@ -157,8 +159,11 @@ export function addendumChanges(a: CedulaAddendum): string[] {
   if (changes.includes("valor-aumento") || changes.includes("valor-reducao")) {
     const before = moneyCents(a.previousAmount);
     const after = moneyCents(a.newAmount);
-    const diff =
-      before !== null && after !== null && after !== before
+    const oldBalance =
+      changes.includes("valor-aumento") && inferNewMoney(a) === "nao";
+    const diff = oldBalance
+      ? " (saldo anterior atualizado com juros e encargos, sem liberação de crédito suplementar)"
+      : before !== null && after !== null && after !== before
         ? ` (${after > before ? "acréscimo" : "redução"} de ${formatMoney(Math.abs(after - before))})`
         : "";
     lines.push(
@@ -189,15 +194,17 @@ function declaredValue(
   charge: PlannedAct["charge"],
 ): string {
   if (!a) return "[preencher: valor]";
+  const money = newMoneyCents(a);
   const before = moneyCents(a.previousAmount);
   const after = moneyCents(a.newAmount);
-  if (before === null || after === null) {
-    return "[preencher: valor alterado pelo aditivo]";
+  const from =
+    before !== null && after !== null
+      ? ` (o crédito passou de ${formatMoney(before)} para ${formatMoney(after)})`
+      : "";
+  if (money === null) {
+    return "[preencher: valor do dinheiro novo liberado pelo aditivo]";
   }
-  const diff = formatMoney(Math.abs(after - before));
-  return charge === "valor-suplementar"
-    ? `${diff}, crédito suplementar (o crédito passou de ${formatMoney(before)} para ${formatMoney(after)})`
-    : `${formatMoney(after)}, novo valor do crédito (${after > before ? "acréscimo" : "redução"} de ${diff} sobre ${formatMoney(before)})`;
+  return `${formatMoney(money)}, ${charge === "valor-suplementar" ? "crédito suplementar liberado" : "valor liberado pelo aditivo"}${from}`;
 }
 
 /** The model of one planned act; null for an act with no paper here. */
@@ -326,11 +333,13 @@ export function modelFor(
           `ADITIVO: nos termos do ${fill(a?.title ?? "", "aditivo")}, de ${fill(a?.date ?? "", "data do aditivo")}, à ${titleLine(data)}, ${
             a ? addendumChanges(a).join("; ") : "[preencher: o que mudou]"
           }. Permanecem inalteradas as demais condições.`,
-          // Said in the act itself (decision of 21/11/2026): a change of
-          // value is an averbação com valor declarado.
+          // Said in the act itself (decision of 21/11/2026): only new money
+          // (crédito suplementar) is an averbação com valor declarado.
           act.charge === "sem-conteudo"
-            ? "ATO SEM VALOR DECLARADO."
-            : `VALOR DECLARADO: ${declaredValue(a, act.charge)}.`,
+            ? "ATO SEM VALOR DECLARADO (sem liberação de dinheiro novo)."
+            : act.charge === "a-conferir"
+              ? "[preencher: VALOR DECLARADO: valor do dinheiro novo, se o aditivo liberou crédito suplementar; ou ATO SEM VALOR DECLARADO, se o novo valor é o saldo antigo com juros]."
+              : `VALOR DECLARADO: ${declaredValue(a, act.charge)}.`,
           `PROTOCOLO: nº ${fill(data.protocolNumber, "número do protocolo")}, de ${fill(data.protocolDate, "data do protocolo")}.`,
           `FUNDAMENTO: ${act.basis}`,
           "",
