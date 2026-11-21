@@ -853,6 +853,36 @@ ENTRIES["/admin/rcpn/certidoes"] = {
   terms: CERTIDAO_TERMS,
 };
 
+ENTRIES["/admin/utilitarios/cedulas"] = {
+  purpose:
+    "Dizer, para cada cédula de crédito e seus aditivos, a espécie, o livro, os atos (registro, averbação, remissão), o cartório competente, o prazo e como cobrar, e gerar os modelos dos atos para o cartório escolher.",
+  steps: [
+    "Em Nova análise, anexe a cédula e os aditivos (PDF, foto ou Word). Veio pelo balcão online? No pedido, clique em Analisar cédula: os anexos do pedido já vêm marcados.",
+    "Os arquivos são lidos e descartados. Com o Assistente Virtual ligado, ele preenche os dados; sem ele, o sistema lê o texto e reconhece a espécie pelo título.",
+    "Confira os dados: espécie, partes, valor, vencimento, garantias (marque se o bem fica nesta circunscrição) e, em cada aditivo, o que mudou: prazo, valor, encargos, garantia.",
+    "Veja os atos sugeridos, com fundamento, prazo e base de cobrança. Clique no botão de cada modelo para abrir, editar, copiar, imprimir ou baixar em Word.",
+    "Corrigiu a espécie? O sistema aprende só as palavras do título, sem número nem nome. Em Aprendizado e cobrança você altera ou apaga o que ele aprendeu e escreve como a serventia cobra cada tipo de ato.",
+    "Apagar não tira nada do banco: a análise vai para Apagadas e pode ser restaurada. Toda edição guarda o valor anterior no histórico.",
+  ],
+  terms: [
+    {
+      term: "Cédula rural",
+      meaning:
+        "Desde a Lei nº 13.986/2020 a cédula rural não tem inscrição própria: registram-se as garantias (hipoteca na matrícula, penhor rural no Livro nº 3).",
+    },
+    {
+      term: "CPR",
+      meaning:
+        "Registrada ou depositada em entidade autorizada pelo Banco Central; no Registro de Imóveis vão só as garantias, em 3 dias úteis.",
+    },
+    {
+      term: "Aditivo",
+      meaning:
+        "Mudança de prazo, encargos ou valor é averbação; bem novo em garantia pede também o registro da garantia. No crédito rural, aditivo sem mudança de valor é ato sem conteúdo econômico, e o crédito suplementar é a base de cálculo (Lei nº 10.169/2000, art. 2º, § 2º).",
+    },
+  ],
+};
+
 ENTRIES["/admin/utilitarios/titularidade"] = {
   purpose:
     "Comunicar à prefeitura, todo mês, as escrituras e os registros que mudaram o dono de um imóvel, para a Secretaria de Tributação atualizar o cadastro do IPTU (Código Nacional de Normas, art. 184-A, incluído pelo Provimento CN nº 174/2024).",

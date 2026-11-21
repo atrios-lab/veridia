@@ -16,6 +16,8 @@ import {
   auditNotificationFiles,
   auditNotifications,
   auditReviews,
+  cedulaAnalyses,
+  cedulaLearnedCues,
   censecActs,
   censecClosings,
   certificates,
@@ -208,6 +210,14 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     table: serviceRequestPickups,
     reason:
       "quem retirou o documento no balcão: prova da entrega, sem chave estrangeira",
+  },
+  {
+    table: cedulaAnalyses,
+    reason: "análises de cédulas: o trabalho do cartório, com histórico",
+  },
+  {
+    table: cedulaLearnedCues,
+    reason: "o que a análise de cédulas aprendeu, sem dados pessoais",
   },
 ];
 

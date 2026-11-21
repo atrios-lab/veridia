@@ -106,6 +106,7 @@ import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
+import { CedulaSection } from "./_components/cedula-section.tsx";
 import type { SeenLabels } from "./_components/citizen-seen.tsx";
 import { DangerSection } from "./_components/danger-section.tsx";
 import { DeliveryClosing } from "./_components/delivery-closing.tsx";
@@ -771,6 +772,14 @@ export default async function ServiceRequestDetailPage({
                 tenantSlug={tenant.slug}
                 protocol={request.protocolNumber}
               />
+            )}
+
+            {can(
+              session.user.role ?? "",
+              "cedulas.manage",
+              session.user.permissions,
+            ) && (
+              <CedulaSection tenantSlug={tenant.slug} requestId={request.id} />
             )}
 
             {act?.taxGuide && (

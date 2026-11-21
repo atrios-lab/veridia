@@ -75,6 +75,9 @@ export const OFFICE_PERMISSIONS = [
   // The DOI to the Receita Federal (IN RFB nº 2.186/2024), its own item
   // (decision of 15/11/2026: "a DOI tem que ficar no item à parte").
   "doi.manage",
+  // The análise de cédulas (decision of 21/11/2026): open to everyone at
+  // the desk ("todos podem acessar"), restrictable in Perfis e permissões.
+  "cedulas.manage",
   // The legal base the AI is taught with (decision of 15/11/2026): laws,
   // provimentos, jurisprudence and models, kept as Markdown.
   "knowledge.manage",
@@ -167,6 +170,7 @@ export const GRANTABLE_PERMISSIONS = [
   "doi.manage",
   "knowledge.manage",
   "qualificacao.manage",
+  "cedulas.manage",
   "signer.use",
   "transparency.manage",
   "numbering.manage",
@@ -207,6 +211,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "signer.use": "desk.access",
   // Everyone at the desk kept the messenger the day it got its own line.
   "messages.use": "desk.access",
+  // Everyone at the desk analyses cédulas (decision of 21/11/2026).
+  "cedulas.manage": "desk.access",
   "transparency.manage": "content.edit",
   "numbering.manage": "content.edit",
   "access.manage": "user.manage",
@@ -332,6 +338,7 @@ export const DEMO_OPEN_PERMISSIONS = [
   "censec.manage",
   "doi.manage",
   "qualificacao.manage",
+  "cedulas.manage",
   "transparency.manage",
   "numbering.manage",
   "security-paper.manage",
@@ -535,6 +542,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
   "censec.manage":
     "Cargas da CENSEC: CEP, CESDI e RCTO por quinzena (CNN, arts. 265 a 272)",
   "doi.manage": "Carga da DOI à Receita Federal (IN RFB nº 2.186/2024)",
+  "cedulas.manage":
+    "Análise de cédulas de crédito: espécie, livro, atos e modelos de registro e averbação",
   "knowledge.manage":
     "Base jurídica do Assistente Virtual: enviar, corrigir e excluir leis, provimentos, jurisprudência e modelos",
   "qualificacao.manage":

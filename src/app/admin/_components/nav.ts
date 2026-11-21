@@ -353,6 +353,23 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The análise de cédulas (decision of 21/11/2026, change
+    // analise-de-cedulas): kind, book, acts and models, aditivos included.
+    group: "Utilitários",
+    label: "Análise de cédulas",
+    href: "/admin/utilitarios/cedulas",
+    icon: "wallet",
+    permission: "cedulas.manage",
+    children: [
+      { label: "Análises", href: "/admin/utilitarios/cedulas" },
+      { label: "Nova análise", href: "/admin/utilitarios/cedulas/nova" },
+      {
+        label: "Aprendizado e cobrança",
+        href: "/admin/utilitarios/cedulas/configuracao",
+      },
+    ],
+  },
+  {
     // The legal base the AI is taught with (decision of 15/11/2026): laws,
     // provimentos, jurisprudence and models, kept as Markdown.
     group: "Utilitários",
