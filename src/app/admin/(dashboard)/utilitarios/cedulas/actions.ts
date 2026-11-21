@@ -103,14 +103,16 @@ export async function createCedulaAnalysisAction(
       return {
         status: "error",
         message:
-          "Anexe a cédula (e os aditivos) ou escolha a espécie para preencher à mão.",
+          "Anexe a cédula e os aditivos. Sem o arquivo, abra Preencher à mão e escolha a espécie.",
       };
     }
+    // With a file, the document says the kind; the choice is only for
+    // filling by hand (decision of 21/11/2026).
     const reading = await readCedulaDocumentsWith(
       db,
       ctx.tenant.slug,
       files,
-      chosenKind,
+      files.length > 0 ? null : chosenKind,
     );
     id = await createAnalysisWith(
       db,
