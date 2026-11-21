@@ -1013,3 +1013,133 @@ export async function linkNoteWith(
     targetId: row.id,
   });
 }
+
+// ------------------------------------------------- cédula in a pedido
+
+export interface RequestFileRef {
+  id: string;
+  displayName: string;
+  path: string | null;
+  mimeType: string;
+  sizeBytes: number;
+  purgedAt: Date | null;
+}
+
+export interface CedulaInRequest {
+  kind: CedulaKind;
+  /** How it was seen: the act asked, a file's name, a file's text. */
+  from: "ato" | "nome" | "texto";
+  file: string;
+}
+
+const NAMES_CEDULA =
+  /c[ée]dula|nota de cr[ée]dito (rural|industrial|comercial|[àa] exporta)|\bcpr\b|\bccb\b|\bcci\b|\bcir\b/i;
+const SCAN_MAX_FILES = 5;
+const SCAN_MAX_BYTES = 10 * 1024 * 1024;
+
+const ScanSchema = z.object({
+  key: z.string(),
+  kind: z.string().nullable(),
+  file: z.string().default(""),
+});
+
+/**
+ * Whether a pedido brought a cédula (decision of 21/11/2026: "o campo de
+ * cédula no pedido só se o documento for cédula, que o sistema já veja
+ * caso a pessoa não saiba escolher na hora do protocolo"): by the act
+ * asked, by a file's name, or by the text of the files themselves. The
+ * reading of the text is kept in the pedido by the files it read, so the
+ * same files are never read twice.
+ */
+export async function cedulaInRequestWith(
+  database: Database,
+  tenantSlug: string,
+  input: {
+    requestId: string;
+    details: unknown;
+    actName: string;
+    files: RequestFileRef[];
+  },
+): Promise<CedulaInRequest | null> {
+  const learned = await listLearnedWith(database, tenantSlug).catch(() => []);
+  const byAct = detectKind(input.actName, learned);
+  if (byAct || NAMES_CEDULA.test(input.actName)) {
+    return {
+      kind: byAct?.kind ?? "credito-bancario",
+      from: "ato",
+      file: input.actName,
+    };
+  }
+  const live = input.files.filter((f) => f.path && !f.purgedAt);
+  for (const f of live) {
+    const byName = detectKind(f.displayName, learned);
+    if (byName || NAMES_CEDULA.test(f.displayName)) {
+      return {
+        kind: byName?.kind ?? "credito-bancario",
+        from: "nome",
+        file: f.displayName,
+      };
+    }
+  }
+  const readable = live
+    .filter(
+      (f) =>
+        f.sizeBytes <= SCAN_MAX_BYTES &&
+        (f.mimeType === "application/pdf" ||
+          /wordprocessingml|msword/.test(f.mimeType)),
+    )
+    .slice(0, SCAN_MAX_FILES);
+  if (readable.length === 0) return null;
+  const key = readable
+    .map((f) => f.id)
+    .sort()
+    .join(",");
+  const cached = ScanSchema.safeParse(
+    (input.details as { cedulaScan?: unknown } | null)?.cedulaScan,
+  );
+  if (cached.success && cached.data.key === key) {
+    return cached.data.kind && isCedulaKind(cached.data.kind)
+      ? { kind: cached.data.kind, from: "texto", file: cached.data.file }
+      : null;
+  }
+  let found: CedulaInRequest | null = null;
+  for (const f of readable) {
+    if (!f.path) continue;
+    try {
+      const bytes = new Uint8Array(await readStoredFile(f.path));
+      const text = await textOf({
+        name: f.displayName,
+        bytes,
+        mediaType: f.mimeType,
+      });
+      const hit = detectKind(text.slice(0, 20_000), learned);
+      if (hit) {
+        found = { kind: hit.kind, from: "texto", file: f.displayName };
+        break;
+      }
+    } catch {
+      // A file out of reach is just not read.
+    }
+  }
+  await database
+    .update(serviceRequests)
+    .set({
+      details: sql`coalesce(${serviceRequests.details}, '{}'::jsonb) || ${JSON.stringify(
+        {
+          cedulaScan: {
+            key,
+            kind: found?.kind ?? null,
+            file: found?.file ?? "",
+          },
+        },
+      )}::jsonb`,
+    })
+    .where(
+      and(
+        eq(serviceRequests.tenantSlug, tenantSlug),
+        eq(serviceRequests.id, input.requestId),
+      ),
+    )
+    .catch(() => undefined);
+  return found;
+}
