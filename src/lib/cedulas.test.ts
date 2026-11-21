@@ -12,6 +12,7 @@ import {
   feeTableReferenceWith,
   getAnalysisWith,
   getChargeNotesWith,
+  linkNoteWith,
   listAnalysesWith,
   listLearnedWith,
   readCedulaDocumentsWith,
@@ -245,4 +246,25 @@ test("as notas de cobrança da serventia são salvas e lidas", async () => {
   assert.deepEqual(await getChargeNotesWith(db, OFFICE), {
     "sem-conteudo": "Tabela do Estado, item fictício 1.2",
   });
+});
+
+test("a nota de exigência fica ligada à análise e não se perde ao editar os dados", async () => {
+  const [analysis] = await listAnalysesWith(db, OFFICE);
+  assert.ok(analysis);
+  const noteId = "0b1c2d3e-4f50-4a61-8b72-93a4b5c6d7e8";
+  await linkNoteWith(db, OFFICE, analysis.id, noteId, ACTOR);
+  const linked = await getAnalysisWith(db, OFFICE, analysis.id);
+  assert.deepEqual(linked?.data.noteIds, [noteId]);
+  // The data form sends no notes: they stay.
+  await updateDataWith(
+    db,
+    OFFICE,
+    analysis.id,
+    { ...(linked?.data ?? analysis.data), noteIds: [] },
+    ACTOR,
+  );
+  assert.deepEqual(
+    (await getAnalysisWith(db, OFFICE, analysis.id))?.data.noteIds,
+    [noteId],
+  );
 });

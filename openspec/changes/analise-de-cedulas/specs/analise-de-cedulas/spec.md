@@ -71,3 +71,20 @@ A cobrança SHALL citar a tabela de emolumentos vigente, que é a primeira "Tabe
 #### Scenario: Tabela não cadastrada
 - **WHEN** a serventia não tem tabela de emolumentos publicada
 - **THEN** a análise avisa e oferece "clique aqui para atualizar", que leva a Transparência
+
+### Requirement: Nota de exigência a partir da análise
+
+Depois da análise, a tela SHALL sugerir as exigências do que falta, cada uma com fundamento:
+- requisitos do título;
+- matrícula do imóvel;
+- bem fora da circunscrição;
+- local dos bens apenhados;
+- outorga do cônjuge;
+- série e custodiante da CCI;
+- título sem ato.
+
+A tela NÃO SHALL sugerir documento que a lei veda exigir (CCIR, ITR, CND nas cédulas). O funcionário SHALL poder desmarcar, editar e acrescentar exigências. A nota SHALL abrir na Qualificação de títulos (Registro de Imóveis), onde é numerada, assinada e entregue, e SHALL ficar ligada à análise.
+
+#### Scenario: Emitente casado sem anuência
+- **WHEN** a análise mostra emitente casado dando imóvel em hipoteca sem o cônjuge
+- **THEN** a tela sugere a exigência "Outorga do cônjuge" (Código Civil, art. 1.647, I), e "Criar a nota de exigência" abre a qualificação com ela

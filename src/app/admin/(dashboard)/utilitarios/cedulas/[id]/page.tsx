@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import {
@@ -6,6 +7,7 @@ import {
   planActs,
 } from "@/core/cedulas/analise.ts";
 import { CHECKED_ON, KIND_INFO } from "@/core/cedulas/especies.ts";
+import { suggestRequirements } from "@/core/cedulas/exigencias.ts";
 import { db } from "@/db/index.ts";
 import {
   feeTableReferenceWith,
@@ -22,6 +24,7 @@ import {
   LinkRequestForm,
   ModelsPanel,
   RemoveAnalysis,
+  RequirementsPanel,
   RestoreAnalysis,
 } from "../cedula-forms.tsx";
 import { FeeTableReminder } from "../fee-table-reminder.tsx";
@@ -88,6 +91,7 @@ export default async function CedulaAnalysisPage({
   const plan = planActs(analysis.data);
   const info = KIND_INFO[analysis.kind];
   const models = modelsOf(tenant, analysis);
+  const suggestions = suggestRequirements(analysis.data, plan);
   const removed = Boolean(analysis.removedAt);
   const when = (iso: string) =>
     new Date(iso).toLocaleString("pt-BR", {
@@ -241,6 +245,37 @@ export default async function CedulaAnalysisPage({
               </ul>
             </details>
           )}
+        </Card>
+
+        <Card title="Nota de exigência">
+          {analysis.data.noteIds.length > 0 && (
+            <ul className="flex flex-col gap-1 text-sm">
+              {analysis.data.noteIds.map((noteId, i) => (
+                <li key={noteId}>
+                  <Link
+                    href={`/admin/utilitarios/qualificacao/${noteId}`}
+                    className="font-medium text-primary underline underline-offset-4"
+                  >
+                    Abrir a nota de exigência {i + 1} na Qualificação de títulos
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <RequirementsPanel
+            key={suggestions.map((r) => r.key).join(",")}
+            id={analysis.id}
+            suggestions={suggestions}
+            presenter={
+              analysis.data.people.find((p) => p.role === "credor")?.name ?? ""
+            }
+            canQualify={can(
+              session.user.role ?? "",
+              "qualificacao.manage",
+              session.user.permissions,
+            )}
+            disabled={removed}
+          />
         </Card>
 
         <Card title="Modelos">
