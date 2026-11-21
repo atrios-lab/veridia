@@ -39,7 +39,7 @@ import {
   type TitleFile,
 } from "./ai.ts";
 import { recordAuditWith } from "./audit.ts";
-import { currentFeeTableWith } from "./fee-tables.ts";
+import { feeTableReferenceWith } from "./fee-tables.ts";
 import { pdfText } from "./guide-reading.ts";
 import { searchKnowledgeWith } from "./knowledge.ts";
 import { docxText } from "./titularidade-reading.ts";
@@ -955,27 +955,6 @@ export async function saveChargeNotesWith(
 export { CHANGE_KINDS };
 
 /**
- * The fee table the charging refers to (decision of 21/11/2026: "sempre
- * pegue a tabela vigente como referência"): the one in force in
- * Transparência, the same the public site shows. Null when none is.
- */
-export async function feeTableReferenceWith(
-  database: Database,
-  tenantSlug: string,
-): Promise<{ id: string; title: string; year: string } | null> {
-  const table = await currentFeeTableWith(database, tenantSlug).catch(
-    () => undefined,
-  );
-  return table
-    ? {
-        id: table.document.id,
-        title: table.document.title,
-        year: table.document.yearLabel,
-      }
-    : null;
-}
-
-/**
  * Records the nota de exigência opened from the analysis (decision of
  * 21/11/2026): the qualificação's id goes into the analysis, which lists
  * it; the note itself lives, numbered, in the Qualificação de títulos.
@@ -1143,3 +1122,6 @@ export async function cedulaInRequestWith(
     .catch(() => undefined);
   return found;
 }
+
+/** The fee table in force, re-exported for the cédulas' screens. */
+export { feeTableReferenceWith };

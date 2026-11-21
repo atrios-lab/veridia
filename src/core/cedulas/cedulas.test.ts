@@ -311,3 +311,79 @@ test("os modelos saem preenchidos e marcam o que falta, sem inventar", () => {
     allModels(cedula({ kind: kind as CedulaData["kind"] }), place);
   }
 });
+
+test("mudou o valor: averbação com valor declarado, com os valores e o passo a passo", () => {
+  const addendum = (over: Partial<CedulaData["addenda"][number]>) => ({
+    title: "1º aditivo",
+    date: "01/12/2026",
+    changes: [] as CedulaData["addenda"][number]["changes"],
+    previousDue: "",
+    newDue: "",
+    previousAmount: "R$ 600.000,00",
+    newAmount: "R$ 500.000,00",
+    guaranteeChange: "",
+    description: "",
+    ...over,
+  });
+  // A reduction also changes the value: charged by the value.
+  const reduced = cedula({
+    kind: "credito-industrial",
+    addenda: [addendum({ changes: ["valor-reducao"] })],
+  });
+  const act = planActs(reduced).acts.find((a) => a.addendumIndex === 0);
+  assert.equal(act?.charge, "conteudo-financeiro");
+  assert.match(act?.basis ?? "", /art\. 2º, III, b/);
+  const how = act?.how?.join(" ") ?? "";
+  assert.match(how, /averbação com valor declarado, e cobra-se pelo valor/);
+  assert.match(
+    how,
+    /antes R\$\s600\.000,00, depois R\$\s500\.000,00, redução de R\$\s100\.000,00/,
+  );
+  assert.match(how, /à margem do registro no Livro nº 3/);
+  assert.match(how, /Prazo: 3 dias úteis/);
+  const model = allModels(reduced, place).find((m) => m.id === act?.id);
+  assert.match(
+    model?.text ?? "",
+    /VALOR DECLARADO: R\$\s500\.000,00, novo valor do crédito \(redução de R\$\s100\.000,00/,
+  );
+
+  // Rural with supplementary credit: the base is the supplement.
+  const rural = cedula({
+    addenda: [
+      addendum({ changes: ["valor-aumento"], newAmount: "R$ 750.000,00" }),
+    ],
+  });
+  const ruralAct = planActs(rural).acts.find((a) => a.addendumIndex === 0);
+  assert.equal(ruralAct?.charge, "valor-suplementar");
+  assert.match(ruralAct?.how?.join(" ") ?? "", /0,3% do valor do crédito/);
+  assert.match(
+    allModels(rural, place).find((m) => m.id === ruralAct?.id)?.text ?? "",
+    /VALOR DECLARADO: R\$\s150\.000,00, crédito suplementar/,
+  );
+
+  // Only the due date: no declared value, and the rural law dispenses it.
+  const due = cedula({
+    addenda: [
+      addendum({ changes: ["prazo"], previousAmount: "", newAmount: "" }),
+    ],
+  });
+  const dueAct = planActs(due).acts.find((a) => a.addendumIndex === 0);
+  assert.equal(dueAct?.charge, "sem-conteudo");
+  assert.match(dueAct?.how?.[0] ?? "", /dispensa o aditivo de prorrogação/);
+  assert.match(
+    allModels(due, place).find((m) => m.id === dueAct?.id)?.text ?? "",
+    /ATO SEM VALOR DECLARADO\./,
+  );
+});
+
+test("todo ato traz o como fazer; ato de outro órgão orienta o apresentante", () => {
+  const plan = planActs(cedula({ kind: "produto-rural" }));
+  for (const act of plan.acts) assert.ok((act.how ?? []).length > 0, act.id);
+  const outside = plan.acts.find((a) => a.where === "entidade-registradora");
+  assert.equal(outside?.how?.[0], "Não pratique este ato nesta serventia.");
+  const registro = plan.acts.find((a) => a.model === "hipoteca-matricula");
+  assert.match(
+    registro?.how?.join(" ") ?? "",
+    /registro com valor declarado, base no valor do crédito garantido \(R\$\s600\.000,00\)/,
+  );
+});

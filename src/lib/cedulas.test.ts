@@ -7,7 +7,11 @@ import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { emptyCedula } from "@/core/cedulas/analise.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog, cedulaAnalyses } from "@/db/schema.ts";
+import {
+  auditLog,
+  cedulaAnalyses,
+  transparencyDocuments,
+} from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   CedulaError,
@@ -360,4 +364,39 @@ test("o pedido mostra a cédula só quando há cédula: pelo ato, pelo nome ou p
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("a referência é a tabela de emolumentos vigente publicada em Transparência", async () => {
+  const OTHER = "cartorio-tabela";
+  assert.equal(await feeTableReferenceWith(db, OTHER), null);
+  const doc = {
+    tenantSlug: OTHER,
+    category: "Tabela de emolumentos",
+    yearLabel: "2026",
+    fileStoredName: "t.pdf",
+    fileDisplayName: "t.pdf",
+    filePath: "/tmp/t.pdf",
+    fileMimeType: "application/pdf",
+    fileSizeBytes: 1,
+  };
+  // A draft is not in force; the first published, in the panel's order, is.
+  await db.insert(transparencyDocuments).values([
+    { ...doc, title: "Tabela rascunho", status: "draft", position: 0 },
+    {
+      ...doc,
+      title: "Tabela 2026 (fictícia)",
+      status: "published",
+      position: 1,
+    },
+    {
+      ...doc,
+      title: "Tabela 2025 (fictícia)",
+      status: "published",
+      position: 2,
+      yearLabel: "2025",
+    },
+  ]);
+  const ref = await feeTableReferenceWith(db, OTHER);
+  assert.equal(ref?.title, "Tabela 2026 (fictícia)");
+  assert.equal(ref?.year, "2026");
 });

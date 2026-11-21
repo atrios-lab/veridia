@@ -20,6 +20,7 @@ import {
 } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
+import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import {
   getDeadlineSettingsWith,
   getQualificationWith,
@@ -33,6 +34,7 @@ import { findByProtocol } from "@/lib/service-request.ts";
 import { certificatesForSignerWith } from "@/lib/signing.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
+import { FeeTableReminder } from "../../../../_components/fee-table-reminder.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../../../_components/role-labels.ts";
 import {
@@ -84,6 +86,7 @@ export default async function QualificationPage({
     clientDocs,
     linkedRequest,
     certificates,
+    feeTable,
   ] = await Promise.all([
     listNotesWith(db, tenant.slug, q.id),
     listLibraryWith(db, tenant.slug, q.data.attribution),
@@ -94,6 +97,8 @@ export default async function QualificationPage({
       ? findByProtocol(tenant.slug, q.data.protocol.trim())
       : Promise.resolve(null),
     certificatesForSignerWith(db, tenant.slug, session.user.id).catch(() => []),
+    // The fee table in force, for reference (decision of 21/11/2026).
+    feeTableReferenceWith(db, tenant.slug),
   ]);
   const round = currentRound(q.data);
   // The Tabelião's validation of the notes with the Assistente Virtual's
@@ -172,6 +177,14 @@ export default async function QualificationPage({
             {isoDate(due.due)} ({rule.days} dias úteis). {rule.basis}
           </p>
         )}
+        <FeeTableReminder
+          table={feeTable}
+          canUpdate={can(
+            session.user.role ?? "",
+            "transparency.manage",
+            session.user.permissions,
+          )}
+        />
         {q.removedAt && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted px-5 py-3 text-sm text-foreground">
             <span>

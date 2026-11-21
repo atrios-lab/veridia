@@ -3,7 +3,12 @@ import {
   emptyRequirement,
   type QualificationData,
 } from "../qualificacao/qualificacao.ts";
-import type { CedulaData, CedulaGuarantee, Plan } from "./analise.ts";
+import {
+  addendumUnclear,
+  type CedulaData,
+  type CedulaGuarantee,
+  type Plan,
+} from "./analise.ts";
 import { type CedulaKind, KIND_INFO } from "./especies.ts";
 
 /**
@@ -210,7 +215,28 @@ export function suggestRequirements(
     }
   }
 
-  // 8. Nothing to register here: a note says so, with what to do.
+  // 8. An aditivo that does not say what it changes: the requerente is
+  // told and asked to clarify (decision of 21/11/2026).
+  for (const [index, a] of data.addenda.entries()) {
+    if (!addendumUnclear(a)) continue;
+    const name = a.title || `${index + 1}º aditivo`;
+    out.push({
+      key: `a${index}-esclarecer`,
+      title: "Alterações do aditivo",
+      description: `O ${name} não diz com clareza o que altera na cédula (valor, vencimento, encargos, garantias ou partes), e sem isso não se sabe que ato praticar nem como cobrá-lo.`,
+      howToComply:
+        "Apresentar o aditivo, datado e assinado na forma da lei, com as cláusulas alteradas e os valores e datas de antes e de depois, ou declaração do credor que as esclareça.",
+      basis:
+        KIND_INFO[data.kind].family === "industrial"
+          ? "Decreto-Lei nº 413/1969, arts. 12 e 36; Lei nº 6.015/1973, art. 198."
+          : KIND_INFO[data.kind].family === "rural"
+            ? "Decreto-Lei nº 167/1967, art. 12; Lei nº 6.015/1973, arts. 198 e 246."
+            : "Lei nº 6.015/1973, arts. 198 e 246.",
+      reference: name,
+    });
+  }
+
+  // 9. Nothing to register here: a note says so, with what to do.
   const hereActs = plan.acts.filter((a) => !a.elsewhere && a.nature !== "fora");
   if (hereActs.length === 0 && data.kind === "nota-credito-rural") {
     out.push({

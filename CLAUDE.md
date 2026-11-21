@@ -39,6 +39,12 @@ Regras do dono do projeto (21/11/2026), para toda tela, documento ou texto do si
   publicada em Transparência (`currentFeeTableWith`, em `src/lib/fee-tables.ts`). Onde a tabela for
   citada, mostre o lembrete para conferir se a tabela cadastrada é mesmo a vigente e, se não for, o
   link "clique aqui para atualizar", que leva a Transparência.
+- **Ensine o funcionário a fazer**: todo ato, cobrança ou exigência que o sistema sugerir vem com o
+  "Como fazer", passo a passo (o que conferir, como cobrar, onde lançar, o modelo, o prazo), cada
+  passo com a fonte jurídica correta, conferida no texto oficial.
+- **Mudou o valor, cobra-se pelo valor**: aditivo ou ato que altera o valor do crédito é averbação
+  **com valor declarado** (Lei nº 10.169/2000, art. 2º, III, b; no crédito rural, a base é o crédito
+  suplementar, § 2º, II, b). Sem mudança de valor, averbação sem valor declarado (§ 2º, II, c).
 
 ## Antes de abrir qualquer PR
 
