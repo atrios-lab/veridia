@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { after, before, test } from "node:test";
 import { and, eq } from "drizzle-orm";
+import PDFDocument from "pdfkit";
 import { emptyCedula } from "@/core/cedulas/analise.ts";
 import type { Database } from "@/db/index.ts";
 import { auditLog, cedulaAnalyses } from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import {
   CedulaError,
+  cedulaInRequestWith,
   changeLearnedWith,
   createAnalysisWith,
   feeTableReferenceWith,
@@ -267,4 +272,92 @@ test("a nota de exigência fica ligada à análise e não se perde ao editar os 
     (await getAnalysisWith(db, OFFICE, analysis.id))?.data.noteIds,
     [noteId],
   );
+});
+
+function pdfOf(text: string): Promise<Buffer> {
+  return new Promise((resolve) => {
+    const doc = new PDFDocument();
+    const chunks: Buffer[] = [];
+    doc.on("data", (c: Buffer) => chunks.push(c));
+    doc.on("end", () => resolve(Buffer.concat(chunks)));
+    doc.text(text);
+    doc.end();
+  });
+}
+
+test("o pedido mostra a cédula só quando há cédula: pelo ato, pelo nome ou pelo texto do arquivo", async () => {
+  const file = (
+    over: Partial<Parameters<typeof cedulaInRequestWith>[2]["files"][number]>,
+  ) => ({
+    id: "f1",
+    displayName: "documento.pdf",
+    path: null,
+    mimeType: "application/pdf",
+    sizeBytes: 1000,
+    purgedAt: null,
+    ...over,
+  });
+  const ask = (
+    actName: string,
+    files: ReturnType<typeof file>[],
+    details: unknown = {},
+  ) =>
+    cedulaInRequestWith(db, OFFICE, {
+      requestId: "00000000-0000-4000-8000-000000000001",
+      details,
+      actName,
+      files,
+    });
+  assert.equal(await ask("Certidão de inteiro teor", []), null);
+  assert.equal((await ask("Registro de cédula de crédito", []))?.from, "ato");
+  assert.equal(
+    (
+      await ask("Registro", [
+        file({ displayName: "CCB banco fictício.pdf", path: "/x" }),
+      ])
+    )?.from,
+    "nome",
+  );
+  // A person chose "Registro" and sent "contrato.pdf": the text says CPR.
+  const dir = await mkdtemp(join(tmpdir(), "cedula-"));
+  try {
+    const path = join(dir, "contrato.pdf");
+    await writeFile(
+      path,
+      await pdfOf("CÉDULA DE PRODUTO RURAL Nº 9 (fictícia)"),
+    );
+    const seen = await ask("Registro", [
+      file({ id: "f9", displayName: "contrato.pdf", path }),
+    ]);
+    assert.deepEqual(seen, {
+      kind: "produto-rural",
+      from: "texto",
+      file: "contrato.pdf",
+    });
+    // Read once: the same files are not read again (the cache answers).
+    const cached = await ask(
+      "Registro",
+      [
+        file({
+          id: "f9",
+          displayName: "contrato.pdf",
+          path: join(dir, "sumiu.pdf"),
+        }),
+      ],
+      {
+        cedulaScan: { key: "f9", kind: "produto-rural", file: "contrato.pdf" },
+      },
+    );
+    assert.equal(cached?.kind, "produto-rural");
+    // An ordinary file is read and gives nothing.
+    await writeFile(path, await pdfOf("Requerimento de certidão fictícia"));
+    assert.equal(
+      await ask("Registro", [
+        file({ id: "f10", displayName: "contrato.pdf", path }),
+      ]),
+      null,
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });

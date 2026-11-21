@@ -88,3 +88,11 @@ A tela NÃO SHALL sugerir documento que a lei veda exigir (CCIR, ITR, CND nas c�
 #### Scenario: Emitente casado sem anuência
 - **WHEN** a análise mostra emitente casado dando imóvel em hipoteca sem o cônjuge
 - **THEN** a tela sugere a exigência "Outorga do cônjuge" (Código Civil, art. 1.647, I), e "Criar a nota de exigência" abre a qualificação com ela
+
+### Requirement: Cédula vista sozinha no pedido, com a qualificação no topo
+
+Na tela do pedido, a qualificação do título SHALL vir no topo, porque é ela que inicia o ato com a nota positiva ou a devolutiva. O cartão "Análise de cédula" SHALL aparecer só quando o pedido trouxer uma cédula ou já tiver análise ligada. O sistema SHALL descobrir a cédula sozinho, mesmo que a pessoa tenha escolhido outro ato no protocolo: pelo ato pedido, pelo nome do arquivo ou pelo texto dos PDFs e dos arquivos do Word. A leitura do texto SHALL ficar guardada no pedido, para os mesmos arquivos não serem lidos de novo.
+
+#### Scenario: Cédula enviada com outro nome
+- **WHEN** a pessoa escolhe "Registro" e anexa "contrato.pdf", que é uma cédula de produto rural
+- **THEN** o pedido mostra "O sistema viu uma Cédula de Produto Rural (CPR) neste pedido, pelo texto do arquivo" com o botão "Analisar cédula"

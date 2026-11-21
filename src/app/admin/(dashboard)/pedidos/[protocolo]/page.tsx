@@ -547,6 +547,44 @@ export default async function ServiceRequestDetailPage({
                   />
                 );
               })()}
+            {/* The qualificação first (decision of 21/11/2026): it is what
+                starts the act, with the positiva or the nota devolutiva. */}
+            {can(
+              session.user.role ?? "",
+              "qualificacao.manage",
+              session.user.permissions,
+            ) && (
+              <QualificationSection
+                tenantSlug={tenant.slug}
+                protocol={request.protocolNumber}
+              />
+            )}
+
+            {can(
+              session.user.role ?? "",
+              "cedulas.manage",
+              session.user.permissions,
+            ) && (
+              <CedulaSection
+                tenantSlug={tenant.slug}
+                requestId={request.id}
+                details={request.details}
+                actName={act?.name ?? ""}
+                files={ownAttachments
+                  .filter(
+                    (a) => a.kind !== "office" && a.kind !== "signed-form",
+                  )
+                  .map((a) => ({
+                    id: a.id,
+                    displayName: a.displayName,
+                    path: a.path,
+                    mimeType: a.mimeType,
+                    sizeBytes: a.sizeBytes,
+                    purgedAt: a.purgedAt,
+                  }))}
+              />
+            )}
+
             <StatusSection
               requestId={request.id}
               protocolNumber={request.protocolNumber}
@@ -762,25 +800,6 @@ export default async function ServiceRequestDetailPage({
               attachments={citizenAttachments}
               hasExemption={Boolean(exemption)}
             />
-
-            {can(
-              session.user.role ?? "",
-              "qualificacao.manage",
-              session.user.permissions,
-            ) && (
-              <QualificationSection
-                tenantSlug={tenant.slug}
-                protocol={request.protocolNumber}
-              />
-            )}
-
-            {can(
-              session.user.role ?? "",
-              "cedulas.manage",
-              session.user.permissions,
-            ) && (
-              <CedulaSection tenantSlug={tenant.slug} requestId={request.id} />
-            )}
 
             {act?.taxGuide && (
               <section className="rounded-xl border bg-card p-6">
