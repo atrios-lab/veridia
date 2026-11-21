@@ -22,9 +22,15 @@ export interface GuideFilesReading {
   notes: string[];
 }
 
+/**
+ * The text of a PDF. pdf.js takes the buffer it is given (it transfers it
+ * to its worker and leaves it detached), so it reads a copy: the caller's
+ * bytes stay usable, for the Assistente Virtual to read the same file
+ * after ("Cannot perform Construct on a detached ArrayBuffer").
+ */
 export async function pdfText(bytes: Uint8Array): Promise<string> {
   const { extractText, getDocumentProxy } = await import("unpdf");
-  const pdf = await getDocumentProxy(bytes);
+  const pdf = await getDocumentProxy(bytes.slice());
   const { text } = await extractText(pdf, { mergePages: true });
   return Array.isArray(text) ? text.join("\n") : text;
 }

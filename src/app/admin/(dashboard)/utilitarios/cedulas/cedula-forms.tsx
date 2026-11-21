@@ -139,25 +139,36 @@ export function NewAnalysisForm({
           </ul>
         )}
       </div>
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="ced-especie">Espécie</Label>
-        <NativeSelect id="ced-especie" name="especie" defaultValue="">
-          <NativeSelectOption value="">
-            Descobrir pelo documento
-          </NativeSelectOption>
-          {KIND_OPTIONS.map((o) => (
-            <NativeSelectOption key={o.value} value={o.value}>
-              {o.label}
-            </NativeSelectOption>
-          ))}
-        </NativeSelect>
-        <p className="text-xs text-muted-foreground">
-          Sem arquivo? Escolha a espécie e preencha os dados à mão.
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        O sistema lê os documentos sozinho: descobre a espécie, o livro e os
+        atos e preenche os dados. Você só confere depois.
+      </p>
+      {/* Only without a file the clerk picks the kind (decision of
+          21/11/2026: "é para ler sozinho e saber"). */}
+      <details className="text-sm">
+        <summary className="cursor-pointer font-medium text-foreground">
+          Não tem o arquivo? Preencher à mão
+        </summary>
+        <div className="mt-2 flex flex-col gap-2">
+          <Label htmlFor="ced-especie">Espécie da cédula</Label>
+          <NativeSelect id="ced-especie" name="especie" defaultValue="">
+            <NativeSelectOption value="">Escolha a espécie</NativeSelectOption>
+            {KIND_OPTIONS.map((o) => (
+              <NativeSelectOption key={o.value} value={o.value}>
+                {o.label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <p className="text-xs text-muted-foreground">
+            Com arquivo anexado, deixe em branco: a espécie vem do documento.
+          </p>
+        </div>
+      </details>
       <ErrorLine state={state} />
       <Button type="submit" disabled={pending} className="self-start">
-        {pending ? "Lendo os documentos..." : "Analisar"}
+        {pending
+          ? "Lendo os documentos (pode levar até um minuto)..."
+          : "Analisar"}
       </Button>
     </form>
   );

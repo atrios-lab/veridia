@@ -32,6 +32,7 @@ import {
 } from "@/db/schema.ts";
 import {
   AI_IMAGE_TYPES,
+  AiError,
   type AiImageType,
   aiBlockedWith,
   readCedula,
@@ -383,16 +384,19 @@ export async function readCedulaDocumentsWith(
         files: names,
       };
     } catch (error) {
-      notes.push(
-        error instanceof Error
-          ? `${error.message} Os dados vieram só da leitura do texto.`
-          : "O Assistente Virtual falhou; os dados vieram só da leitura do texto.",
-      );
+      // Only the assistente's own messages are in the office's words; any
+      // other failure goes to the log, never to the screen in English.
+      const said =
+        error instanceof AiError
+          ? error.message
+          : "O Assistente Virtual não conseguiu ler os documentos agora.";
+      if (!(error instanceof AiError)) console.error("cedulas.read", error);
+      notes.push(`${said} Os dados vieram só da leitura do texto: confira.`);
       return {
         data: draftFromText(kind, texts),
         source: "leitura",
         notes,
-        aiNote: error instanceof Error ? error.message : null,
+        aiNote: said,
         detection,
         files: names,
       };
