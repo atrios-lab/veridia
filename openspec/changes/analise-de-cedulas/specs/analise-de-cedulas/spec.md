@@ -55,3 +55,19 @@ Para cada aditivo, a análise SHALL indicar o que mudou: prazo, valor, encargos,
 #### Scenario: Aditivo com crédito suplementar e bem novo
 - **WHEN** o aditivo aumenta o crédito e vincula um imóvel novo
 - **THEN** a análise indica o registro da garantia nova e a averbação do aditivo, com base de cálculo no crédito suplementar
+
+### Requirement: Lei que mudou, com a regra vigente e como fazer
+
+Quando a doutrina ou a regra antiga divergir da lei vigente, a análise SHALL mostrar três coisas: como era, o que vale hoje (a norma vigente, com o artigo) e como fazer agora, passo a passo. A análise NÃO SHALL dizer só que a norma foi revogada.
+
+#### Scenario: Cédula rural
+- **WHEN** a análise mostra uma cédula rural
+- **THEN** ela diz que os arts. 30 a 40 do DL 167/1967 foram revogados pela Lei 13.986/2020, que hoje se registram as garantias, e como registrar cada uma (hipoteca na matrícula, penhor rural no Livro nº 3), com prazo e artigos
+
+### Requirement: Tabela de emolumentos vigente como referência
+
+A cobrança SHALL citar a tabela de emolumentos vigente, que é a primeira "Tabela de emolumentos" publicada em Transparência. Onde a tabela for citada, a tela SHALL mostrar o lembrete para conferir se a tabela cadastrada é mesmo a vigente, com o link "clique aqui para atualizar" para Transparência. Sem tabela cadastrada, a tela SHALL pedir que se publique a tabela vigente.
+
+#### Scenario: Tabela não cadastrada
+- **WHEN** a serventia não tem tabela de emolumentos publicada
+- **THEN** a análise avisa e oferece "clique aqui para atualizar", que leva a Transparência

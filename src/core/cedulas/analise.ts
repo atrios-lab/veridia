@@ -7,6 +7,7 @@ import {
   GUARANTEE_KINDS,
   type GuaranteeKind,
   KIND_INFO,
+  type LawChange,
 } from "./especies.ts";
 
 /**
@@ -242,7 +243,7 @@ export interface Plan {
   deadlineBasis: string;
   warnings: string[];
   rules: string[];
-  divergence?: string;
+  divergence?: LawChange;
   toConfirm?: string;
 }
 

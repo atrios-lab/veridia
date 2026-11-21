@@ -38,6 +38,7 @@ import {
   type TitleFile,
 } from "./ai.ts";
 import { recordAuditWith } from "./audit.ts";
+import { currentFeeTableWith } from "./fee-tables.ts";
 import { pdfText } from "./guide-reading.ts";
 import { searchKnowledgeWith } from "./knowledge.ts";
 import { docxText } from "./titularidade-reading.ts";
@@ -941,3 +942,24 @@ export async function saveChargeNotesWith(
 
 /** Change kinds re-exported for the forms. */
 export { CHANGE_KINDS };
+
+/**
+ * The fee table the charging refers to (decision of 21/11/2026: "sempre
+ * pegue a tabela vigente como referência"): the one in force in
+ * Transparência, the same the public site shows. Null when none is.
+ */
+export async function feeTableReferenceWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<{ id: string; title: string; year: string } | null> {
+  const table = await currentFeeTableWith(database, tenantSlug).catch(
+    () => undefined,
+  );
+  return table
+    ? {
+        id: table.document.id,
+        title: table.document.title,
+        year: table.document.yearLabel,
+      }
+    : null;
+}

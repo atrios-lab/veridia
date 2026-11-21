@@ -9,6 +9,7 @@ import {
   CedulaError,
   changeLearnedWith,
   createAnalysisWith,
+  feeTableReferenceWith,
   getAnalysisWith,
   getChargeNotesWith,
   listAnalysesWith,
@@ -229,6 +230,8 @@ test("modelo editado e de volta ao gerado; apagar e restaurar sem tirar do banco
 });
 
 test("as notas de cobrança da serventia são salvas e lidas", async () => {
+  // No fee table in force yet: the screen asks to publish one.
+  assert.equal(await feeTableReferenceWith(db, OFFICE), null);
   assert.deepEqual(await getChargeNotesWith(db, OFFICE), {});
   await saveChargeNotesWith(
     db,

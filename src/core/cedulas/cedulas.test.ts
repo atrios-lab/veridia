@@ -60,7 +60,17 @@ test("cédula rural: sem inscrição própria desde 2020, só a hipoteca na matr
     [["registro", "matricula"]],
   );
   assert.match(plan.cedulaBasis, /Lei nº 13\.986\/2020/);
-  assert.match(plan.divergence ?? "", /Caderno IRIB nº 9/);
+  // The change says what was, what is in force and how to do it now.
+  assert.match(plan.divergence?.before ?? "", /Caderno IRIB nº 9/);
+  assert.match(
+    plan.divergence?.now ?? "",
+    /Lei nº 13\.986\/2020 \(art\. 61, V e VI\)/,
+  );
+  assert.ok(
+    plan.divergence?.how.some((h) =>
+      /Hipoteca cedular: registro na matrícula/.test(h),
+    ),
+  );
   assert.equal(plan.deadline, "10 dias");
   assert.ok(plan.rules.some((r) => /0,3%/.test(r)));
 });

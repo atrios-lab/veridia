@@ -54,6 +54,15 @@ export interface Deadline {
   basis: string;
 }
 
+export interface LawChange {
+  /** What the old rule said, with its articles. */
+  before: string;
+  /** What changed it and what is in force now, with the articles. */
+  now: string;
+  /** How to do it today, step by step, with the articles. */
+  how: string[];
+}
+
 export interface KindInfo {
   label: string;
   family: CedulaFamily;
@@ -62,8 +71,12 @@ export interface KindInfo {
   deadline: Deadline;
   /** Rules the registrar must keep in mind for this kind. */
   rules: string[];
-  /** What the Caderno IRIB nº 9 (2016) says that the law changed. */
-  divergence?: string;
+  /**
+   * What changed since the Caderno IRIB nº 9 (2016) (decision of
+   * 21/11/2026: "quando citar que a lei mudou ou revogou, citar a correta
+   * e como fazer"): what the study said, what is in force, how to do it.
+   */
+  divergence?: LawChange;
   /** A point not read in the official text: confirm before relying on it. */
   toConfirm?: string;
 }
@@ -91,8 +104,19 @@ const RURAL_RULES = [
   `A venda dos bens apenhados ou hipotecados depende de anuência prévia e escrita do credor (${DL167}, art. 59).`,
 ];
 
-const RURAL_DIVERGENCE =
-  "O Caderno IRIB nº 9 (2016) manda registrar a cédula rural no Livro nº 3 e exigir CCIR e ITR em alguns casos. Esses fundamentos (DL 167/1967, arts. 30 a 40; LRP, art. 167, I, 13) foram revogados pela Lei nº 13.986/2020, que também vedou exigir documento complementar.";
+const RURAL_DIVERGENCE: LawChange = {
+  before:
+    "O Caderno IRIB nº 9 (2016) manda registrar a cédula rural no Livro nº 3, Registro Auxiliar (DL 167/1967, art. 30, e LRP, art. 167, I, item 13), em 3 dias úteis (DL 167/1967, art. 38), e exigir CCIR e ITR em alguns casos.",
+  now: "A Lei nº 13.986/2020 (art. 61, V e VI) revogou os arts. 30 a 40 do DL 167/1967 e o item 13 do inciso I do art. 167 da Lei nº 6.015/1973. Hoje a cédula rural não tem inscrição própria: registram-se só as garantias reais que ela constitui, e é vedado exigir documento complementar ou negar o registro porque a garantia vale menos que o crédito (DL 167/1967, art. 14, §§ 3º a 6º, incluídos pela mesma lei).",
+  how: [
+    "Hipoteca cedular: registro na matrícula do imóvel hipotecado (LRP, art. 167, I, item 2).",
+    "Penhor rural: registro no Livro nº 3 do Registro de Imóveis onde estão os bens apenhados (Código Civil, art. 1.438; LRP, arts. 167, I, item 15, e 178, VI).",
+    "Alienação fiduciária de imóvel: registro na matrícula (LRP, art. 167, I, item 35).",
+    "Prazo: 10 dias do protocolo; cancelamento de garantia, 5 dias (LRP, art. 188, caput e § 1º, I).",
+    "Não exija CCIR, ITR, CND nem outro documento além do título (DL 167/1967, art. 14, §§ 3º e 4º).",
+    "Emolumentos da garantia com o teto do crédito rural (Lei nº 10.169/2000, art. 2º, § 2º).",
+  ],
+};
 
 const INDUSTRIAL_ACT = (law: string) => ({
   where: "livro-3" as const,
@@ -151,8 +175,15 @@ export const KIND_INFO: Record<CedulaKind, KindInfo> = {
     },
     deadline: RURAL_DEADLINE,
     rules: RURAL_RULES,
-    divergence:
-      "O Caderno IRIB nº 9 (2016) manda inscrever a nota de crédito rural no Livro nº 3. Essa inscrição foi revogada pela Lei nº 13.986/2020 (DL 167/1967, arts. 30 a 40).",
+    divergence: {
+      before:
+        "O Caderno IRIB nº 9 (2016) manda inscrever a nota de crédito rural no Livro nº 3 do Registro de Imóveis (DL 167/1967, art. 30, d).",
+      now: "Essa inscrição foi revogada pela Lei nº 13.986/2020 (art. 61, V, a, que revogou os arts. 30 a 40 do DL 167/1967). A nota de crédito rural não constitui garantia real: não há ato a praticar no Registro de Imóveis.",
+      how: [
+        "Apresentada sozinha para registro: informe ao apresentante, por nota, que desde a Lei nº 13.986/2020 a nota de crédito rural não tem ato no Registro de Imóveis.",
+        "Veio com garantia real em instrumento próprio (hipoteca, penhor rural): registre a garantia, como nas demais cédulas rurais.",
+      ],
+    },
   },
   "credito-industrial": {
     label: "Cédula de Crédito Industrial",
@@ -200,8 +231,17 @@ export const KIND_INFO: Record<CedulaKind, KindInfo> = {
       "As garantias (hipoteca, penhor rural, alienação fiduciária de imóvel e de produtos agropecuários) são levadas ao Registro de Imóveis onde estiverem os bens (Lei nº 8.929/1994, art. 12, §§ 1º, 2º e 4º).",
       "Emolumentos das garantias: os mesmos da cédula de crédito rural (Lei nº 8.929/1994, art. 12, § 3º).",
     ],
-    divergence:
-      "O Caderno IRIB nº 9 (2016) manda registrar a CPR no Livro nº 3 do domicílio do emitente. Desde a Lei nº 13.986/2020, o registro da CPR é feito em entidade autorizada pelo Banco Central, e o Registro de Imóveis recebe só as garantias, onde estiverem os bens.",
+    divergence: {
+      before:
+        "O Caderno IRIB nº 9 (2016) manda registrar a CPR no Livro nº 3 do Registro de Imóveis do domicílio do emitente (Lei nº 8.929/1994, art. 12, na redação original) e averbá-la na matrícula do imóvel hipotecado.",
+      now: "As Leis nº 13.986/2020 e 14.421/2022 deram nova redação ao art. 12 da Lei nº 8.929/1994: a CPR e seus aditamentos são registrados ou depositados em entidade autorizada pelo Banco Central, em até 30 dias úteis da emissão ou do aditamento (10 dias úteis se emitida até 10/8/2022), e a validade da CPR não depende de registro em cartório (art. 12, caput e § 2º).",
+      how: [
+        "Não registre a CPR no Livro nº 3: o registro dela é na entidade autorizada pelo Banco Central.",
+        "Registre as garantias no Registro de Imóveis onde estão os bens: hipoteca e alienação fiduciária de imóvel na matrícula; penhor rural e alienação fiduciária de produtos agropecuários no Livro nº 3 (Lei nº 8.929/1994, art. 12, §§ 1º e 4º).",
+        "Prazo: 3 dias úteis da apresentação do título ou da certidão de inteiro teor (art. 12, § 2º).",
+        "Emolumentos: os mesmos das garantias da cédula de crédito rural (art. 12, § 3º).",
+      ],
+    },
   },
   "credito-imobiliario": {
     label: "Cédula de Crédito Imobiliário (CCI)",

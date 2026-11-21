@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { can } from "@/core/auth/roles.ts";
 import {
   ACT_WHERE_LABELS,
   CHARGE_LABELS,
@@ -6,7 +7,11 @@ import {
 } from "@/core/cedulas/analise.ts";
 import { CHECKED_ON, KIND_INFO } from "@/core/cedulas/especies.ts";
 import { db } from "@/db/index.ts";
-import { getAnalysisWith, getChargeNotesWith } from "@/lib/cedulas.ts";
+import {
+  feeTableReferenceWith,
+  getAnalysisWith,
+  getChargeNotesWith,
+} from "@/lib/cedulas.ts";
 import { modelsOf } from "@/lib/cedulas-files.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
@@ -19,6 +24,7 @@ import {
   RemoveAnalysis,
   RestoreAnalysis,
 } from "../cedula-forms.tsx";
+import { FeeTableReminder } from "../fee-table-reminder.tsx";
 
 export const metadata = { title: "Análise de cédula" };
 
@@ -66,11 +72,19 @@ export default async function CedulaAnalysisPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireCedulas();
+  const session = await requireCedulas();
   const tenant = await getTenant();
   const analysis = await getAnalysisWith(db, tenant.slug, (await params).id);
   if (!analysis) notFound();
-  const [notes] = await Promise.all([getChargeNotesWith(db, tenant.slug)]);
+  const [notes, feeTable] = await Promise.all([
+    getChargeNotesWith(db, tenant.slug),
+    feeTableReferenceWith(db, tenant.slug),
+  ]);
+  const canUpdateTable = can(
+    session.user.role ?? "",
+    "transparency.manage",
+    session.user.permissions,
+  );
   const plan = planActs(analysis.data);
   const info = KIND_INFO[analysis.kind];
   const models = modelsOf(tenant, analysis);
@@ -128,10 +142,30 @@ export default async function CedulaAnalysisPage({
           </p>
         </Card>
 
-        {(plan.divergence || plan.toConfirm) && (
+        {plan.divergence && (
           <Card title="Atenção: a lei mudou" tone="warning">
-            {plan.divergence && <p>{plan.divergence}</p>}
-            {plan.toConfirm && <p>{plan.toConfirm}</p>}
+            <p>
+              <strong className="font-semibold">Como era:</strong>{" "}
+              {plan.divergence.before}
+            </p>
+            <p>
+              <strong className="font-semibold">O que vale hoje:</strong>{" "}
+              {plan.divergence.now}
+            </p>
+            <div>
+              <strong className="font-semibold">Como fazer agora:</strong>
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
+                {plan.divergence.how.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          </Card>
+        )}
+
+        {plan.toConfirm && (
+          <Card title="A conferir" tone="warning">
+            <p>{plan.toConfirm}</p>
           </Card>
         )}
 
@@ -185,12 +219,16 @@ export default async function CedulaAnalysisPage({
                   <span className="text-xs text-foreground">
                     <strong className="font-semibold">Cobrança:</strong>{" "}
                     {CHARGE_LABELS[act.charge]}
+                    {act.charge !== "nenhum" && feeTable
+                      ? `, pela ${feeTable.title}`
+                      : ""}
                     {notes[act.charge] ? ` · ${notes[act.charge]}` : ""}
                   </span>
                 </li>
               ))}
             </ol>
           )}
+          <FeeTableReminder table={feeTable} canUpdate={canUpdateTable} />
           {plan.rules.length > 0 && (
             <details className="text-sm">
               <summary className="cursor-pointer font-medium text-foreground">

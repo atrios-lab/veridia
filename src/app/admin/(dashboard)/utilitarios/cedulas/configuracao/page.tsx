@@ -1,12 +1,18 @@
+import { can } from "@/core/auth/roles.ts";
 import { CHARGE_BASES, CHARGE_LABELS } from "@/core/cedulas/analise.ts";
 import { KIND_INFO } from "@/core/cedulas/especies.ts";
 import { db } from "@/db/index.ts";
-import { getChargeNotesWith, listLearnedWith } from "@/lib/cedulas.ts";
+import {
+  feeTableReferenceWith,
+  getChargeNotesWith,
+  listLearnedWith,
+} from "@/lib/cedulas.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { requireCedulas } from "../_access.ts";
 import { ChargeNotesForm, LearnedRow } from "../cedula-forms.tsx";
+import { FeeTableReminder } from "../fee-table-reminder.tsx";
 
 export const metadata = { title: "Aprendizado e cobrança das cédulas" };
 
@@ -24,11 +30,12 @@ const LAW: Record<(typeof CHARGE_BASES)[number], string> = {
 };
 
 export default async function CedulasConfigPage() {
-  await requireCedulas();
+  const session = await requireCedulas();
   const tenant = await getTenant();
-  const [learned, notes] = await Promise.all([
+  const [learned, notes, feeTable] = await Promise.all([
     listLearnedWith(db, tenant.slug, { all: true }),
     getChargeNotesWith(db, tenant.slug),
+    feeTableReferenceWith(db, tenant.slug),
   ]);
   return (
     <>
@@ -88,6 +95,14 @@ export default async function CedulasConfigPage() {
             tipo de ato, o item da tabela e como se calcula: a nota aparece ao
             lado de cada ato sugerido.
           </p>
+          <FeeTableReminder
+            table={feeTable}
+            canUpdate={can(
+              session.user.role ?? "",
+              "transparency.manage",
+              session.user.permissions,
+            )}
+          />
           <ChargeNotesForm
             bases={CHARGE_BASES.map((key) => ({
               key,
