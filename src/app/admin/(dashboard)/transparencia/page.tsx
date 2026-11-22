@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import {
@@ -109,7 +110,22 @@ export default async function TransparencyPage({
         {tab === "documentos" ? (
           <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
             <DocumentsTab tenantSlug={tenant.slug} />
-            <DocumentForm />
+            <div className="flex flex-col gap-4">
+              <Link
+                href="/admin/transparencia/tabela/assistente"
+                className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm hover:bg-primary/10"
+              >
+                <span className="font-semibold text-foreground">
+                  Assistente da tabela de custas ›
+                </span>
+                <span className="text-muted-foreground">
+                  Mudou um fundo ou os emolumentos? Anexe a lei ou a tabela: o
+                  assistente virtual refaz a tabela no padrão, confere as contas
+                  e publica como vigente.
+                </span>
+              </Link>
+              <DocumentForm />
+            </div>
           </div>
         ) : (
           <BulletinTab

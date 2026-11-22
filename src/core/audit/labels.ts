@@ -337,6 +337,8 @@ const EXACT: Record<string, string> = {
   "transparency.document.unpublish":
     "Despublicou um documento de transparência",
   "transparency.document.delete": "Excluiu um documento de transparência",
+  "transparency.fee-table.generated":
+    "Gerou e publicou uma tabela de custas atualizada pelo assistente",
   "transparency.document.current":
     "Marcou uma tabela de emolumentos como vigente (publicada e no topo da lista)",
   "user.delete": "Excluiu uma conta",
