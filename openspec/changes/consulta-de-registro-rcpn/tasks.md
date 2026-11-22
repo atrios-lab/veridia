@@ -31,15 +31,16 @@
 
 ## 2. Fase 2: site (consulta pública)
 
-- [ ] 2.1 Núcleo puro da resposta: localizado, profissão por pessoa, casamento e óbito
+- [x] 2.1 Núcleo puro da resposta: localizado, profissão por pessoa, casamento e óbito
   encontrados, textos que nunca afirmam ausência. Testes.
-- [ ] 2.2 Página "Seu registro é daqui?" com identificação, finalidade e declaração, atrás do
-  gating de seção.
-- [ ] 2.3 Correspondência exata, limite de tentativas e registro das consultas.
-- [ ] 2.4 Botões para `rcpn-certidao`, `rcpn-certidao-inteiro-teor` e `rcpn-busca` já
-  preenchidos; o pedido mostra ao cartório o registro localizado.
-- [ ] 2.5 Lista das consultas na área RCPN.
-- [ ] 2.6 Verificar no navegador com dados fictícios; bateria completa.
+- [x] 2.2 Página "Seu registro é daqui?" (`/consulta-registro`) com identificação, finalidade
+  e declaração; só com o Registro Civil e com a consulta ligada pela serventia.
+- [x] 2.3 Correspondência exata (nome completo e nome da mãe; data de nascimento opcional,
+  decisão de 22/11/2026), limite de tentativas e registro das consultas.
+- [ ] 2.4 Botões para `rcpn-certidao`, `rcpn-certidao-inteiro-teor` e `rcpn-busca` (feito);
+  falta levar o registro localizado preenchido para o pedido.
+- [x] 2.5 Lista das consultas na área RCPN, com o botão de ligar e desligar.
+- [x] 2.6 Verificar no navegador com dados fictícios; bateria completa.
 
 ## 3. Depois (mudança própria)
 

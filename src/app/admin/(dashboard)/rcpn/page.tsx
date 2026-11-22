@@ -8,6 +8,7 @@ import {
   type RcpnKind,
   toIsoDate,
 } from "@/core/rcpn/record.ts";
+import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { rcpn } from "@/lib/rcpn.ts";
 import {
   type DateField,
@@ -16,6 +17,7 @@ import {
   SEARCH_MODES,
   type SearchMode,
 } from "@/lib/rcpn-ficha.ts";
+import { publicLookupEnabled, recentLookups } from "@/lib/rcpn-lookup.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { RCPN_KINDS_HELP } from "../../_components/screen-help.ts";
@@ -40,6 +42,7 @@ import {
   canReadGuides,
   requireRcpn,
 } from "./_lib/access.ts";
+import { PublicLookupCard } from "./public-lookup-card.tsx";
 
 export const metadata = { title: "Registro Civil" };
 
@@ -144,6 +147,11 @@ export default async function RcpnPage({
     "rcpn.edit",
     session.user.permissions,
   );
+  const importer = canImport(session);
+  const [lookupOn, lookups] = await Promise.all([
+    publicLookupEnabled(tenant.slug).catch(() => true),
+    importer ? recentLookups(tenant.slug).catch(() => []) : Promise.resolve([]),
+  ]);
 
   return (
     <>
@@ -453,6 +461,16 @@ export default async function RcpnPage({
               </Table>
             )}
           </section>
+        )}
+        {importer && (
+          <PublicLookupCard
+            enabled={lookupOn}
+            canEdit={importer}
+            lookups={lookups.map((l) => ({
+              at: formatOfficeDateTime(l.at),
+              text: l.text,
+            }))}
+          />
         )}
         <p className="text-xs text-muted-foreground">
           {RCPN_KIND_LABELS[kind]}: o registro aberto mostra a ficha completa

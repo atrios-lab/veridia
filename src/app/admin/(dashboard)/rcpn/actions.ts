@@ -3,12 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
+import { db } from "@/db/index.ts";
 import {
   RcpnImportError,
   rcpn,
   rcpnFolder,
   storeImportFile,
 } from "@/lib/rcpn.ts";
+import {
+  editImportWith,
+  hideImportWith,
+  ImportMetaError,
+  purgeImportFileWith,
+  restoreImportWith,
+} from "@/lib/rcpn-import-meta.ts";
+import { setPublicLookupWith } from "@/lib/rcpn-lookup.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { readStoredFile } from "@/lib/uploads.ts";
@@ -174,4 +183,122 @@ export async function discardImportAction(
   }
   revalidatePath("/admin/rcpn/importar");
   redirect("/admin/rcpn/importar");
+}
+
+export type ImportMetaState =
+  | { status: "idle" }
+  | { status: "saved"; message: string }
+  | { status: "error"; message: string };
+
+async function withImporter(
+  formData: FormData,
+  run: (gate: {
+    tenantSlug: string;
+    actorId: string;
+    id: string;
+  }) => Promise<string>,
+): Promise<ImportMetaState> {
+  const gate = await importer();
+  if (!gate) {
+    return { status: "error", message: "Sem permissão para importar." };
+  }
+  const id = String(formData.get("id") ?? "");
+  try {
+    const message = await run({
+      tenantSlug: gate.tenant.slug,
+      actorId: gate.session.user.id,
+      id,
+    });
+    revalidatePath("/admin/rcpn/importar", "layout");
+    return { status: "saved", message };
+  } catch (error) {
+    if (error instanceof ImportMetaError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("rcpn.import-meta", error);
+    return { status: "error", message: "Não foi possível salvar agora." };
+  }
+}
+
+/** A name and a note for a file sent; the earlier ones stay. */
+export async function editImportAction(
+  _prev: ImportMetaState,
+  formData: FormData,
+): Promise<ImportMetaState> {
+  return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
+    await editImportWith(
+      db,
+      tenantSlug,
+      id,
+      {
+        label: String(formData.get("label") ?? ""),
+        note: String(formData.get("note") ?? ""),
+      },
+      actorId,
+    );
+    return "Alteração salva.";
+  });
+}
+
+/** Takes the line off the list; the registros stay in the index. */
+export async function hideImportAction(
+  _prev: ImportMetaState,
+  formData: FormData,
+): Promise<ImportMetaState> {
+  return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
+    await hideImportWith(db, tenantSlug, id, actorId);
+    return "Arquivo tirado da lista. Os registros continuam no índice.";
+  });
+}
+
+export async function restoreImportAction(
+  _prev: ImportMetaState,
+  formData: FormData,
+): Promise<ImportMetaState> {
+  return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
+    await restoreImportWith(db, tenantSlug, id, actorId);
+    return "Arquivo de volta à lista.";
+  });
+}
+
+/** Deletes the file sent and keeps only the data read from it. */
+export async function purgeImportFileAction(
+  _prev: ImportMetaState,
+  formData: FormData,
+): Promise<ImportMetaState> {
+  return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
+    await purgeImportFileWith(db, tenantSlug, id, actorId);
+    return "Arquivo apagado. Ficaram só os dados lidos.";
+  });
+}
+
+/** The office's switch for the public lookup "Seu registro é daqui?". */
+export async function setPublicLookupAction(
+  _prev: ImportMetaState,
+  formData: FormData,
+): Promise<ImportMetaState> {
+  const gate = await importer();
+  if (!gate) {
+    return { status: "error", message: "Sem permissão para alterar." };
+  }
+  const enabled = formData.get("enabled") === "on";
+  try {
+    await setPublicLookupWith(
+      db,
+      gate.tenant.slug,
+      enabled,
+      gate.session.user.id,
+    );
+  } catch (error) {
+    console.error("rcpn.public-lookup", error);
+    return { status: "error", message: "Não foi possível salvar agora." };
+  }
+  revalidatePath("/admin/rcpn");
+  revalidatePath("/consulta-registro");
+  return {
+    status: "saved",
+    message: enabled
+      ? "Consulta pelo site ligada."
+      : "Consulta pelo site desligada.",
+  };
 }

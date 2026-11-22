@@ -105,7 +105,10 @@ código (LGPD; regra do projeto).
 ### 6. Consulta pública: correspondência exata e só o que foi encontrado
 
 A comparação ignora acentos, maiúsculas, espaços repetidos e "de/da/do/dos/das" no meio do
-nome. Os três dados precisam bater. Não há sugestão de nomes parecidos, porque isso
+nome. O nome completo e o nome completo da mãe precisam bater; a data de nascimento só
+precisa bater quando é informada e o registro a tem (decisão de 22/11/2026: "caso ela não
+saiba a data de nascimento, mas os outros nomes estiverem certos, pode dizer que tem
+registro"). Não há sugestão de nomes parecidos, porque isso
 revelaria o nome de outra pessoa. A tolerância a grafia existe só na pesquisa do painel.
 
 A resposta afirma apenas o que foi encontrado:

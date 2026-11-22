@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { RCPN_MAX_MB } from "@/core/rcpn/limits.ts";
 import { rcpn, rcpnFolder } from "@/lib/rcpn.ts";
+import { importMeta } from "@/lib/rcpn-import-meta.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
@@ -16,6 +17,7 @@ import {
 import { requireRcpn } from "../_lib/access.ts";
 import { statusOf, when } from "../_lib/status.ts";
 import { UploadForm } from "../forms.tsx";
+import { ImportRowActions } from "./import-row-actions.tsx";
 
 export const metadata = { title: "Importar arquivos do Registro Civil" };
 
@@ -24,10 +26,24 @@ export const metadata = { title: "Importar arquivos do Registro Civil" };
 // 14/11/2026, after a full carga did not fit).
 export const maxDuration = 300;
 
-export default async function ImportPage() {
+export default async function ImportPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ocultos?: string }>;
+}) {
   await requireRcpn("rcpn.import");
   const tenant = await getTenant();
-  const imports = await rcpn.listImports(tenant.slug);
+  const showHidden = (await searchParams).ocultos === "1";
+  const [all, meta] = await Promise.all([
+    rcpn.listImports(tenant.slug),
+    importMeta(tenant.slug).catch(
+      () => ({}) as Awaited<ReturnType<typeof importMeta>>,
+    ),
+  ]);
+  const hiddenCount = all.filter((item) => meta[item.id]?.hiddenAt).length;
+  const imports = all.filter(
+    (item) => Boolean(meta[item.id]?.hiddenAt) === showHidden,
+  );
   return (
     <>
       <AdminPageHeader
@@ -114,12 +130,38 @@ export default async function ImportPage() {
         </section>
 
         <section className="rounded-xl border bg-card shadow-xs">
-          <h2 className="border-b px-6 py-3 text-lg font-semibold text-foreground">
-            Arquivos enviados
-          </h2>
+          <div className="flex flex-wrap items-center gap-3 border-b px-6 py-3">
+            <h2 className="mr-auto text-lg font-semibold text-foreground">
+              {showHidden ? "Arquivos tirados da lista" : "Arquivos enviados"}
+            </h2>
+            {(hiddenCount > 0 || showHidden) && (
+              <Link
+                href={
+                  showHidden
+                    ? "/admin/rcpn/importar"
+                    : "/admin/rcpn/importar?ocultos=1"
+                }
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {showHidden
+                  ? "Voltar aos arquivos enviados"
+                  : `Mostrar os tirados da lista (${hiddenCount})`}
+              </Link>
+            )}
+          </div>
+          <p className="border-b px-6 py-3 text-sm text-muted-foreground">
+            O painel guarda os dados lidos de cada registro, não o arquivo. O
+            arquivo é apagado sozinho quando a importação é publicada ou
+            descartada, e pode ser apagado antes em "Apagar o arquivo". "Apagar
+            da lista" tira só a linha: os registros continuam no índice. Para
+            corrigir ou cancelar um registro, abra a ficha dele em Nascimentos,
+            Casamentos ou Óbitos.
+          </p>
           {imports.length === 0 ? (
             <p className="px-6 py-4 text-sm text-muted-foreground">
-              Nenhum arquivo enviado ainda.
+              {showHidden
+                ? "Nenhum arquivo tirado da lista."
+                : "Nenhum arquivo enviado ainda."}
             </p>
           ) : (
             <Table>
@@ -137,6 +179,11 @@ export default async function ImportPage() {
                   return (
                     <TableRow key={item.id}>
                       <TableCell className="whitespace-normal">
+                        {meta[item.id]?.label && (
+                          <span className="block font-semibold text-foreground">
+                            {meta[item.id]?.label}
+                          </span>
+                        )}
                         <span className="font-medium text-foreground break-all">
                           {item.fileName}
                         </span>
@@ -151,6 +198,16 @@ export default async function ImportPage() {
                             ? ` · ${item.publishedCount} registro(s) publicado(s)`
                             : ""}
                         </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {item.hasFile
+                            ? "Arquivo guardado no painel até publicar ou descartar."
+                            : "Arquivo apagado: ficaram só os dados."}
+                        </span>
+                        {meta[item.id]?.note && (
+                          <span className="block text-xs text-foreground">
+                            {meta[item.id]?.note}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">
                         {when(item.createdAt)}
@@ -159,14 +216,16 @@ export default async function ImportPage() {
                         <Badge variant={status.variant}>{status.label}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link
-                          href={`/admin/rcpn/importar/${item.id}`}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          {item.status === "lida"
-                            ? "Conferir e publicar"
-                            : "Ver"}
-                        </Link>
+                        <ImportRowActions
+                          id={item.id}
+                          open={
+                            item.status === "lida" || item.status === "nao-lida"
+                          }
+                          hasFile={item.hasFile}
+                          hidden={Boolean(meta[item.id]?.hiddenAt)}
+                          label={meta[item.id]?.label ?? ""}
+                          note={meta[item.id]?.note ?? ""}
+                        />
                       </TableCell>
                     </TableRow>
                   );

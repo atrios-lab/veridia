@@ -390,6 +390,15 @@ export default async function PublicLayout({
                     ))}
                     {/* None of these carries data-section: they are not gated sections,
                     and the gating e2e compares the footer's data-section set. */}
+                    {title === "Serviços" &&
+                      tenant.attributions.includes("RCPN") && (
+                        <Link
+                          href="/consulta-registro"
+                          className="text-sm text-brand-on-dark-body hover:text-white"
+                        >
+                          Seu registro é daqui?
+                        </Link>
+                      )}
                     {title === "Serviços" && (
                       <Link
                         href="/verificar"
