@@ -39,7 +39,7 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
   "(dashboard)/utilitarios/assinador/[id]/manifesto":
     "manifesto de um documento já assinado",
   "(dashboard)/pedidos/[protocolo]/imprimir":
-    "requerimento e declaração: quem assina é o cliente",
+    "requerimento e declaração: quem assina é o cliente; o comprovante de apresentação (sem linha de assinatura) é assinado pelo link da página do pedido",
   "(dashboard)/auditoria/relatorio":
     "relatório gerado na hora de uma seleção, para leitura",
   "(dashboard)/utilitarios/censec/relatorio":

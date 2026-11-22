@@ -214,6 +214,13 @@ export function activitySentence(entry: RecentActivityEntry): string {
  */
 const OFFICE_ANSWER_ACTIONS = [
   "service-request.status",
+  // Returning the signed requerimento, or editing the reason, answers the
+  // citizen: the next move is theirs, a new file (decision of 22/11/2026:
+  // "já indeferi e ainda está na minha mesa"). Withdrawing a return is not
+  // here: the file is then the office's to check again.
+  "service-request.signed-form-check",
+  "service-request.signed-form-returned",
+  "service-request.signed-form-return-edited",
   "service-request.requirement.register",
   "service-request.requirement.edit",
   "service-request.requirement.reply",
