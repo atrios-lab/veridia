@@ -41,6 +41,7 @@ import {
   type RequestKind,
   readActVariant,
   readExemption,
+  readPrenotation,
   readSearchAnswer,
   type ServiceRequestStatus,
   statusLabel,
@@ -87,6 +88,7 @@ import {
   sendAccessKey,
 } from "@/lib/email/service-request.ts";
 import { type PixCharge, pixChargeFor } from "@/lib/pix-qr.ts";
+import { prenotationPending } from "@/lib/prenotation-charge.ts";
 import {
   isPollRateLimited,
   isRateLimited,
@@ -275,7 +277,12 @@ export interface ServiceRequestDetail extends BaseDetail {
    * result is the registration or the note of what is missing. `termBasis`
    * is the statute of the term, when the law fixes one for the registry.
    */
-  analysis?: { termBasis?: string };
+  analysis?: {
+    termBasis?: string;
+    /** The prenotação is paid (or was not charged): a payment asked now is
+     * the value of the act, not the prenotação. */
+    prenotationSettled?: boolean;
+  };
 }
 
 export interface DataRightsDetail extends BaseDetail {
@@ -725,6 +732,9 @@ export async function lookupProtocolDetail(
       },
       analysis: act.chargesPrenotation
         ? {
+            prenotationSettled: !prenotationPending(
+              readPrenotation(record.details),
+            ),
             termBasis:
               act.legalDeadlineDays && act.legalDeadlineNote
                 ? citeLegalBasis(act.legalDeadlineNote)

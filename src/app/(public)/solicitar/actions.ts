@@ -47,6 +47,10 @@ import { db } from "@/db/index.ts";
 import { clientIp } from "@/lib/client-ip.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
 import { currentPrenotation } from "@/lib/fee-tables.ts";
+import {
+  getPrenotationChargeSetting,
+  releaseRequest,
+} from "@/lib/prenotation-charge.ts";
 import { isRateLimited } from "@/lib/rate-limit.ts";
 import {
   attachToRequest,
@@ -54,7 +58,6 @@ import {
   findByProtocol,
   findOpenServiceRequestDuplicate,
   reconcileDeadlinePauseWith,
-  updateRequestStatus,
 } from "@/lib/service-request.ts";
 import {
   readSignedForm,
@@ -293,8 +296,12 @@ export async function submitServiceRequest(
 
     // The prenotação is priced on filing by the table in force; without the
     // item there, the request goes in unpriced, for the operator, as before.
+    // Switched off by the Tabelião (Configurações › Cobrança), nothing is
+    // charged up front: the pedido is analysed first, as before.
     const prenotation =
-      act.chargesPrenotation && isPrenotationAttribution(act.attribution)
+      act.chargesPrenotation &&
+      isPrenotationAttribution(act.attribution) &&
+      (await getPrenotationChargeSetting(tenant.slug)).enabled
         ? await currentPrenotation(tenant, act.attribution)
         : undefined;
 
@@ -520,8 +527,9 @@ export async function attachSignedForm(
         return { status: "review", message: SIGNED_FORM_MESSAGES.review };
       }
       if (request.status === "awaiting-signed-form") {
-        await updateRequestStatus(tenant.slug, request.id, "new", null);
-        await reconcileDeadlinePauseWith(db, tenant, request.id, null, today());
+        // With a prenotação to pay, the pedido waits for the payment before
+        // the analysis (decision of 22/11/2026); otherwise it goes on as new.
+        await releaseRequest(tenant, request.id, null);
       }
       return { status: "success", message: SIGNED_FORM_MESSAGES.accepted };
     }

@@ -64,6 +64,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "Clique no protocolo para abrir o pedido.",
       "Confira os documentos enviados e, se faltar algo, faça uma exigência (o cidadão é avisado).",
       "Informe o valor quando houver cobrança; o cidadão paga pelo Pix.",
+      "Atos com prenotação (Registro de Imóveis, Títulos e Documentos, Pessoas Jurídicas): depois do requerimento o pedido vai sozinho para Aguardando pagamento com o valor da prenotação da tabela vigente. No cartão Prenotação, gere o Pix (QR Code e chave, para mostrar, baixar ou enviar) e, conferido o pagamento, clique em Pagamento conferido e concluído: o pedido vai para a análise. O Tabelião liga e desliga isso em Configurações › Cobrança.",
       "Anexe o documento final em 'Entrega ao cidadão' (dê o nome e escolha assinar digitalmente ou enviar como está).",
       "Ao anexar uma nota ou documento à exigência, o Assistente Virtual analisa na hora: aponta o que diverge da lei ou cita norma revogada, com o fundamento, e sugere manter ou alterar. A decisão é sua.",
       "Mude o andamento até 'Concluído'.",

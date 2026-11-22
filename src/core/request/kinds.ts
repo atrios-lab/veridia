@@ -891,6 +891,27 @@ export const prenotationChargeSchema = z.object({
   totalCents: z.number().int().nonnegative(),
   tableTitle: z.string(),
   tableId: z.string(),
+  // Paid (decision of 22/11/2026): the office confirmed the payment, by the
+  // comprovante the citizen sent or in person at the counter. From then on
+  // the title is analysed, and the value of the act comes after.
+  paidAt: z.string().optional(),
+  paidBy: z.string().optional(),
+  paidHow: z.enum(["receipt", "counter"]).optional(),
+  // Not charged: the Tabelião had the prenotação charge switched off when
+  // the requerimento was accepted, so the pedido went on without it.
+  skippedAt: z.string().optional(),
+  // Every earlier price, kept when the fee table in force changed before
+  // the citizen paid: the charge follows the table, the history stays.
+  repriced: z
+    .array(
+      z.object({
+        totalCents: z.number().int().nonnegative(),
+        code: z.string(),
+        tableTitle: z.string(),
+        at: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type PrenotationCharge = z.infer<typeof prenotationChargeSchema>;
 

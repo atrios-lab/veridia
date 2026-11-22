@@ -61,8 +61,16 @@ export async function GET(
   const loaded = await load(request, protocolo);
   if (loaded instanceof Response) return loaded;
   const { tenant, stored, brand, actorId } = loaded;
-  const documento = new URL(request.url).searchParams.get("documento");
-  return printRequerimentoWith(db, tenant, stored, actorId, brand, documento);
+  const query = new URL(request.url).searchParams;
+  return printRequerimentoWith(
+    db,
+    tenant,
+    stored,
+    actorId,
+    brand,
+    query.get("documento"),
+    query.get("modo") === "baixar",
+  );
 }
 
 /**

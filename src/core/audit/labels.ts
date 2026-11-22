@@ -42,6 +42,16 @@ const EXACT: Record<string, string> = {
     "Salvou os arquivos da manifestação antes de serem apagados",
   "ombudsman.files-saved-undone":
     'Desfez o "Já salvei" dos arquivos da manifestação',
+  "service-request.prenotation-paid":
+    "Conferiu o pagamento da prenotação e mandou o pedido para a análise",
+  "service-request.prenotation-repriced":
+    "Valor da prenotação ajustado à tabela de emolumentos vigente",
+  "service-request.prenotation-pix-sent":
+    "Enviou ao cliente o Pix da prenotação por e-mail",
+  "office-settings.prenotation-charge-on":
+    "Ligou a cobrança da prenotação antes da análise",
+  "office-settings.prenotation-charge-off":
+    "Desligou a cobrança da prenotação antes da análise",
   "compliance-intake.done": "Marcou a Adequação ao Provimento como cumprida",
   "compliance-intake.done-edited":
     "Alterou a data ou o Justiça Aberta da Adequação cumprida",

@@ -37,13 +37,14 @@ import {
   readActVariant,
   readAlternateDocument,
   readExemption,
+  readPrenotation,
   requiresStatusReason,
   type ServiceRequestStatus,
   searchAnswerInputSchema,
   statusAfterAmount,
   validateStatusReason,
 } from "@/core/request/kinds.ts";
-import { parseCentsInput } from "@/core/request/money.ts";
+import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import {
   CLOSING_MODES,
   CLOSING_STATUS,
@@ -63,8 +64,16 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
 import { getAiPlatformWith } from "@/lib/ai-platform.ts";
+import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen, sendAccessKey } from "@/lib/email/service-request.ts";
+import { pixChargeFor } from "@/lib/pix-qr.ts";
+import {
+  confirmPrenotationPayment,
+  PrenotationError,
+  prenotationPending,
+  releaseRequest,
+} from "@/lib/prenotation-charge.ts";
 import {
   learnFromReviewWith,
   linkReviewWith,
@@ -300,6 +309,39 @@ export async function changeStatus(
       reason = result.reason ?? undefined;
     }
 
+    // The prenotação (decision of 22/11/2026): accepting the requerimento
+    // sends a pedido with a prenotação to pay to "Aguardando pagamento";
+    // confirming that payment sends it to analysis, not to execution.
+    const prenotationDue = prenotationPending(readPrenotation(request.details));
+    if (request.status === "awaiting-signed-form" && status === "new") {
+      if (deadline) {
+        await updateRequestDeadline(
+          tenant.slug,
+          requestId,
+          session.user.id,
+          deadline,
+        );
+      }
+      await releaseRequest(tenant, requestId, session.user.id);
+      revalidateAdmin();
+      return { status: "success", emailWarning: null };
+    }
+    if (
+      prenotationDue &&
+      (request.status === "awaiting-payment" ||
+        request.status === "payment-reported") &&
+      (status === "processing" || status === "in-review")
+    ) {
+      await confirmPrenotationPayment(
+        tenant,
+        requestId,
+        session.user.id,
+        request.status === "payment-reported" ? "receipt" : "counter",
+      );
+      revalidateAdmin();
+      return { status: "success", emailWarning: null };
+    }
+
     await updateRequestStatus(
       tenant.slug,
       requestId,
@@ -371,7 +413,7 @@ export async function changeStatus(
       });
     }
   } catch (error) {
-    if (error instanceof AttachmentError) {
+    if (error instanceof AttachmentError || error instanceof PrenotationError) {
       return { status: "error", message: error.message };
     }
     console.error("pedidos.change-status", error);
@@ -1872,6 +1914,96 @@ export async function reissueKeyAction(
     return { status: "success", accessKey, sentTo: email, emailWarning };
   } catch (error) {
     console.error("pedidos.reissue-key", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+/**
+ * "Pagamento conferido e concluído" (decision of 22/11/2026): the citizen
+ * paid the prenotação in front of the clerk, or the clerk checked the
+ * comprovante. The prenotação is marked paid and the pedido goes to
+ * analysis. In the audit with who confirmed it and how.
+ */
+export async function confirmPrenotationPaidAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    if (!request) return { status: "error", message: "Pedido não encontrado." };
+    await confirmPrenotationPayment(
+      tenant,
+      requestId,
+      session.user.id,
+      request.status === "payment-reported" ? "receipt" : "counter",
+    );
+  } catch (error) {
+    if (error instanceof PrenotationError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("pedidos.prenotation-paid", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidateAdmin();
+  return { status: "success", emailWarning: null };
+}
+
+/**
+ * Sends the citizen the Pix of the prenotação by e-mail: the value, the
+ * "copia e cola" code and where to send the comprovante. The QR Code itself
+ * is on the consult page, behind the access key.
+ */
+export async function sendPrenotationPixAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const requestId = String(formData.get("requestId") ?? "");
+  try {
+    const tenant = await getTenant();
+    const request = await findById(tenant.slug, requestId);
+    const charge = readPrenotation(request?.details);
+    if (!request || !prenotationPending(charge) || !request.amountCents) {
+      return {
+        status: "error",
+        message: "Este pedido não tem prenotação a pagar.",
+      };
+    }
+    const pix = await pixChargeFor(
+      tenant,
+      request.protocolNumber,
+      request.amountCents,
+    );
+    if (!pix) {
+      return {
+        status: "error",
+        message:
+          "Falta cadastrar a chave Pix da serventia em Configurações › Cobrança.",
+      };
+    }
+    const emailWarning = await notifyCitizen({
+      tenant,
+      contact: request.contact,
+      protocolNumber: request.protocolNumber,
+      subject: "Pagamento da prenotação",
+      body: `O valor da prenotação do seu pedido é ${formatCents(request.amountCents)} (código ${charge.code} da tabela de emolumentos vigente). O pedido só tem andamento depois do pagamento. Pague pelo Pix com o código "copia e cola" abaixo, ou pelo QR Code na consulta do protocolo, e envie o comprovante na mesma consulta.\n\nPix copia e cola:\n${pix.copyPaste}`,
+    });
+    await recordAudit({
+      tenantSlug: tenant.slug,
+      actorId: session.user.id,
+      action: "service-request.prenotation-pix-sent",
+      targetType: "service-request",
+      targetId: requestId,
+    });
+    revalidateAdmin();
+    return { status: "success", emailWarning };
+  } catch (error) {
+    console.error("pedidos.prenotation-pix", error);
     return { status: "error", message: GENERIC_ERROR };
   }
 }

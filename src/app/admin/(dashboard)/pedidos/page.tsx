@@ -20,6 +20,7 @@ import {
   toIsoDate,
 } from "@/core/scheduling/calendar.ts";
 import type { Attribution } from "@/core/tenant/schema.ts";
+import { repricePendingPrenotations } from "@/lib/prenotation-charge.ts";
 import {
   countByStatus,
   countServiceRequests,
@@ -90,6 +91,9 @@ export default async function ServiceRequestQueuePage({
   // Files 90 days past the closing leave storage as the queue opens (see
   // purgeExpiredRequestFiles): before the list is read, for every kind.
   await purgeExpiredRequestFiles(tenant.slug, todayIso);
+  // The prenotações not paid yet always at the price of the table in force
+  // (decision of 22/11/2026), checked again as the queue opens.
+  await repricePendingPrenotations(tenant, null);
   const raw = await searchParams;
   const byStatus = await countByStatus(tenant.slug);
   const counts = Object.fromEntries(

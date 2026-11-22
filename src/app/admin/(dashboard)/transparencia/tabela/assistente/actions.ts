@@ -28,7 +28,7 @@ import {
   feeTablePlanSchema,
   publishFeeTableWith,
 } from "@/lib/custas.ts";
-import { readNewFeeTable } from "@/lib/fee-tables.ts";
+import { readTableThenReprice } from "@/lib/prenotation-charge.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -302,7 +302,7 @@ export async function publishAction(
   try {
     const done = await publishFeeTableWith(db, tenant, plan, session.user.id);
     // Its prenotações are read now, as for a table sent by hand.
-    after(() => readNewFeeTable(tenant, done.id));
+    after(() => readTableThenReprice(tenant, done.id, session.user.id));
     revalidatePath("/admin/transparencia");
     revalidatePath("/transparencia");
     return { status: "success", ...done };

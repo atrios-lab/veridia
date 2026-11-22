@@ -32,7 +32,7 @@ import {
   defaultDeliveryName,
   deliveryNameSuggestions,
 } from "@/core/request/delivery-name.ts";
-import { maskCpf } from "@/core/request/form.ts";
+import { isEmailContact, maskCpf } from "@/core/request/form.ts";
 import {
   asksPurpose,
   asksRequesterQualification,
@@ -44,9 +44,11 @@ import {
   maskAlternateDocument,
   readActVariant,
   readAlternateDocument,
+  readChannel,
   readDeliveryFormat,
   readExemption,
   readPhone,
+  readPrenotation,
   readRequesterQualification,
   readSearchAnswer,
   requesterQualificationRows,
@@ -73,6 +75,8 @@ import { db } from "@/db/index.ts";
 import { getAiPlatformWith } from "@/lib/ai-platform.ts";
 import { linkedConversations } from "@/lib/chat.ts";
 import { citizenCienciaWith } from "@/lib/citizen-views.ts";
+import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
+import { pixChargeFor } from "@/lib/pix-qr.ts";
 import {
   type ReviewView,
   reviewsOfAttachmentsWith,
@@ -104,6 +108,11 @@ import { RequestFilesNotice } from "../../../_components/request-files-notice.ts
 import { SignOrPrint, signHref } from "../../../_components/sign-or-print.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
+import {
+  PrenotationCard,
+  type PrenotationView,
+  RequerimentoReminder,
+} from "../_components/prenotation-card.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
 import { ApplicantSection } from "./_components/applicant-section.tsx";
 import { AttachmentsSection } from "./_components/attachments-section.tsx";
@@ -407,6 +416,49 @@ export default async function ServiceRequestDetailPage({
   );
 
   const filesSaved = await filesSavedMarksWith(db, tenant.slug, [request.id]);
+  // The prenotação charged before the analysis (decision of 22/11/2026).
+  const prenotation = readPrenotation(request.details);
+  const prenotationView: PrenotationView | undefined =
+    prenotation && !prenotation.skippedAt
+      ? {
+          requestId: request.id,
+          protocolNumber: request.protocolNumber,
+          amountLabel: formatCents(prenotation.totalCents),
+          code: prenotation.code,
+          description: prenotation.description,
+          table: await feeTableReferenceWith(db, tenant.slug).catch(() => null),
+          pix:
+            prenotation.paidAt || request.amountCents == null
+              ? null
+              : ((await pixChargeFor(
+                  tenant,
+                  request.protocolNumber,
+                  request.amountCents,
+                )) ?? null),
+          stage: prenotation.paidAt
+            ? "paid"
+            : status === "payment-reported"
+              ? "reported"
+              : "pending",
+          paidLabel: prenotation.paidAt
+            ? `em ${formatOfficeDate(new Date(prenotation.paidAt))}${prenotation.paidHow === "counter" ? ", no balcão" : prenotation.paidHow === "receipt" ? ", pelo comprovante" : ""}`
+            : undefined,
+          canEmail: isEmailContact(request.contact ?? ""),
+          canUpdateTable: can(
+            session.user.role ?? "",
+            "transparency.manage",
+            session.user.permissions,
+          ),
+        }
+      : undefined;
+  // Waiting for the requerimento, or analysed already: the card is not
+  // where the clerk acts.
+  const showPrenotation =
+    prenotationView &&
+    (prenotationView.stage === "paid" ||
+      status === "awaiting-payment" ||
+      status === "payment-reported");
+
   return (
     <>
       <AdminPageHeader title="Pedidos de serviço" />
@@ -956,6 +1008,17 @@ export default async function ServiceRequestDetailPage({
               />
             )}
 
+            {showPrenotation && prenotationView && (
+              <PrenotationCard view={prenotationView} />
+            )}
+            {showPrenotation &&
+              prenotationView?.stage !== "paid" &&
+              readChannel(request.details) === "counter" && (
+                <RequerimentoReminder
+                  printHref={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir`}
+                  downloadHref={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?modo=baixar`}
+                />
+              )}
             <AmountSection
               requestId={request.id}
               seen={

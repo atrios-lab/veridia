@@ -362,18 +362,22 @@ function computeHeadline(
     return {
       headline: "Recebemos o seu comprovante.",
       leadDate: `${formatDate(result.updatedAt)}:`,
-      leadText: result.analysis
-        ? "estamos conferindo o pagamento da prenotação. Assim que confirmarmos, o seu título entra em análise."
-        : "estamos conferindo o pagamento. Assim que confirmarmos, começamos a preparar o seu documento.",
+      leadText:
+        result.analysis && !result.analysis.prenotationSettled
+          ? "estamos conferindo o pagamento da prenotação. Assim que confirmarmos, o seu título entra em análise."
+          : "estamos conferindo o pagamento. Assim que confirmarmos, começamos a preparar o seu documento.",
     };
   }
   if (awaitingPay) {
     return {
       headline: "Falta só o pagamento.",
       leadDate: `${formatDate(result.updatedAt)}:`,
-      leadText: result.analysis
-        ? `o valor da prenotação é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou. Com o pagamento, o seu título entra em análise.`
-        : `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
+      leadText:
+        result.analysis && !result.analysis.prenotationSettled
+          ? `o valor da prenotação é ${result.amountLabel}. O pedido só tem andamento depois do pagamento. Pague pelo Pix ao lado, ou envie o comprovante se já pagou. Com o pagamento, o seu título entra em análise.`
+          : result.analysis
+            ? `o título foi analisado e o valor do registro é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`
+            : `o valor do seu documento é ${result.amountLabel}. Pague pelo Pix ao lado, ou envie o comprovante se já pagou.`,
     };
   }
   if (awaitingDeclaration) {
