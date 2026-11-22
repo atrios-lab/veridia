@@ -133,6 +133,9 @@ export async function listImportsWith(database: Database, tenantSlug: string) {
       publishedCount: rcpnImports.publishedCount,
       createdAt: rcpnImports.createdAt,
       closedAt: rcpnImports.closedAt,
+      // Whether the file sent is still stored (it goes when the import
+      // closes, or earlier when the office deletes it).
+      hasFile: sql<boolean>`${rcpnImports.storedPath} is not null`,
     })
     .from(rcpnImports)
     .where(eq(rcpnImports.tenantSlug, tenantSlug))

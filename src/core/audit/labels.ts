@@ -90,6 +90,16 @@ const EXACT: Record<string, string> = {
   "rcpn.import.publish": "Publicou registros no índice do Registro Civil",
   "rcpn.import.discard":
     "Descartou um arquivo enviado ao índice do Registro Civil",
+  "rcpn.import.edit":
+    "Alterou o nome ou a observação de um arquivo do Registro Civil",
+  "rcpn.import.hide":
+    "Tirou da lista um arquivo do Registro Civil (os registros continuam)",
+  "rcpn.import.restore": "Voltou para a lista um arquivo do Registro Civil",
+  "rcpn.import.file-purge":
+    "Apagou um arquivo enviado ao Registro Civil e manteve só os dados",
+  "rcpn.public-lookup": "Consulta de registro feita pelo site",
+  "rcpn.public-lookup-on": "Ligou a consulta de registro pelo site",
+  "rcpn.public-lookup-off": "Desligou a consulta de registro pelo site",
   "attributions.file.upload": "Enviou um arquivo a uma atribuição",
   "attributions.file.remove":
     "Excluiu um arquivo de uma atribuição (fica guardado)",
@@ -561,6 +571,18 @@ const EXPLANATIONS: Record<string, string> = {
     "Registros lidos de um arquivo foram conferidos e publicados no índice do Registro Civil, que alimenta a pesquisa e a consulta do site. Registros já existentes só foram substituídos quando a pessoa escolheu.",
   "rcpn.import.discard":
     "Um arquivo enviado ao índice do Registro Civil foi descartado sem publicar. O arquivo foi apagado do painel; nada mudou no índice.",
+  "rcpn.import.edit":
+    "O nome ou a observação de um arquivo enviado ao Registro Civil foi alterado. O texto anterior fica no histórico.",
+  "rcpn.import.hide":
+    "Um arquivo enviado ao Registro Civil saiu da lista. Os registros que ele publicou continuam no índice, e a linha pode voltar com Restaurar.",
+  "rcpn.import.restore":
+    "Um arquivo do Registro Civil que tinha saído da lista voltou para ela.",
+  "rcpn.import.file-purge":
+    "O arquivo enviado ao Registro Civil foi apagado do armazenamento. Os dados lidos dele continuam no painel.",
+  "rcpn.public-lookup":
+    "Alguém consultou pelo site se um registro é desta serventia. Ficam registrados quem consultou, a finalidade e se o registro foi localizado.",
+  "rcpn.public-lookup-on": "A consulta de registro pelo site foi ligada.",
+  "rcpn.public-lookup-off": "A consulta de registro pelo site foi desligada.",
   "attributions.file.upload":
     "Um arquivo (livro, índice, remessa de central, modelo ou documento) foi enviado à área de uma atribuição e guardado como veio.",
   "attributions.file.remove":

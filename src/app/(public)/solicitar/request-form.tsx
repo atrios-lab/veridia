@@ -1017,6 +1017,23 @@ export function RequestForm({
 
         {act.chargesPrenotation && <PrenotationCard notice={prenotation} />}
 
+        {act.id === "rcpn-busca" && (
+          <a
+            href="/consulta-registro"
+            className="flex items-start gap-2.5 rounded-2xl border border-brand-accent bg-brand-surface px-3.5 py-3 text-sm text-brand-primary"
+          >
+            <Icon
+              name="search"
+              className="mt-0.5 h-4 w-4 shrink-0 text-brand-accent-ink"
+              strokeWidth={2}
+            />
+            <span>
+              <strong>Consulte na hora, sem pedido:</strong> com o nome completo
+              e o nome da mãe, o site diz se o registro é daqui e a profissão
+              que consta nele. Abrir a consulta.
+            </span>
+          </a>
+        )}
         {act.guidance && (
           <div className="flex items-start gap-2.5 rounded-2xl bg-brand-accent-soft px-3.5 py-3">
             <Icon
