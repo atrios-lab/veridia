@@ -42,6 +42,8 @@ export async function printRequerimentoWith(
   actorId: string,
   brand: DocumentBrand,
   documento: string | null,
+  /** "Baixar para enviar ao cliente": saved as a file, not opened. */
+  download = false,
 ): Promise<Response> {
   if (documento === "protocolo") {
     const proof = await renderProtocolProofWith(
@@ -86,7 +88,7 @@ export async function printRequerimentoWith(
   return pdf(
     bytes,
     `${wantsDeclaracao ? "declaracao" : "requerimento"}-${stored.protocolNumber}`,
-    "inline",
+    download ? "attachment" : "inline",
   );
 }
 

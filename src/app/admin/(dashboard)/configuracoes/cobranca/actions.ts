@@ -10,6 +10,7 @@ import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { setPrenotationChargeSettingWith } from "@/lib/prenotation-charge.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_PIX_KEY } from "@/lib/tenant.ts";
 
@@ -169,4 +170,46 @@ export async function removePixKey(
 
   revalidatePath("/", "layout");
   return { status: "removed" };
+}
+
+export type PrenotationSwitchState =
+  | { status: "idle" }
+  | { status: "saved"; enabled: boolean }
+  | { status: "error"; message: string };
+
+/**
+ * The Tabelião's switch for the prenotação charged before the analysis
+ * (decision of 22/11/2026). Off, the pedidos go as before: analysed first,
+ * nothing asked up front. In the audit either way.
+ */
+export async function savePrenotationChargeAction(
+  _previous: PrenotationSwitchState,
+  formData: FormData,
+): Promise<PrenotationSwitchState> {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "billing.edit", session.user.permissions)
+  ) {
+    return {
+      status: "error",
+      message: "Só o Tabelião (ou quem cuida da cobrança) altera esta opção.",
+    };
+  }
+  const enabled = formData.get("enabled") === "on";
+  const tenant = await getTenant();
+  try {
+    await setPrenotationChargeSettingWith(
+      db,
+      tenant.slug,
+      enabled,
+      session.user.id,
+    );
+  } catch (error) {
+    console.error("cobranca.prenotation", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidatePath("/admin/configuracoes/cobranca");
+  revalidatePath("/solicitar");
+  return { status: "saved", enabled };
 }

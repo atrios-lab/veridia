@@ -39,11 +39,14 @@ import {
   FEE_TABLE_CATEGORY,
   getFeeTableDocument,
   pdfTableText,
-  readNewFeeTable,
   readPrenotationFromPdf,
   saveFeeTableItems,
 } from "@/lib/fee-tables.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
+import {
+  readTableThenReprice,
+  repricePendingPrenotations,
+} from "@/lib/prenotation-charge.ts";
 import { getSession } from "@/lib/session.ts";
 import { CertificatePasswordError } from "@/lib/signature/certificate.ts";
 import { requestOrigin, verifyUrlFor } from "@/lib/signature/documents.ts";
@@ -191,7 +194,7 @@ export async function uploadDocumentAction(
     // A new fee table: its prenotações are read from the PDF right after
     // the answer, for the office to confirm on the table's own screen.
     if (parsed.data.category === FEE_TABLE_CATEGORY) {
-      after(() => readNewFeeTable(tenant, created.id));
+      after(() => readTableThenReprice(tenant, created.id, session.user.id));
     }
   } catch (error) {
     if (error instanceof AttachmentError) {
@@ -329,7 +332,7 @@ export async function makeCurrentFeeTableAction(
       };
     }
     // A table nobody read yet has its prenotação read now, as on upload.
-    after(() => readNewFeeTable(tenant, id));
+    after(() => readTableThenReprice(tenant, id, session.user.id));
     notifyIndexNow(tenant, await getSiteOrigin(), ["/transparencia"]);
   } catch (error) {
     console.error("transparencia.current", error);
@@ -890,6 +893,8 @@ export async function saveFeeTableAction(
       "manual",
       session.user.id,
     );
+    // The prenotações not paid yet follow the corrected items.
+    await repricePendingPrenotations(tenant, session.user.id);
   } catch (error) {
     console.error("transparencia.fee-table", error);
     return { status: "error", message: GENERIC_ERROR, fieldErrors: {} };

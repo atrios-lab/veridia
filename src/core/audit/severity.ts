@@ -75,6 +75,12 @@ const EXACT: Record<string, AuditLevel> = {
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",
+  // The prenotação: money confirmed, a price changed, a charge switched.
+  "service-request.prenotation-paid": "atencao",
+  "service-request.prenotation-repriced": "atencao",
+  "service-request.prenotation-pix-sent": "rotina",
+  "office-settings.prenotation-charge-on": "atencao",
+  "office-settings.prenotation-charge-off": "atencao",
   // Money: whether the party paid the tax, and the proof of it.
   "tax-guide.status": "atencao",
   "tax-guide.status-withdrawn": "atencao",

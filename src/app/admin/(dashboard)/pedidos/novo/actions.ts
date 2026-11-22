@@ -23,6 +23,11 @@ import { formatCents, parseCentsInput } from "@/core/request/money.ts";
 import { formatDate, officeHolidays } from "@/core/scheduling/calendar.ts";
 import { closeConversation } from "@/lib/chat.ts";
 import { sendAccessKey } from "@/lib/email/service-request.ts";
+import { pixChargeFor } from "@/lib/pix-qr.ts";
+import {
+  chargeAtCounter,
+  getPrenotationChargeSetting,
+} from "@/lib/prenotation-charge.ts";
 import {
   createServiceRequest,
   setRequestAmount,
@@ -58,6 +63,22 @@ export type ManualEntryState =
       /** Whether the SuccessScreen also offers printing the declaração de
        * hipossuficiência (Provimento CGJ/TJRN n. 7/2026, Anexo I). */
       hasExemption: boolean;
+      requestId: string;
+      /** An act with prenotação, charged at once (decision of 22/11/2026):
+       * the pedido waits for the payment before the analysis. */
+      prenotation?: {
+        amountLabel: string;
+        code: string;
+        description: string;
+        tableTitle: string;
+        tableId: string;
+        /** Null when the office has no Pix key yet. */
+        pix: { copyPaste: string; qrSvg: string } | null;
+        canUpdateTable: boolean;
+      };
+      /** The act has a prenotação but nothing was charged: the Tabelião
+       * switched the charge off, or the table in force has no item. */
+      prenotationNotCharged?: "off" | "no-item";
     };
 
 const GENERIC_ERROR =
@@ -189,6 +210,19 @@ export async function createManualServiceRequest(
     if (amountCents !== undefined) {
       await setRequestAmount(tenant.slug, id, amountCents, session.user.id);
     }
+    // An act with prenotação, filed at the counter: charged at once at the
+    // table's price, and the pedido waits for the payment (decision of
+    // 22/11/2026). A value typed by the clerk stands as typed.
+    const charge =
+      amountCents === undefined && act.chargesPrenotation
+        ? await chargeAtCounter(tenant, id, session.user.id)
+        : undefined;
+    const prenotationNotCharged =
+      act.chargesPrenotation && amountCents === undefined && !charge
+        ? (await getPrenotationChargeSetting(tenant.slug)).enabled
+          ? ("no-item" as const)
+          : ("off" as const)
+        : undefined;
 
     // The counter already handed over the protocol and the key, on paper or
     // on the operator's screen. This is the copy that survives the walk
@@ -234,13 +268,41 @@ export async function createManualServiceRequest(
       },
       attributionLabel: ATTRIBUTION_SHORT_NAMES[act.attribution],
       amountLabel:
-        amountCents !== undefined ? formatCents(amountCents) : undefined,
+        amountCents !== undefined
+          ? formatCents(amountCents)
+          : charge
+            ? formatCents(charge.totalCents)
+            : undefined,
       // Same as the online filing: the act's legal term counted from today,
       // since a request just filed carries no term of its own.
       deadlineLabel: formatDate(
         deadlineDate(today(), deadlineDays, officeHolidays(tenant)),
       ),
       hasExemption: Boolean(exemption),
+      requestId: id,
+      ...(charge
+        ? {
+            prenotation: {
+              amountLabel: formatCents(charge.totalCents),
+              code: charge.code,
+              description: charge.description,
+              tableTitle: charge.tableTitle,
+              tableId: charge.tableId,
+              pix:
+                (await pixChargeFor(
+                  tenant,
+                  protocolNumber,
+                  charge.totalCents,
+                )) ?? null,
+              canUpdateTable: can(
+                session.user.role ?? "",
+                "transparency.manage",
+                session.user.permissions,
+              ),
+            },
+          }
+        : {}),
+      ...(prenotationNotCharged ? { prenotationNotCharged } : {}),
     };
   } catch (error) {
     console.error("pedidos.manual-entry", error);

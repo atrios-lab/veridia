@@ -40,6 +40,10 @@ import {
 import { Textarea } from "../../../_ui/textarea.tsx";
 import { AlternateDocumentFields } from "../_components/alternate-document-fields.tsx";
 import {
+  PrenotationCard,
+  RequerimentoReminder,
+} from "../_components/prenotation-card.tsx";
+import {
   createManualServiceRequest,
   type ManualEntryState,
 } from "./actions.ts";
@@ -1176,6 +1180,40 @@ function SuccessScreen({ state }: { state: SuccessState }) {
           ))}
         </div>
       </section>
+
+      {state.prenotation && (
+        <PrenotationCard
+          view={{
+            requestId: state.requestId,
+            protocolNumber: state.protocolNumber,
+            amountLabel: state.prenotation.amountLabel,
+            code: state.prenotation.code,
+            description: state.prenotation.description,
+            table: {
+              id: state.prenotation.tableId,
+              title: state.prenotation.tableTitle,
+              year: "",
+            },
+            pix: state.prenotation.pix,
+            stage: "pending",
+            canEmail: isEmailContact(state.contact),
+            canUpdateTable: state.prenotation.canUpdateTable,
+          }}
+        />
+      )}
+      {state.prenotationNotCharged && (
+        <p className="rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm text-warning-text">
+          {state.prenotationNotCharged === "off"
+            ? "Este ato tem prenotação, mas a cobrança antecipada está desligada pelo Tabelião (Configurações › Cobrança): o pedido segue para a análise sem cobrar antes."
+            : "Este ato tem prenotação, mas a tabela vigente cadastrada em Transparência não tem o item de prenotação desta atribuição. Informe o valor em Valor do pedido ou atualize a tabela."}
+        </p>
+      )}
+      {(state.prenotation || state.prenotationNotCharged) && (
+        <RequerimentoReminder
+          printHref={`/admin/pedidos/${encodeURIComponent(state.protocolNumber)}/imprimir`}
+          downloadHref={`/admin/pedidos/${encodeURIComponent(state.protocolNumber)}/imprimir?modo=baixar`}
+        />
+      )}
 
       {/* One form, one submit, one PDF with every ticked document (decision
           of 19/11/2026). Two tabs from one click was the old way, and the
