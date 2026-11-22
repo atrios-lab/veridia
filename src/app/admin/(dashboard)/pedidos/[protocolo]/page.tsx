@@ -100,7 +100,7 @@ import {
 } from "../../../_components/attachment-link.ts";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { RequestFilesNotice } from "../../../_components/request-files-notice.tsx";
-import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
+import { SignOrPrint, signHref } from "../../../_components/sign-or-print.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
 import { DeadlineBadge } from "../_components/deadline-badge.tsx";
 import { AmountSection } from "./_components/amount-section.tsx";
@@ -521,6 +521,19 @@ export default async function ServiceRequestDetailPage({
                 title="Pode ser compartilhado: não dá acesso para movimentar o pedido"
               >
                 Comprovante de apresentação
+              </a>
+              {/* A second copy signed by the office (decision of
+                  22/11/2026): the assinador signs it with the band and QR,
+                  and keeps it to download or print again. */}
+              <a
+                href={signHref(
+                  `/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=protocolo`,
+                  `Comprovante de apresentação ${request.protocolNumber}`,
+                )}
+                className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+                title="Segunda via assinada digitalmente pelo cartório"
+              >
+                Assinar comprovante (2ª via)
               </a>
             </div>
           )}

@@ -34,7 +34,9 @@ import {
   storedBulletinOf,
   type TransparencyBulletinRow,
 } from "@/lib/transparency.ts";
+import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
+import { buttonVariants } from "../../_ui/button.tsx";
 import { BulletinForm } from "./_components/bulletin-form.tsx";
 import { BulletinList } from "./_components/bulletin-list.tsx";
 import { DocumentForm } from "./_components/document-form.tsx";
@@ -111,19 +113,42 @@ export default async function TransparencyPage({
           <div className="mt-6 grid gap-5 lg:grid-cols-[1fr_360px]">
             <DocumentsTab tenantSlug={tenant.slug} />
             <div className="flex flex-col gap-4">
-              <Link
-                href="/admin/transparencia/tabela/assistente"
-                className="flex flex-col gap-1 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm hover:bg-primary/10"
-              >
-                <span className="font-semibold text-foreground">
-                  Assistente da tabela de custas ›
-                </span>
-                <span className="text-muted-foreground">
-                  Mudou um fundo ou os emolumentos? Anexe a lei ou a tabela: o
-                  assistente virtual refaz a tabela no padrão, confere as contas
-                  e publica como vigente.
-                </span>
-              </Link>
+              {/* Loud on purpose (decision of 22/11/2026): the office has to
+                  see that the new table comes from here, attaching the law. */}
+              <section className="flex flex-col gap-3 rounded-xl border-2 border-primary bg-primary/5 px-4 py-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <AdminIcon name="sparkles" className="size-4" />
+                  </span>
+                  <h3 className="text-base font-semibold text-foreground">
+                    Mudou a tabela de custas?
+                  </h3>
+                </div>
+                <p className="text-sm text-foreground">
+                  Quando sair lei ou tabela nova de um fundo (FRMP, FDJ...) ou
+                  dos emolumentos, use o assistente. Não precisa montar a tabela
+                  à mão.
+                </p>
+                <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm text-foreground">
+                  <li>Clique no botão abaixo.</li>
+                  <li>
+                    <strong>Anexe a lei, a tabela ou a planilha</strong> (ou
+                    informe o índice).
+                  </li>
+                  <li>Confira as linhas que mudam.</li>
+                  <li>Baixe o PDF ou publique como vigente.</li>
+                </ol>
+                <Link
+                  href="/admin/transparencia/tabela/assistente"
+                  className={buttonVariants({
+                    size: "lg",
+                    className: "w-full",
+                  })}
+                >
+                  <AdminIcon name="upload" className="size-4" />
+                  Abrir o assistente e anexar a lei
+                </Link>
+              </section>
               <DocumentForm />
             </div>
           </div>
