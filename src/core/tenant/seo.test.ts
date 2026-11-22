@@ -23,7 +23,8 @@ test("the home title says what the office is, not only what it is called", () =>
 });
 
 test("every page in the sitemap has a title and a description", () => {
-  for (const path of sitemapPaths(cartorioMarinho)) {
+  const everything = { hasTeam: true, hasNews: true };
+  for (const path of sitemapPaths(cartorioMarinho, everything)) {
     const meta = PAGE_META[path];
     assert.ok(meta, `${path} has no PAGE_META entry`);
     // The home takes the office's own title; every other page names itself.

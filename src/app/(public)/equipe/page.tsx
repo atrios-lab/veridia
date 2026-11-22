@@ -1,9 +1,25 @@
+import type { Metadata } from "next";
 import { frameImageStyle } from "@/core/team/team.ts";
 import { publicTeam } from "@/lib/team.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
-export const generateMetadata = publicMetadata("/equipe");
+const pageMetadata = publicMetadata("/equipe");
+
+// While nobody is published the page is only its empty state: no menu links
+// to it and the sitemap leaves it out, and a noindex keeps a search engine
+// that reaches it anyway from filing that as the office's team page.
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getTenant();
+  const [metadata, team] = await Promise.all([
+    pageMetadata(),
+    publicTeam(tenant.slug),
+  ]);
+  return team.groups.length > 0
+    ? metadata
+    : { ...metadata, robots: { index: false, follow: true } };
+}
 
 /** "2024-05-20" as "20/05/2024". */
 const brDate = (iso: string) => iso.split("-").reverse().join("/");
