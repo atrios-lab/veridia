@@ -30,6 +30,18 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-rename": "Renomeou um documento entregue",
   "service-request.pickup":
     "Registrou quem retirou o documento no balcão e concluiu o pedido",
+  "service-request.files-saved":
+    "Salvou os arquivos do pedido antes de serem apagados",
+  "service-request.files-saved-undone":
+    'Desfez o "Já salvei" dos arquivos do pedido',
+  "data-rights.files-saved":
+    "Salvou os arquivos do requerimento LGPD antes de serem apagados",
+  "data-rights.files-saved-undone":
+    'Desfez o "Já salvei" dos arquivos do requerimento LGPD',
+  "ombudsman.files-saved":
+    "Salvou os arquivos da manifestação antes de serem apagados",
+  "ombudsman.files-saved-undone":
+    'Desfez o "Já salvei" dos arquivos da manifestação',
   "compliance-intake.done": "Marcou a Adequação ao Provimento como cumprida",
   "compliance-intake.done-edited":
     "Alterou a data ou o Justiça Aberta da Adequação cumprida",
@@ -39,6 +51,11 @@ const EXACT: Record<string, string> = {
   "tax-guide.update": "Corrigiu uma guia de transmissão de bens",
   "tax-guide.renumber": "Alterou o número de uma guia",
   "tax-guide.delete": "Excluiu uma guia de transmissão de bens",
+  "tax-guide.status":
+    "Alterou a situação da guia (aguardando pagamento, paga ou concluída)",
+  "tax-guide.status-withdrawn": "Voltou a guia para aguardando pagamento",
+  "tax-guide.receipt-attach": "Anexou o comprovante de pagamento da guia",
+  "tax-guide.receipt-withdrawn": "Tirou o comprovante de pagamento da guia",
   "iss-declaration.issue": "Gerou uma declaração de ISS",
   "iss-declaration.update": "Corrigiu uma declaração de ISS",
   "iss-declaration.remove": "Excluiu uma declaração de ISS da lista",

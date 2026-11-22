@@ -29,7 +29,7 @@ export type SaveState =
   | { status: "error"; message: string; fieldErrors: Record<string, string> }
   | {
       status: "success";
-      /** The last day the file just sent is kept (30-day rule), if one was. */
+      /** The last day the file just sent is kept (90-day rule), if one was. */
       fileUntil?: string;
     };
 

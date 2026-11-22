@@ -202,12 +202,12 @@ export const serviceRequestAttachments = pgTable(
     kind: text("kind").notNull().default("citizen"),
     storedName: text("stored_name").notNull(),
     displayName: text("display_name").notNull(),
-    // Null once the file is deleted by the 30-day rule; the row stays as
+    // Null once the file is deleted by the 90-day rule; the row stays as
     // the record (name, kind, size, when it came, `purgedAt`).
     path: text("path"),
     mimeType: text("mime_type").notNull(),
     sizeBytes: integer("size_bytes").notNull(),
-    // When the platform deleted the file, 30 days after the protocol closed
+    // When the platform deleted the file, 90 days after the protocol closed
     // (see `src/core/request/attachment-retention.ts`).
     purgedAt: timestamp("purged_at", { withTimezone: true }),
     // Set only on the form the office attaches to a requirement, for the
@@ -221,7 +221,7 @@ export const serviceRequestAttachments = pgTable(
     ),
     // Set on a file sent inside a message of the requirement's conversation.
     // `requestId` stays filled alongside it: the owner is still the request,
-    // which is how the 30-day purge (`purgeExpiredRequestFiles`) finds the
+    // which is how the 90-day purge (`purgeExpiredRequestFiles`) finds the
     // file to delete by walking the request. Without that, deleting the
     // request would leave the bytes in storage with nobody pointing at them.
     requirementMessageId: uuid("requirement_message_id").references(
@@ -412,7 +412,7 @@ export const officePublications = pgTable(
     attachmentPath: text("attachment_path"),
     attachmentMimeType: text("attachment_mime_type"),
     attachmentSizeBytes: integer("attachment_size_bytes"),
-    // When the current file was sent: it is kept 30 days from then (see
+    // When the current file was sent: it is kept 90 days from then (see
     // src/core/publications/attachment-retention.ts), then deleted.
     attachmentUploadedAt: timestamp("attachment_uploaded_at", {
       withTimezone: true,

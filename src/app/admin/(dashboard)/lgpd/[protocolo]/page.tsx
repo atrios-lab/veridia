@@ -14,6 +14,7 @@ import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDayMonthTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { alignmentMessagesWith } from "@/lib/dpo/alignment.ts";
+import { filesSavedMarksWith } from "@/lib/request-files-due.ts";
 import {
   findByProtocol,
   listAttachments,
@@ -115,6 +116,7 @@ export default async function DataRightsDetailPage({
   const reportAttachments = attachments.filter((a) => a.kind === "office");
   const todayIso = today();
 
+  const filesSaved = await filesSavedMarksWith(db, tenant.slug, [request.id]);
   return (
     <>
       <AdminPageHeader title={request.protocolNumber} />
@@ -136,6 +138,8 @@ export default async function DataRightsDetailPage({
                 status: requestFileStatusOf(a, request, todayIso),
                 purgedAt: a.purgedAt,
               }))}
+              requestId={request.id}
+              saved={filesSaved.get(request.id)}
             />
             <div className="rounded-xl border bg-card p-6">
               <div className="rounded-lg bg-muted/50 px-4 py-3.5">

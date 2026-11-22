@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { can } from "@/core/auth/roles.ts";
-import { attachmentServable } from "@/core/publications/attachment-retention.ts";
+import {
+  ATTACHMENT_RETENTION_DAYS,
+  attachmentServable,
+} from "@/core/publications/attachment-retention.ts";
 import { today } from "@/lib/office-config.ts";
 import {
   getPublication,
@@ -35,12 +38,13 @@ export async function GET(
   if (!publication?.attachmentPath) {
     return new Response("Não encontrado", { status: 404 });
   }
-  // Past its 30 days and off the site: gone, even if the cleanup
+  // Past its 90 days and off the site: gone, even if the cleanup
   // (run when the list opens, see purgeExpiredAttachments) has not reached it yet.
   if (!attachmentServable(publicationAttachmentStatus(publication, today()))) {
-    return new Response("Arquivo apagado pela regra de 30 dias", {
-      status: 410,
-    });
+    return new Response(
+      `Arquivo apagado pela regra de ${ATTACHMENT_RETENTION_DAYS} dias`,
+      { status: 410 },
+    );
   }
   // "Baixar o arquivo": the office saving its own copy to its own cloud.
   const download = new URL(request.url).searchParams.has("baixar");

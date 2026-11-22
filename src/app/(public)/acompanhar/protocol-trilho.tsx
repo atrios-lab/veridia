@@ -310,8 +310,8 @@ function computeHeadline(
       leadText:
         result.deliveredDocuments.length > 0 &&
         result.deliveredDocuments.every((d) => d.gone)
-          ? "terminamos o seu pedido. O arquivo ficou disponível por 30 dias e já foi apagado."
-          : "terminamos o seu pedido. É só baixar ao lado. O arquivo fica disponível por 30 dias.",
+          ? "terminamos o seu pedido. O arquivo ficou disponível por 90 dias e já foi apagado."
+          : "terminamos o seu pedido. É só baixar ao lado. O arquivo fica disponível por 90 dias.",
     };
   }
   if (!hasSignedForm && result.signedFormCheck?.verdict === "review") {
@@ -542,8 +542,8 @@ function buildHistory(
       at: doc.createdAt,
       title: "Documento entregue.",
       sub: doc.gone
-        ? "Apagado 30 dias depois da conclusão do pedido."
-        : "Fica disponível por 30 dias nesta página.",
+        ? "Apagado 90 dias depois da conclusão do pedido."
+        : "Fica disponível por 90 dias nesta página.",
       tone: "green",
     });
   }
@@ -1512,7 +1512,7 @@ function CalmCard({ analysis }: { analysis?: boolean }) {
         {analysis
           ? "Quando a análise terminar, o resultado aparece aqui: o registro, ou a nota com o que falta para registrar, e fica disponível por "
           : "Quando terminarmos, o documento aparece aqui e fica disponível por "}
-        <strong className="text-brand-text">30 dias</strong> depois da
+        <strong className="text-brand-text">90 dias</strong> depois da
         conclusão. Se precisarmos de algo, avisamos nesta mesma página.
       </p>
     </div>
@@ -1553,11 +1553,11 @@ function DoneCard({
             </div>
             <div className="text-[12.5px] text-brand-muted">
               {doc.gone
-                ? "apagado 30 dias depois da conclusão do pedido"
+                ? "apagado 90 dias depois da conclusão do pedido"
                 : `disponível até ${formatCalendarDate(
-                    // The server's date (30 days after the closing) once the
+                    // The server's date (90 days after the closing) once the
                     // request is closed; before that, the earliest it can be.
-                    result.filesUntil ?? addCalendarDays(doc.createdAt, 30),
+                    result.filesUntil ?? addCalendarDays(doc.createdAt, 90),
                   )}`}
               {doc.openedAt
                 ? ` · aberto em ${formatDateTime(doc.openedAt)}`

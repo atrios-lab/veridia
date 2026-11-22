@@ -2,38 +2,38 @@ import { addDays, type IsoDate } from "../scheduling/calendar.ts";
 import type { PublicationState } from "./state.ts";
 
 /**
- * How long a publication's file (the PDF or the image) is kept: 30 days
+ * How long a publication's file (the PDF or the image) is kept: 90 days
  * from the day it was sent, the same window the platform promises for the
  * documents of a service request. After that only the written record stays:
  * kind, title, text, dates, who did what. The file is deleted from storage.
  *
- * The 30 days are the platform's rule, not a number from the law. What the
+ * The 90 days are the platform's rule, not a number from the law. What the
  * law asks (LGPD, art. 6º, III, and arts. 15 and 16) is that personal data
  * not be kept past its purpose; an edital's file usually carries names,
  * CPFs and addresses, and the office keeps its own copy in its own cloud.
  */
-export const ATTACHMENT_RETENTION_DAYS = 30;
+export const ATTACHMENT_RETENTION_DAYS = 90;
 
 /** Warn the office this many days before the file goes. */
-export const ATTACHMENT_WARNING_DAYS = 7;
+export const ATTACHMENT_WARNING_DAYS = 10;
 
 export type AttachmentStatus =
   /** No file was ever attached. */
   | { kind: "none" }
-  /** Within its 30 days. */
+  /** Within its 90 days. */
   | { kind: "available"; until: IsoDate; daysLeft: number }
   /**
-   * Past its 30 days, but the publication is on the site right now: the
+   * Past its 90 days, but the publication is on the site right now: the
    * file stays until it leaves, so an edital whose legal term is still
    * running never loses its document in the middle of it.
    */
   | { kind: "held"; until: IsoDate }
-  /** Past its 30 days and off the site: due to be deleted. */
+  /** Past its 90 days and off the site: due to be deleted. */
   | { kind: "expired"; until: IsoDate }
   /** Already deleted; the record says when. */
   | { kind: "purged" };
 
-/** The last day the file is kept: the upload day plus 30. */
+/** The last day the file is kept: the upload day plus 90 (30 until 2026-11-22). */
 export function attachmentAvailableUntil(uploadedOn: IsoDate): IsoDate {
   return addDays(uploadedOn, ATTACHMENT_RETENTION_DAYS);
 }

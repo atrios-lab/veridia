@@ -36,7 +36,7 @@ export default async function OmbudsmanQueuePage() {
     notFound();
   const tenant = await getTenant();
 
-  // Files 30 days past the closing leave storage as the queue opens.
+  // Files 90 days past the closing leave storage as the queue opens.
   await purgeExpiredRequestFiles(tenant.slug, today());
   const manifestations = await listRecordsByKind(tenant.slug, "ombudsman");
 

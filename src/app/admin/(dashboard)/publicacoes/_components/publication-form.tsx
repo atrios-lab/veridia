@@ -456,7 +456,7 @@ export function PublicationForm({
             Aparece junto da publicação na página inicial e em /editais: a
             imagem é mostrada no próprio cartão, o PDF abre em nova aba.
           </p>
-          {/* The 30-day rule, said before the save, in every state (draft,
+          {/* The 90-day rule, said before the save, in every state (draft,
               scheduled, live): the office must know to keep its own copy. */}
           <p className="mt-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-xs leading-relaxed text-warning-text">
             <strong>

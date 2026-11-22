@@ -171,7 +171,7 @@ export interface DeliveredDocumentView {
   /** When the citizen first opened or downloaded it (their ciência). */
   openedAt?: string;
   /**
-   * Deleted by the 30-day rule (or past it, which the route already
+   * Deleted by the 90-day rule (or past it, which the route already
    * refuses): listed so the citizen knows it was there, with no download.
    */
   gone: boolean;
@@ -232,7 +232,7 @@ export interface ServiceRequestDetail extends BaseDetail {
   /** Files the office attached through DeliverySection, downloadable here. */
   deliveredDocuments: DeliveredDocumentView[];
   /**
-   * Once the request is closed: the last day its files are kept (30 days
+   * Once the request is closed: the last day its files are kept (90 days
    * after the closing), the earliest among those still stored. Absent while
    * open, and once nothing is left.
    */
@@ -583,7 +583,7 @@ export async function lookupProtocolDetail(
     const filesUntil = [...fileStatuses.values()]
       .flatMap((s) => (s.kind === "available" ? [s.until] : []))
       .sort()[0];
-    // What the consult offers to download: a file the 30-day rule removed
+    // What the consult offers to download: a file the 90-day rule removed
     // is not one of them. What happened (a form signed, a receipt sent, a
     // document delivered) is still read off every file, so a closed request
     // never goes back to asking for a signature it already got.

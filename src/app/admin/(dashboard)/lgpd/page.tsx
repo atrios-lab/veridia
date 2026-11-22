@@ -34,7 +34,7 @@ export default async function DataRightsQueuePage() {
   const tenant = await getTenant();
 
   const now = today();
-  // Files 30 days past the closing leave storage as the queue opens.
+  // Files 90 days past the closing leave storage as the queue opens.
   await purgeExpiredRequestFiles(tenant.slug, now);
   const requests = await listRecordsByKind(tenant.slug, "data-rights");
 

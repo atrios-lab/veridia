@@ -37,6 +37,8 @@ export interface GuideRequestRow {
   citizenUpdatedAt: Date | null;
   /** "006/2026", the guia drawn for the request, when there is one. */
   guideNumber: string | null;
+  /** That guia's id, to open it and read its step. */
+  guideId: string | null;
 }
 
 /** Files and messages from the citizen, per request: the "atualizou" clock. */
@@ -136,6 +138,7 @@ export async function listGuideRequestsWith(
       : database
           .select({
             requestId: taxGuides.serviceRequestId,
+            id: taxGuides.id,
             year: taxGuides.year,
             sequence: taxGuides.sequence,
           })
@@ -154,6 +157,7 @@ export async function listGuideRequestsWith(
       formatGuideNumber(guide.year, guide.sequence),
     ]),
   );
+  const guideIdOf = new Map(guides.map((guide) => [guide.requestId, guide.id]));
   return rows.map((row) => {
     const moved = activity.get(row.id);
     // A file sent with the request itself is not an update.
@@ -165,6 +169,7 @@ export async function listGuideRequestsWith(
       ...row,
       citizenUpdatedAt: updated,
       guideNumber: guideOf.get(row.id) ?? null,
+      guideId: guideIdOf.get(row.id) ?? null,
     };
   });
 }

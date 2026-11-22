@@ -70,13 +70,13 @@ function attachmentColumns(file: PublicationAttachment | undefined) {
     attachmentPath: file.path,
     attachmentMimeType: file.mimeType,
     attachmentSizeBytes: file.sizeBytes,
-    // A new file starts its own 30 days (see attachment-retention.ts).
+    // A new file starts its own 90 days (see attachment-retention.ts).
     attachmentUploadedAt: new Date(),
     attachmentPurgedAt: null,
   };
 }
 
-/** Where a row's file stands today under the 30-day rule. */
+/** Where a row's file stands today under the 90-day rule. */
 export function publicationAttachmentStatus(
   row: PublicationRow,
   today: IsoDate,
@@ -95,7 +95,7 @@ export function publicationAttachmentStatus(
 }
 
 /**
- * Deletes, from storage, every file of this office past its 30 days and
+ * Deletes, from storage, every file of this office past its 90 days and
  * off the site, and clears its path on the row: the text, the dates and the
  * file's name, type and size stay as the record. Run when the panel's list
  * opens, the same "computed when read" stance the publication states take:
@@ -135,7 +135,7 @@ export async function purgeExpiredAttachments(
     if (path) await deleteStoredFile(path);
     await recordAudit({
       tenantSlug,
-      // The platform did it, by the 30-day rule: no person to name.
+      // The platform did it, by the 90-day rule: no person to name.
       actorId: null,
       action: "publication.attachment-purge",
       targetType: "publication",
@@ -149,7 +149,7 @@ export async function purgeExpiredAttachments(
 export interface PublicationHistoryEntry {
   action: string;
   at: Date;
-  /** The operator's name; null when the platform acted (the 30-day rule). */
+  /** The operator's name; null when the platform acted (the 90-day rule). */
   actorName: string | null;
 }
 

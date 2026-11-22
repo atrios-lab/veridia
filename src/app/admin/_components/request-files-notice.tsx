@@ -5,11 +5,19 @@ import {
 } from "@/core/request/attachment-retention.ts";
 import { formatDate } from "@/core/scheduling/calendar.ts";
 import { formatOfficeDate } from "@/core/time/office-time.ts";
+import { buttonVariants } from "../_ui/button.tsx";
+import {
+  markFilesSavedAction,
+  undoFilesSavedAction,
+} from "../(dashboard)/documento/actions.ts";
+import { AdminIcon } from "./icon.tsx";
 
 /**
- * Where a closed protocol's files stand under the 30-day rule, said once at
+ * Where a closed protocol's files stand under the 90-day rule, said once at
  * the top of the detail: until when they are kept (in warning tone in the
- * last 7 days), or that they were deleted. Nothing while the protocol is
+ * last 10 days), or that they were deleted. With `requestId`, it also offers
+ * "Baixar tudo" (one ZIP) and "Já salvei", which stop the daily reminder of
+ * the Visão geral; `saved` is where that mark stands, and it can be undone. Nothing while the protocol is
  * open: nothing goes then, and a notice that says so on every open request
  * would only be noise.
  *
@@ -18,8 +26,12 @@ import { formatOfficeDate } from "@/core/time/office-time.ts";
  */
 export function RequestFilesNotice({
   files,
+  requestId,
+  saved,
 }: {
   files: { status: RequestFileStatus; purgedAt: Date | null }[];
+  requestId?: string;
+  saved?: { saved: boolean; at: Date } | undefined;
 }) {
   const available = files
     .map((f) => f.status)
@@ -35,22 +47,56 @@ export function RequestFilesNotice({
   );
 
   if (next) {
-    const soon = requestFileDueSoon(next);
+    const soon = requestFileDueSoon(next) && !saved?.saved;
     return (
-      <p
+      <div
         className={
           soon
-            ? "rounded-lg bg-warning px-4 py-3 text-sm leading-relaxed text-warning-foreground"
-            : "rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm leading-relaxed text-warning-text"
+            ? "flex flex-col gap-3 rounded-lg bg-warning px-4 py-3 text-sm leading-relaxed text-warning-foreground"
+            : "flex flex-col gap-3 rounded-lg border border-warning/30 bg-warning-soft px-4 py-3 text-sm leading-relaxed text-warning-text"
         }
       >
-        Protocolo encerrado. Os arquivos ficam até{" "}
-        <strong>{formatDate(next.until)}</strong>
-        {daysLeftLabel(next.daysLeft)} e depois são apagados,{" "}
-        {REQUEST_FILE_RETENTION_DAYS} dias após o encerramento. Baixe e guarde
-        no acervo da serventia o que precisar manter, como o requerimento
-        assinado e o comprovante.
-      </p>
+        <p>
+          Protocolo encerrado. Os arquivos ficam até{" "}
+          <strong>{formatDate(next.until)}</strong>
+          {daysLeftLabel(next.daysLeft)} e depois são apagados,{" "}
+          {REQUEST_FILE_RETENTION_DAYS} dias após o encerramento. Baixe e guarde
+          no acervo da serventia o que precisar manter, como o requerimento
+          assinado e o comprovante.
+          {saved?.saved &&
+            ` Marcado como salvo em ${formatOfficeDate(saved.at)}: o aviso diário parou.`}
+        </p>
+        {requestId && (
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`/admin/documento/todos?pedido=${encodeURIComponent(requestId)}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <AdminIcon name="download" className="h-4 w-4" /> Baixar tudo
+              (ZIP)
+            </a>
+            <form
+              action={
+                saved?.saved ? undoFilesSavedAction : markFilesSavedAction
+              }
+            >
+              <input type="hidden" name="requestId" value={requestId} />
+              <button
+                type="submit"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                {saved?.saved ? (
+                  'Desfazer "Já salvei"'
+                ) : (
+                  <>
+                    <AdminIcon name="check" className="h-4 w-4" /> Já salvei
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -67,7 +113,7 @@ export function RequestFilesNotice({
       </p>
     );
   }
-  // Past the 30 days, not yet deleted: the routes already refuse them, and
+  // Past the 90 days, not yet deleted: the routes already refuse them, and
   // the next queue opening removes them from storage.
   if (files.some((f) => f.status.kind === "expired")) {
     return (
