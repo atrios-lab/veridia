@@ -154,7 +154,7 @@ export function PrenotationCard({ view }: { view: PrenotationView }) {
           disabled={!view.pix}
         >
           <AdminIcon name="wallet" className="h-4 w-4" />
-          {showPix ? "Esconder o pagamento" : "Gerar o pagamento (Pix)"}
+          {showPix ? "Fechar o QR Code" : "Gerar o pagamento (Pix)"}
         </Button>
         <ConfirmAction
           action={paidAction}

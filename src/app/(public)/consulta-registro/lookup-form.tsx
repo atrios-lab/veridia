@@ -226,7 +226,10 @@ export function LookupForm() {
                 as anotações e averbações do registro.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={REQUEST_LINKS.certidao} className="btn btn-primary btn-md">
+                <Link
+                  href={REQUEST_LINKS.certidao}
+                  className="btn btn-primary btn-md"
+                >
                   Pedir a certidão
                 </Link>
                 <Link
@@ -249,7 +252,10 @@ export function LookupForm() {
                 busca: a serventia procura nos livros e responde pelo protocolo.
               </p>
               <div className="mt-4">
-                <Link href={REQUEST_LINKS.busca} className="btn btn-primary btn-md">
+                <Link
+                  href={REQUEST_LINKS.busca}
+                  className="btn btn-primary btn-md"
+                >
                   Pedir a busca na serventia
                 </Link>
               </div>
