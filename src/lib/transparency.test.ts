@@ -3,12 +3,19 @@ import { after, before, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import type { BulletinFigures } from "@/core/transparency/bulletin.ts";
 import type { Database } from "@/db/index.ts";
-import { auditLog, tenantContent, transparencyBulletins } from "@/db/schema.ts";
+import {
+  auditLog,
+  tenantContent,
+  transparencyBulletins,
+  transparencyDocuments,
+} from "@/db/schema.ts";
 import { createTestDb } from "@/db/test-db.ts";
 import { OFFICE_BULLETIN_KEY } from "./office-config.ts";
 import {
   getBulletinWith,
+  makeCurrentFeeTableWith,
   removeBulletinWith,
+  reorderDocumentsWith,
   saveBulletinOptionWith,
   storedBulletinOf,
   upsertBulletinWith,
@@ -242,4 +249,107 @@ test("excluir um boletim tira do site sem apagar do banco; publicar de novo o tr
   );
   const back = await getBulletinWith(db, TENANT, row.id);
   assert.equal(back?.actsCount, 300);
+});
+
+async function addDocument(
+  tenantSlug: string,
+  title: string,
+  position: number,
+  status = "published",
+  category = "Tabela de emolumentos",
+): Promise<string> {
+  const [row] = await db
+    .insert(transparencyDocuments)
+    .values({
+      tenantSlug,
+      category,
+      title,
+      yearLabel: "2026",
+      fileStoredName: `${title}.pdf`,
+      fileDisplayName: `${title}.pdf`,
+      filePath: `/tmp/${title}.pdf`,
+      fileMimeType: "application/pdf",
+      fileSizeBytes: 1000,
+      status,
+      position,
+    })
+    .returning({ id: transparencyDocuments.id });
+  return row.id;
+}
+
+async function titlesInOrder(tenantSlug: string): Promise<string[]> {
+  const rows = await db
+    .select({
+      title: transparencyDocuments.title,
+      position: transparencyDocuments.position,
+    })
+    .from(transparencyDocuments)
+    .where(eq(transparencyDocuments.tenantSlug, tenantSlug));
+  return rows.sort((a, b) => a.position - b.position).map((r) => r.title);
+}
+
+test("arrastar reordena só os documentos mostrados, nas posições que já tinham", async () => {
+  const office = "cartorio-arrastar";
+  const a = await addDocument(office, "A", 1);
+  const b = await addDocument(office, "B", 2, "published", "Relatório");
+  const c = await addDocument(office, "C", 3);
+  const d = await addDocument(office, "D", 4);
+  // The list filtered to fee tables shows A, C, D; D is dragged to the top.
+  assert.equal(await reorderDocumentsWith(db, office, [d, a, c]), true);
+  assert.deepEqual(await titlesInOrder(office), ["D", "B", "A", "C"]);
+  // Another office's id, or a repeated one, refuses the whole order.
+  const other = await addDocument("cartorio-outro", "X", 1);
+  assert.equal(await reorderDocumentsWith(db, office, [a, other]), false);
+  assert.equal(await reorderDocumentsWith(db, office, [a, a]), false);
+  assert.deepEqual(await titlesInOrder(office), ["D", "B", "A", "C"]);
+  void b;
+});
+
+test("tornar vigente publica a tabela, leva ao topo e fica na auditoria", async () => {
+  const office = "cartorio-vigente";
+  await addDocument(office, "Tabela 2025", 1);
+  await addDocument(office, "Relatório", 2, "published", "Relatório");
+  const nova = await addDocument(office, "Tabela 2026", 3, "draft");
+  assert.equal(
+    await makeCurrentFeeTableWith(
+      db,
+      office,
+      nova,
+      "Tabela de emolumentos",
+      ACTOR,
+    ),
+    true,
+  );
+  assert.deepEqual(await titlesInOrder(office), [
+    "Tabela 2026",
+    "Tabela 2025",
+    "Relatório",
+  ]);
+  const [row] = await db
+    .select({ status: transparencyDocuments.status })
+    .from(transparencyDocuments)
+    .where(eq(transparencyDocuments.id, nova));
+  assert.equal(row?.status, "published");
+  const audits = await db
+    .select()
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.tenantSlug, office),
+        eq(auditLog.action, "transparency.document.current"),
+      ),
+    );
+  assert.equal(audits.length, 1);
+  // A document that is not a fee table is refused.
+  const relatorio = await addDocument(office, "Outro", 4, "draft", "Relatório");
+  assert.equal(
+    await makeCurrentFeeTableWith(
+      db,
+      office,
+      relatorio,
+      "Tabela de emolumentos",
+      ACTOR,
+    ),
+    false,
+  );
 });
