@@ -11,6 +11,7 @@ import { SPECIALTIES } from "./legal-grounds.ts";
 import {
   buildAccessReceipt,
   buildDataRightsReceipt,
+  buildProtocolProof,
   buildRequerimento,
   HANDWRITTEN_SIGNATURE_CAVEAT,
   SIGNED_FORM_CONFIRMATIONS,
@@ -165,32 +166,54 @@ test("the key is nowhere in the file that gets signed", () => {
   assert.match(signed, /REQ\.2026\.000148/);
 });
 
-test("the receipt says what was protocolled, to show a bank", () => {
+test("o comprovante de acesso é confidencial e não lista documentos", () => {
   const document = buildAccessReceipt(cartorioMarinho, {
     ...receipt,
+    applicantName: "Maria Fictícia de Souza",
+    service: "Certidão de inteiro teor",
+    withQr: true,
+  });
+  assert.match(document.title, /Comprovante de acesso/);
+  const notice = document.sections.map((s) => s.highlight ?? "").join("\n");
+  assert.match(notice, /DOCUMENTO CONFIDENCIAL: APENAS PARA O REQUERENTE/);
+  assert.match(document.footer, /Documento confidencial/);
+  assert.match(
+    flatten(document.sections),
+    /Requerente: Maria Fictícia de Souza/,
+  );
+  assert.equal(
+    document.sections.some((s) => s.table),
+    false,
+  );
+  assert.match(document.credentials?.note ?? "", /com ou sem os traços/);
+});
+
+test("o comprovante de apresentação pode ser compartilhado e não leva a chave", () => {
+  const document = buildProtocolProof(cartorioMarinho, {
+    protocolNumber: "REQ.2026.000148",
+    createdAt: receipt.createdAt,
     applicantName: "Maria Fictícia de Souza",
     service: "Certidão de inteiro teor",
     documents: ["RG de Maria", "Comprovante de endereço"],
     withQr: true,
   });
-  assert.match(document.title, /Comprovante de protocolo e de acesso/);
-  const text = document.sections.map((s) => s.highlight ?? "").join("\n");
+  assert.match(document.title, /Comprovante de apresentação para protocolo/);
+  const text = [
+    everything(document),
+    ...document.sections.map((s) => s.highlight ?? ""),
+  ].join("\n");
+  assert.match(text, /ESTE DOCUMENTO PODE SER COMPARTILHADO/);
+  assert.match(text, /não dá acesso para movimentar o protocolo/);
   assert.match(
     text,
-    /Maria Fictícia de Souza protocolou nesta serventia, em .*, o pedido de Certidão de inteiro teor, sob o protocolo nº REQ\.2026\.000148/,
+    /Maria Fictícia de Souza apresentou a esta serventia, em .*, o pedido de Certidão de inteiro teor, registrado sob o protocolo nº REQ\.2026\.000148/,
   );
-  assert.match(
-    flatten(document.sections),
-    /Requerente: Maria Fictícia de Souza/,
-  );
-  const table = document.sections.find((s) => s.table)?.table;
-  assert.deepEqual(table?.rows, [
+  assert.equal(document.credentials, undefined);
+  assert.equal(text.includes(ACCESS_KEY), false);
+  assert.deepEqual(document.sections.find((s) => s.table)?.table?.rows, [
     ["1", "RG de Maria"],
     ["2", "Comprovante de endereço"],
   ]);
-  assert.match(document.credentials?.note ?? "", /com ou sem os traços/);
-  assert.match(document.credentials?.note ?? "", /QR Code/);
-  assert.equal(document.signee, undefined);
 });
 
 test("the access receipt is a document nobody signs", () => {

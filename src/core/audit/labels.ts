@@ -320,6 +320,8 @@ const EXACT: Record<string, string> = {
   "service-request.exemption-decision": "Decidiu um pedido de gratuidade",
   "service-request.key-reissue": "Gerou nova chave de acesso de um pedido",
   "service-request.print.comprovante": "Imprimiu o comprovante de um pedido",
+  "service-request.print.protocolo":
+    "Imprimiu o comprovante de apresentação para protocolo (compartilhável)",
   "service-request.requirement.register": "Registrou uma exigência",
   "service-request.requirement.edit": "Alterou uma exigência",
   "service-request.requirement.delete": "Excluiu uma exigência",

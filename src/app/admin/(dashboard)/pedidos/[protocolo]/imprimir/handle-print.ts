@@ -2,7 +2,10 @@ import { PDFDocument } from "pdf-lib";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
-import { renderAccessReceiptWith } from "@/lib/access-receipt.ts";
+import {
+  renderAccessReceiptWith,
+  renderProtocolProofWith,
+} from "@/lib/access-receipt.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import type { DocumentBrand } from "@/lib/document-brand.ts";
 import { renderDocuments } from "@/lib/pdf.ts";
@@ -40,6 +43,27 @@ export async function printRequerimentoWith(
   brand: DocumentBrand,
   documento: string | null,
 ): Promise<Response> {
+  if (documento === "protocolo") {
+    const proof = await renderProtocolProofWith(
+      database,
+      tenant,
+      stored,
+      brand,
+    );
+    if (!proof) return new Response("Não encontrado", { status: 404 });
+    await recordAuditWith(database, {
+      tenantSlug: tenant.slug,
+      actorId,
+      action: "service-request.print.protocolo",
+      targetType: "service-request",
+      targetId: stored.id,
+    });
+    return pdf(
+      proof,
+      `comprovante-de-protocolo-${stored.protocolNumber}`,
+      "inline",
+    );
+  }
   const wantsDeclaracao =
     documento === "declaracao" || documento === "declaracao-em-branco";
   const documents = buildRequestDocuments(
@@ -110,6 +134,7 @@ export const COUNTER_DOCUMENTS = [
   "requerimento",
   "declaracao",
   "comprovante",
+  "protocolo",
 ] as const;
 export type CounterDocument = (typeof COUNTER_DOCUMENTS)[number];
 
@@ -125,6 +150,7 @@ const AUDIT_ACTIONS: Record<CounterDocument, string> = {
   requerimento: "service-request.print.requerimento",
   declaracao: "service-request.print.declaracao",
   comprovante: "service-request.print.comprovante",
+  protocolo: "service-request.print.protocolo",
 };
 
 /** Several finished PDFs as one file, page after page. Each part is drawn on
@@ -186,6 +212,17 @@ export async function printSelectionWith(
         draw: () =>
           renderAccessReceiptWith(database, tenant, stored, accessKey, brand),
       });
+      continue;
+    }
+    if (document === "protocolo") {
+      const proof = await renderProtocolProofWith(
+        database,
+        tenant,
+        stored,
+        brand,
+      );
+      if (!proof) return new Response("Não encontrado", { status: 404 });
+      built.push({ document, draw: async () => proof });
       continue;
     }
     const parts = buildRequestDocuments(tenant, stored, document);

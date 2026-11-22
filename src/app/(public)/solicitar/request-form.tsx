@@ -1438,9 +1438,29 @@ function SuccessScreen({
             <input type="hidden" name="documento" value="comprovante" />
             <button type="submit" className="btn btn-primary btn-md">
               <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
-              Baixar comprovante (PDF)
+              Baixar comprovante de acesso (confidencial)
             </button>
           </form>
+          {/* The shareable proof (decision of 22/11/2026): what to show a
+              bank or another office; it opens nothing. */}
+          <form
+            action="/solicitar/requerimento"
+            method="post"
+            target="_blank"
+            rel="noopener"
+            className="mt-2"
+          >
+            <ProtocolFields result={result} />
+            <input type="hidden" name="documento" value="protocolo" />
+            <button type="submit" className="btn btn-outline btn-md">
+              <Icon name="download" className="h-3.5 w-3.5" strokeWidth={2} />
+              Baixar comprovante de apresentação (pode ser compartilhado)
+            </button>
+          </form>
+          <p className="mt-1.5 text-[11.5px] leading-relaxed text-brand-muted">
+            O de acesso tem a chave: é só seu. O de apresentação prova ao banco
+            ou a outro órgão que o pedido foi protocolado, sem dar acesso a ele.
+          </p>
         </Step>
 
         {result.prenotation && (

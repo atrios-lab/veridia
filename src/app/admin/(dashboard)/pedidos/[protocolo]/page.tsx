@@ -510,6 +510,18 @@ export default async function ServiceRequestDetailPage({
                   </a>
                 </>
               )}
+              {/* The shareable proof (decision of 22/11/2026): no key, so
+                  it can be printed any time, for the requerente to show a
+                  bank or another office. */}
+              <a
+                href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}/imprimir?documento=protocolo`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                title="Pode ser compartilhado: não dá acesso para movimentar o pedido"
+              >
+                Comprovante de apresentação
+              </a>
             </div>
           )}
         </div>

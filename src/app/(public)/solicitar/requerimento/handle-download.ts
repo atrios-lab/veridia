@@ -7,7 +7,10 @@ import {
 } from "@/core/request/pdf-link.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
-import { renderAccessReceiptWith } from "@/lib/access-receipt.ts";
+import {
+  renderAccessReceiptWith,
+  renderProtocolProofWith,
+} from "@/lib/access-receipt.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { pdfLinkKey } from "@/lib/pdf-link-key.ts";
 import { buildRequestDocuments } from "@/lib/request-documents.ts";
@@ -50,6 +53,23 @@ export async function handleRequerimentoDownloadWith(
   // manifestation carries the same protocol shape and none of the fields.
   if (!stored.actId || !stored.applicantName || !stored.contact) {
     return new Response("Não encontrado", { status: 404 });
+  }
+
+  if (documento === "protocolo") {
+    const bytes = await renderProtocolProofWith(
+      database,
+      tenant,
+      stored,
+      await brandFor(tenant, `${origin}/protocolo`),
+    );
+    if (!bytes) return new Response("Não encontrado", { status: 404 });
+    return new Response(new Uint8Array(bytes), {
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="comprovante-de-protocolo-${stored.protocolNumber}.pdf"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
   }
 
   if (documento === "comprovante") {
