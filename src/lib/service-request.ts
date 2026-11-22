@@ -55,6 +55,7 @@ import {
 } from "@/core/request/kinds.ts";
 import {
   formatProtocolNumber,
+  normalizeProtocolNumber,
   type ProtocolPrefix,
 } from "@/core/request/protocol.ts";
 import { closesRequirements } from "@/core/request/requirement.ts";
@@ -1780,7 +1781,11 @@ export async function findByProtocolWith(
     .where(
       and(
         eq(serviceRequests.tenantSlug, tenantSlug),
-        eq(serviceRequests.protocolNumber, protocolNumber),
+        // With or without dots, dashes or spaces (decision of 22/11/2026).
+        eq(
+          serviceRequests.protocolNumber,
+          normalizeProtocolNumber(protocolNumber),
+        ),
       ),
     )
     .limit(1);

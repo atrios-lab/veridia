@@ -24,6 +24,38 @@ export const PROTOCOL_TYPE_LABELS: Record<ProtocolPrefix, string> = {
 const SEQUENCE_DIGITS = 6;
 const PATTERN = /^([A-Z]{3})\.(\d{4})\.(\d{6})$/;
 
+/** The three parts, whatever sits between them (or nothing at all). */
+const LOOSE = /^([A-Z]{3})[^A-Z0-9]*(\d{4})[^A-Z0-9]*(\d{6})$/;
+
+/**
+ * The protocol as it is stored, from however it was typed (decision of
+ * 22/11/2026: "que funcione tanto com o hífen como sem o hífen, ou é
+ * ponto"): "req 2026 000123", "REQ-2026-000123" and "REQ2026000123" are all
+ * "REQ.2026.000123". Anything that is not a protocol comes back trimmed and
+ * upper-cased, so a lookup simply finds nothing.
+ */
+export function normalizeProtocolNumber(value: string): string {
+  const compact = value.trim().toUpperCase().replace(/\s+/g, "");
+  const match = LOOSE.exec(compact);
+  return match ? `${match[1]}.${match[2]}.${match[3]}` : compact;
+}
+
+/**
+ * The link the receipt's QR code opens (decision of 22/11/2026): the
+ * consult page ("/acompanhar") with the protocol in the query and the key
+ * in the fragment, the same link the access-key e-mail carries. The
+ * fragment never leaves the browser (not in the request, a server log or a
+ * Referer); the page reads it, wipes it from the address and opens the
+ * request at once.
+ */
+export function protocolAccessLink(
+  origin: string,
+  protocolNumber: string,
+  accessKey: string,
+): string {
+  return `${origin}/acompanhar?numero=${encodeURIComponent(protocolNumber)}#chave=${encodeURIComponent(accessKey)}`;
+}
+
 export interface ParsedProtocol {
   prefix: string;
   year: number;
@@ -59,7 +91,7 @@ export function formatProtocolNumber(
  * protocol at all, so the caller can say so instead of querying for nothing.
  */
 export function parseProtocolNumber(value: string): ParsedProtocol | undefined {
-  const match = PATTERN.exec(value.trim().toUpperCase().replace(/\s+/g, ""));
+  const match = PATTERN.exec(normalizeProtocolNumber(value));
   if (!match) return undefined;
   return {
     prefix: match[1],

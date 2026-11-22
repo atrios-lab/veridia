@@ -360,7 +360,7 @@ export function ProtocolLookup({
                   <p className="mt-2 text-[11.5px] leading-relaxed text-brand-muted">
                     {publicStatus.protocolNumber.startsWith("AGD.")
                       ? "A chave foi mostrada na confirmação do agendamento e enviada no e-mail de confirmação. Agendamento antigo, sem chave? Peça uma abaixo, com o e-mail do agendamento."
-                      : "A chave foi mostrada quando você enviou o pedido e está no comprovante de acesso e no e-mail do pedido."}
+                      : "A chave foi mostrada quando você enviou o pedido e está no comprovante de acesso e no e-mail do pedido. Vale com ou sem os traços."}
                   </p>
                   {state.status === "error" && (
                     <p

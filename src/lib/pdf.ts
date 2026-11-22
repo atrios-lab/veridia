@@ -72,7 +72,8 @@ function drawLetterhead(
       .fontSize(6.5)
       .fillColor(palette.muted)
       .text(
-        (brand.lookupUrl ?? "").replace(/^https?:\/\//, ""),
+        brand.lookupCaption ??
+          (brand.lookupUrl ?? "").replace(/^https?:\/\//, ""),
         qrLeft - 30,
         top + QR_SIZE + 5,
         { width: QR_SIZE + 60, align: "center" },
@@ -409,6 +410,61 @@ function drawHighlight(pdf: Pdf, text: string, brand: DocumentBrand): void {
 }
 
 /**
+ * The same card, the rows side by side (decision of 22/11/2026): the
+ * receipt that also says what was protocolled has to fit on one sheet.
+ */
+function drawCompactCredentials(
+  pdf: Pdf,
+  credentials: RequerimentoCredentials,
+  brand: DocumentBrand,
+): void {
+  const { palette } = brand;
+  const width = contentWidth(pdf);
+  const top = pdf.y + 18;
+  const height = 92;
+  pdf
+    .roundedRect(MARGIN, top, width, height, 10)
+    .fillAndStroke(palette.accentSoft, palette.accent);
+  pdf
+    .font("Times-Bold")
+    .fontSize(11)
+    .fillColor(palette.primary)
+    .text(credentials.heading.toUpperCase(), MARGIN, top + 14, {
+      width,
+      align: "center",
+      characterSpacing: 0.8,
+    });
+  const column = width / Math.max(1, credentials.rows.length);
+  credentials.rows.forEach((row, i) => {
+    const left = MARGIN + i * column;
+    pdf
+      .font("Times-Roman")
+      .fontSize(8)
+      .fillColor(palette.muted)
+      .text(row.label.toUpperCase(), left, top + 38, {
+        width: column,
+        align: "center",
+        characterSpacing: 0.5,
+      });
+    pdf
+      .font("Courier-Bold")
+      .fontSize(16)
+      .fillColor(palette.primary)
+      .text(row.value, left, top + 52, { width: column, align: "center" });
+  });
+  pdf.y = top + height + 12;
+  pdf
+    .font("Times-Roman")
+    .fontSize(10)
+    .fillColor(NEUTRALS.textSoft)
+    .text(credentials.note, MARGIN + 12, pdf.y, {
+      width: width - 24,
+      align: "justify",
+      lineGap: 1.2,
+    });
+}
+
+/**
  * The highlighted card carrying protocol and key. It belongs to the access
  * receipt, a file of its own, so it is drawn in the flow of the page rather
  * than pushed onto one: in that document it is the content, not an appendix.
@@ -421,6 +477,10 @@ function drawCredentials(
   const { palette } = brand;
 
   const width = contentWidth(pdf);
+  if (credentials.compact) {
+    drawCompactCredentials(pdf, credentials, brand);
+    return;
+  }
   const top = pdf.y + 26;
   const height = 74 + credentials.rows.length * 46;
 

@@ -42,7 +42,12 @@ import {
   readAlternateDocument,
   searchAnswerInputSchema,
 } from "./kinds.ts";
-import { formatProtocolNumber, parseProtocolNumber } from "./protocol.ts";
+import {
+  formatProtocolNumber,
+  normalizeProtocolNumber,
+  parseProtocolNumber,
+  protocolAccessLink,
+} from "./protocol.ts";
 
 const certificate = getAct("rcpn-certidao");
 const other = getAct("outros-rcpn");
@@ -90,6 +95,10 @@ test("protocol number survives the way people type it back", () => {
     "REQ.2026.000148",
     "  req.2026.000148 ",
     "REQ. 2026. 000148",
+    // With dashes, with nothing between the parts (decision of 22/11/2026).
+    "REQ-2026-000148",
+    "req2026000148",
+    "REQ/2026/000148",
   ]) {
     assert.deepEqual(parseProtocolNumber(typed), {
       prefix: "REQ",
@@ -122,6 +131,29 @@ test("the key verifies through the punctuation a person adds", () => {
   assert.ok(verifyAccessKey(key.toLowerCase(), hash));
   assert.ok(verifyAccessKey(key.replace(/-/g, " "), hash));
   assert.ok(verifyAccessKey(normalizeAccessKey(key), hash));
+  // With or without the dashes, or with dots in their place (decision of
+  // 22/11/2026).
+  assert.ok(verifyAccessKey(key.replace(/-/g, ""), hash));
+  assert.ok(verifyAccessKey(key.replace(/-/g, "."), hash));
+});
+
+test("the protocol is stored one way, however it was typed", () => {
+  assert.equal(normalizeProtocolNumber("req-2026-000148"), "REQ.2026.000148");
+  assert.equal(normalizeProtocolNumber("REQ2026000148"), "REQ.2026.000148");
+  assert.equal(normalizeProtocolNumber(" REQ.2026.000148 "), "REQ.2026.000148");
+  // Not a protocol: left for the lookup to find nothing.
+  assert.equal(normalizeProtocolNumber("abc"), "ABC");
+});
+
+test("the receipt's QR opens the consult with the key after the #", () => {
+  assert.equal(
+    protocolAccessLink(
+      "https://cartorio.exemplo",
+      "REQ.2026.000148",
+      "ABCD-EFGH-JKMN",
+    ),
+    "https://cartorio.exemplo/acompanhar?numero=REQ.2026.000148#chave=ABCD-EFGH-JKMN",
+  );
 });
 
 test("a wrong key never verifies", () => {

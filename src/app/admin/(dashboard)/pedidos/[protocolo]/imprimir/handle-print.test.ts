@@ -366,3 +366,30 @@ test("with gratuidade, the three come out together with the declaração in the 
   assert.equal(await auditCount("service-request.print.declaracao", id), 1);
   assert.equal(await auditCount("service-request.print.comprovante", id), 1);
 });
+
+test("protocol with dashes and key without them still print the receipt, with the QR", async () => {
+  const key = "TEST-KEYS-2009";
+  const { protocolNumber } = await createServiceRequestWith(db, TENANT, ACT, {
+    applicantName: "Bruna Fictícia Lopes",
+    contact: "bruna@exemplo.com",
+    accessKeyHash: hashAccessKey(key),
+  });
+  // Typed back with dashes (decision of 22/11/2026).
+  const stored = await findByProtocolWith(
+    db,
+    TENANT.slug,
+    protocolNumber.replace(/\./g, "-").toLowerCase(),
+  );
+  assert.equal(stored?.protocolNumber, protocolNumber);
+  if (!stored) return;
+  const response = await printReceiptWith(
+    db,
+    TENANT,
+    stored,
+    "staff-1",
+    { ...BRAND, lookupUrl: "https://cartorio.exemplo/protocolo" },
+    key.replace(/-/g, ""),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await pageCount(response), 1);
+});

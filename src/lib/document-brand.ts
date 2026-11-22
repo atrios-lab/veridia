@@ -23,6 +23,9 @@ export interface DocumentBrand {
   identification?: OfficeIdentification;
   /** Where the QR in the letterhead points: the protocol lookup page. */
   lookupUrl?: string;
+  /** Printed under the QR in place of the address, when the address is
+   * not for reading (the receipt's link carries the access key). */
+  lookupCaption?: string;
 }
 
 export async function brandFor(

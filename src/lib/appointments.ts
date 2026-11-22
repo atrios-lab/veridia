@@ -6,7 +6,10 @@ import {
   hashAccessKey,
   verifyAccessKey,
 } from "@/core/request/access-key.ts";
-import { formatProtocolNumber } from "@/core/request/protocol.ts";
+import {
+  formatProtocolNumber,
+  normalizeProtocolNumber,
+} from "@/core/request/protocol.ts";
 import {
   type AgendaBook,
   type AgendaConfig,
@@ -642,7 +645,10 @@ export async function findAppointmentByProtocol(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
-        eq(appointments.protocolNumber, protocolNumber),
+        eq(
+          appointments.protocolNumber,
+          normalizeProtocolNumber(protocolNumber),
+        ),
       ),
     )
     .limit(1);
@@ -732,7 +738,10 @@ export async function findAppointmentByProtocolWithKeyWith(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
-        eq(appointments.protocolNumber, protocolNumber),
+        eq(
+          appointments.protocolNumber,
+          normalizeProtocolNumber(protocolNumber),
+        ),
       ),
     )
     .limit(1);
@@ -772,7 +781,10 @@ export async function recoverAppointmentKeyWith(
     .where(
       and(
         eq(appointments.tenantSlug, tenantSlug),
-        eq(appointments.protocolNumber, protocolNumber),
+        eq(
+          appointments.protocolNumber,
+          normalizeProtocolNumber(protocolNumber),
+        ),
       ),
     )
     .limit(1);
