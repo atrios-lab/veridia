@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, isNull, lt, sql } from "drizzle-orm";
 import type {
   BulletinFigures,
   BulletinStatus,
@@ -237,6 +237,118 @@ export async function moveDocument(
         sql`${transparencyDocuments.id} IN (${current.id}, ${neighbour.id})`,
       ),
     );
+  return true;
+}
+
+/**
+ * The order the office dragged (decision of 22/11/2026: "botão de
+ * arrastar"): the documents in `orderedIds` take, in that order, the
+ * positions they already held between them, so a list filtered by category
+ * reorders only among itself and everything else stays where it was. One
+ * statement, like `moveDocument`. An id of another office, or a repeated
+ * one, refuses the whole order. Not audited, like a move.
+ */
+export async function reorderDocumentsWith(
+  database: Database,
+  tenantSlug: string,
+  orderedIds: string[],
+): Promise<boolean> {
+  if (orderedIds.length < 2 || new Set(orderedIds).size !== orderedIds.length) {
+    return false;
+  }
+  const rows = await database
+    .select({
+      id: transparencyDocuments.id,
+      position: transparencyDocuments.position,
+    })
+    .from(transparencyDocuments)
+    .where(
+      and(
+        eq(transparencyDocuments.tenantSlug, tenantSlug),
+        inArray(transparencyDocuments.id, orderedIds),
+      ),
+    );
+  if (rows.length !== orderedIds.length) return false;
+  const positions = rows.map((r) => r.position).sort((a, b) => a - b);
+  const cases = sql.join(
+    orderedIds.map((id, i) => sql`WHEN ${id}::uuid THEN ${positions[i]}::int`),
+    sql` `,
+  );
+  await database
+    .update(transparencyDocuments)
+    .set({
+      position: sql`CASE ${transparencyDocuments.id} ${cases} END`,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(transparencyDocuments.tenantSlug, tenantSlug),
+        inArray(transparencyDocuments.id, orderedIds),
+      ),
+    );
+  return true;
+}
+
+export function reorderDocuments(
+  tenantSlug: string,
+  orderedIds: string[],
+): Promise<boolean> {
+  return reorderDocumentsWith(db, tenantSlug, orderedIds);
+}
+
+/**
+ * "Vigente" (decision of 22/11/2026): the fee table goes straight to the
+ * top of the list and, if it was a draft or out of the site, is published,
+ * so it is the table in force (the first published one) at once. Audited:
+ * it changes what the office charges.
+ */
+export async function makeCurrentFeeTableWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  category: string,
+  actorId: string,
+): Promise<boolean> {
+  const [doc] = await database
+    .select()
+    .from(transparencyDocuments)
+    .where(
+      and(
+        eq(transparencyDocuments.tenantSlug, tenantSlug),
+        eq(transparencyDocuments.id, id),
+      ),
+    )
+    .limit(1);
+  if (!doc || doc.category !== category) return false;
+  const [first] = await database
+    .select({ position: transparencyDocuments.position })
+    .from(transparencyDocuments)
+    .where(eq(transparencyDocuments.tenantSlug, tenantSlug))
+    .orderBy(asc(transparencyDocuments.position))
+    .limit(1);
+  const top = (first?.position ?? 1) - 1;
+  await database
+    .update(transparencyDocuments)
+    .set({
+      status: "published",
+      unpublishedAt: null,
+      position:
+        doc.position <= (first?.position ?? doc.position) ? doc.position : top,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(transparencyDocuments.tenantSlug, tenantSlug),
+        eq(transparencyDocuments.id, id),
+      ),
+    );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "transparency.document.current",
+    targetType: "transparency-document",
+    targetId: id,
+  });
   return true;
 }
 

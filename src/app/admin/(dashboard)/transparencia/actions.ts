@@ -61,9 +61,11 @@ import {
   createDocument,
   deleteDocument,
   getDocument,
+  makeCurrentFeeTableWith,
   moveDocument,
   publishDocument,
   removeBulletinWith,
+  reorderDocuments,
   saveBulletinOption,
   unpublishDocument,
   upsertBulletin,
@@ -263,6 +265,74 @@ export async function moveDocumentAction(
     await moveDocument(tenant.slug, id, direction);
   } catch (error) {
     console.error("transparencia.move", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
+  return { status: "success" };
+}
+
+/**
+ * The order dragged on the list (decision of 22/11/2026): the ids, top to
+ * bottom, of the documents the list was showing.
+ */
+export async function reorderDocumentsAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const ids = formData
+    .getAll("ids")
+    .map(String)
+    .filter((id) => /^[0-9a-f-]{36}$/i.test(id))
+    .slice(0, 500);
+  const tenant = await getTenant();
+  try {
+    if (!(await reorderDocuments(tenant.slug, ids))) {
+      return {
+        status: "error",
+        message: "Não foi possível salvar a nova ordem. Recarregue a página.",
+      };
+    }
+  } catch (error) {
+    console.error("transparencia.reorder", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidate();
+  return { status: "success" };
+}
+
+/**
+ * "Tornar vigente" (decision of 22/11/2026): the fee table is published, if
+ * it was not, and goes to the top, so it is the table in force at once.
+ */
+export async function makeCurrentFeeTableAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const id = String(formData.get("id") ?? "");
+  const tenant = await getTenant();
+  try {
+    const done = await makeCurrentFeeTableWith(
+      db,
+      tenant.slug,
+      id,
+      FEE_TABLE_CATEGORY,
+      session.user.id,
+    );
+    if (!done) {
+      return {
+        status: "error",
+        message: "Tabela de emolumentos não encontrada.",
+      };
+    }
+    // A table nobody read yet has its prenotação read now, as on upload.
+    after(() => readNewFeeTable(tenant, id));
+    notifyIndexNow(tenant, await getSiteOrigin(), ["/transparencia"]);
+  } catch (error) {
+    console.error("transparencia.current", error);
     return { status: "error", message: GENERIC_ERROR };
   }
   revalidate();
