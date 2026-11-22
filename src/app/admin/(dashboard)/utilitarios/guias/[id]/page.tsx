@@ -3,15 +3,30 @@ import { BackLink } from "@/app/admin/_components/back-link";
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print";
 import { can } from "@/core/auth/roles.ts";
 import { GUIDE_KIND_INFO } from "@/core/guides/catalog.ts";
-import { formatGuideNumber } from "@/core/guides/schema.ts";
+import { formatGuideNumber, retentionEnds } from "@/core/guides/schema.ts";
+import {
+  brDate,
+  GUIDE_STATUS_LABELS,
+  guidePaymentOverdue,
+  guideStatusOf,
+  guideStatusSummary,
+} from "@/core/guides/status.ts";
+import { statusLabel } from "@/core/request/kinds.ts";
+import {
+  formatOfficeDate,
+  formatOfficeDateTime,
+} from "@/core/time/office-time.ts";
+import { findById } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
+import { getGuideStatus } from "@/lib/tax-guide-status.ts";
 import { findGuide, getGuideSettings } from "@/lib/tax-guides.ts";
-import { getTenant } from "@/lib/tenant.ts";
+import { getTenant, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { GuideForm } from "../guide-form.tsx";
 import { GuideNumber } from "./guide-number.tsx";
+import { GuideStatusCard, type GuideStatusView } from "./guide-status-card.tsx";
 
 export const metadata = { title: "Guia de transmissão de bens" };
 
@@ -44,6 +59,43 @@ export default async function GuidePage({
   );
   const base = `/admin/utilitarios/guias/${stored.id}/arquivo`;
   const issued = (await searchParams).emitida === "1";
+  const [statusRecord, request] = await Promise.all([
+    getGuideStatus(tenant.slug, stored.id),
+    stored.serviceRequestId
+      ? findById(tenant.slug, stored.serviceRequestId)
+      : Promise.resolve(undefined),
+  ]);
+  const receiptBase = `/admin/utilitarios/guias/${stored.id}/comprovante`;
+  const current = statusRecord.current;
+  const statusView: GuideStatusView = {
+    status: guideStatusOf(statusRecord),
+    dueOn: current?.dueOn ?? "",
+    paidOn: current?.paidOn ?? "",
+    concludedOn: current?.concludedOn ?? "",
+    note: current?.note ?? "",
+    receipt: current?.receipt
+      ? {
+          displayName: current.receipt.displayName,
+          href: `${receiptBase}?arquivo=${encodeURIComponent(current.receipt.storedName)}`,
+        }
+      : null,
+    summary: guideStatusSummary(statusRecord),
+    saved: Boolean(current) || statusRecord.history.length > 0,
+    history: [...statusRecord.history].reverse().map((h) => ({
+      at: formatOfficeDateTime(new Date(h.at)),
+      text: `${
+        h.change === "withdrawn"
+          ? "voltou para aguardando pagamento; antes"
+          : h.change === "receipt-removed"
+            ? "comprovante retirado"
+            : "alterada; antes"
+      }: ${GUIDE_STATUS_LABELS[h.status]}${h.paidOn ? `, paga em ${brDate(h.paidOn)}` : ""}${h.concludedOn ? `, usada no ato em ${brDate(h.concludedOn)}` : ""}`,
+      receiptHref: h.receipt
+        ? `${receiptBase}?arquivo=${encodeURIComponent(h.receipt.storedName)}`
+        : null,
+    })),
+  };
+  const todayIso = today();
 
   return (
     <>
@@ -75,6 +127,32 @@ export default async function GuidePage({
             <AdminIcon name="file" className="h-4 w-4" /> Word (editável)
           </a>
         </section>
+        {request && (
+          <section className="flex flex-wrap items-center gap-3 rounded-xl border bg-card px-5 py-3 text-sm">
+            <AdminIcon name="inbox" className="h-4 w-4 text-primary" />
+            <p className="mr-auto">
+              Esta guia é do pedido{" "}
+              <strong className="tabular-nums">{request.protocolNumber}</strong>
+              , feito pelo site. Andamento do pedido:{" "}
+              <strong>{statusLabel("service-request", request.status)}</strong>.
+              É um atendimento só: o pedido é o que o cliente acompanha pelo
+              site, e a guia é o documento que sai dele.
+            </p>
+            <a
+              href={`/admin/pedidos/${encodeURIComponent(request.protocolNumber)}`}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              Abrir o pedido
+            </a>
+          </section>
+        )}
+        <GuideStatusCard
+          guideId={stored.id}
+          view={statusView}
+          today={todayIso}
+          keptUntil={formatOfficeDate(retentionEnds(stored.createdAt))}
+          overdue={guidePaymentOverdue(statusRecord, todayIso)}
+        />
         {canCommunicate && stored.guide.kind !== "certidao-imobiliaria" && (
           <section className="flex flex-col gap-3 rounded-xl border border-primary/25 bg-primary/5 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm">

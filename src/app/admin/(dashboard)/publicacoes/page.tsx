@@ -98,7 +98,7 @@ export default async function PublicationsPage({
   const activeState = stateOfSlug(aba);
   const day = today();
 
-  // The 30-day rule is applied here, when the office opens its list: the
+  // The 90-day rule is applied here, when the office opens its list: the
   // files past their time are deleted before the list is read. A failure
   // only leaves them for the next visit (the routes refuse to serve them
   // either way), never takes the screen down.

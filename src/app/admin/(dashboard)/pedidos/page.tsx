@@ -87,7 +87,7 @@ export default async function ServiceRequestQueuePage({
   // Read once for the whole queue: every row's term is measured against the
   // same day, and a clock read per row could straddle midnight.
   const todayIso = today();
-  // Files 30 days past the closing leave storage as the queue opens (see
+  // Files 90 days past the closing leave storage as the queue opens (see
   // purgeExpiredRequestFiles): before the list is read, for every kind.
   await purgeExpiredRequestFiles(tenant.slug, todayIso);
   const raw = await searchParams;

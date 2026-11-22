@@ -77,6 +77,7 @@ import {
   type ReviewView,
   reviewsOfAttachmentsWith,
 } from "@/lib/qualificacao-revisao.ts";
+import { filesSavedMarksWith } from "@/lib/request-files-due.ts";
 import { latestPickup } from "@/lib/request-pickup.ts";
 import {
   findByProtocol,
@@ -240,7 +241,7 @@ export default async function ServiceRequestDetailPage({
   // Everything a requirement carries is that requirement's, not the request's.
   const ownAttachments = requestOwnAttachments(attachments);
   // The header opens the signed copy instead of generating a fresh one only
-  // while that copy can still be served (the 30-day rule).
+  // while that copy can still be served (the 90-day rule).
   const servableOwn = ownAttachments.filter((a) =>
     requestFileServable(fileStatus(a)),
   );
@@ -405,6 +406,7 @@ export default async function ServiceRequestDetailPage({
     tenant.requestDeadlineDays,
   );
 
+  const filesSaved = await filesSavedMarksWith(db, tenant.slug, [request.id]);
   return (
     <>
       <AdminPageHeader title="Pedidos de serviço" />
@@ -778,6 +780,8 @@ export default async function ServiceRequestDetailPage({
                 status: fileStatus(a),
                 purgedAt: a.purgedAt,
               }))}
+              requestId={request.id}
+              saved={filesSaved.get(request.id)}
             />
 
             <RequirementsSection

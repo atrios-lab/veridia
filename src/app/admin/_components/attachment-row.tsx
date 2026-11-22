@@ -79,7 +79,7 @@ export function AttachmentRow({
             {formatFileSize(attachment.sizeBytes)}
           </span>
         )}
-        {/* A file the 30-day rule removed has nothing left to open or
+        {/* A file the 90-day rule removed has nothing left to open or
             delete: the row is only the record of it. */}
         {!attachment.goneLabel && (
           <a

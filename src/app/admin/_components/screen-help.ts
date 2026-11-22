@@ -45,6 +45,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "Comece pela lista 'Sua mesa hoje': cada item leva direto ao pedido, agendamento ou mensagem.",
       "Use a busca no alto (Ctrl K) para achar um protocolo, um nome ou uma tela.",
       "Os números ao lado do menu mostram o que ainda não foi visto em cada área.",
+      "Arquivos que vão ser apagados: os protocolos encerrados ficam com os arquivos por 90 dias. Nos últimos 10 dias o aviso aparece aqui todo dia; clique em Baixar tudo (um ZIP com os arquivos) ou em Já salvei para ele parar.",
     ],
     configure: {
       href: "/admin/configuracoes",
@@ -164,6 +165,16 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "Clique em 'Nova guia' e escolha o tipo.",
       "Preencha as partes, o bem e o valor; o imposto é calculado sozinho.",
       "Escolha quem assina e gere: assine digitalmente ou imprima para assinar à mão.",
+      "Depois de entregar, acompanhe a situação na própria guia: Aguardando pagamento, Paga (com o dia e o comprovante anexado) e Concluída (quando o ato for lavrado com ela).",
+      "Guia de pedido do site: o protocolo (REQ) e a guia (nº) são o mesmo atendimento. Em Pedidos do site, a coluna Guia mostra o número e a situação; clique para abrir.",
+      "O sistema guarda cada guia por 12 meses depois da emissão; baixe e salve no arquivo da serventia antes disso.",
+    ],
+    terms: [
+      {
+        term: "Pagamento atrasado",
+        meaning:
+          "A guia tem dia de vencimento, esse dia passou e ela ainda não foi marcada como paga. Confira com a parte.",
+      },
     ],
     configure: {
       href: "/admin/utilitarios/guias/configuracao",

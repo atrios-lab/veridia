@@ -8,6 +8,10 @@ import {
   GuideSchema,
   GuideSettingsSchema,
 } from "@/core/guides/schema.ts";
+import {
+  GUIDE_STATUS_LABELS,
+  guideStatusInputSchema,
+} from "@/core/guides/status.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
@@ -20,6 +24,12 @@ import {
 import { findById } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import {
+  GuideStatusError,
+  setGuideStatusWith,
+  withdrawGuideReceiptWith,
+  withdrawGuideStatusWith,
+} from "@/lib/tax-guide-status.ts";
+import {
   deleteGuide,
   findGuide,
   GuideNumberTakenError,
@@ -29,6 +39,7 @@ import {
   updateGuide,
 } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
 
 export type GuideFormState =
   | { status: "idle" }
@@ -346,4 +357,122 @@ export async function readGuideDocumentsAdmin(
     console.error("guia.leitura-painel", error);
     return { status: "error", message: "Não foi possível ler agora." };
   }
+}
+
+export type GuideStatusFormState =
+  | { status: "idle" }
+  | { status: "saved"; message: string }
+  | { status: "error"; message: string; fieldErrors: Record<string, string> };
+
+async function guideManager() {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "guides.manage", session.user.permissions)
+  ) {
+    return undefined;
+  }
+  return { session, tenant: await getTenant() };
+}
+
+/**
+ * Sets (or corrects) where the guia stands: aguardando pagamento, paga or
+ * concluída, with the days and, optionally, the comprovante of payment.
+ * The previous version stays in the history and in the audit.
+ */
+export async function saveGuideStatusAction(
+  _previous: GuideStatusFormState,
+  formData: FormData,
+): Promise<GuideStatusFormState> {
+  const auth = await guideManager();
+  if (!auth) {
+    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
+  }
+  const guideId = String(formData.get("guideId") ?? "");
+  const parsed = guideStatusInputSchema.safeParse({
+    status: formData.get("status"),
+    dueOn: formData.get("dueOn") ?? "",
+    paidOn: formData.get("paidOn") ?? "",
+    concludedOn: formData.get("concludedOn") ?? "",
+    note: formData.get("note") ?? "",
+  });
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Confira os campos marcados.",
+      fieldErrors: errorsOf(parsed.error.issues),
+    };
+  }
+  const files = formData
+    .getAll("receipt")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  try {
+    const [receipt] = await storeAttachments(files, {
+      tenantSlug: auth.tenant.slug,
+      limit: 1,
+      name: "Comprovante de pagamento da guia",
+    });
+    await setGuideStatusWith(
+      db,
+      auth.tenant.slug,
+      guideId,
+      parsed.data,
+      auth.session.user.id,
+      receipt,
+    );
+  } catch (error) {
+    if (error instanceof AttachmentError || error instanceof GuideStatusError) {
+      return { status: "error", message: error.message, fieldErrors: {} };
+    }
+    console.error("guias.status", error);
+    return { status: "error", message: GENERIC, fieldErrors: {} };
+  }
+  revalidatePath("/admin/utilitarios/guias", "layout");
+  return {
+    status: "saved",
+    message: `Situação salva: ${GUIDE_STATUS_LABELS[parsed.data.status]}.`,
+  };
+}
+
+/** Back to "aguardando pagamento"; the step it leaves stays in the history. */
+export async function withdrawGuideStatusAction(
+  _previous: GuideStatusFormState,
+  formData: FormData,
+): Promise<GuideStatusFormState> {
+  const auth = await guideManager();
+  const guideId = String(formData.get("guideId") ?? "");
+  if (!auth || !guideId) {
+    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
+  }
+  await withdrawGuideStatusWith(
+    db,
+    auth.tenant.slug,
+    guideId,
+    auth.session.user.id,
+  );
+  revalidatePath("/admin/utilitarios/guias", "layout");
+  return {
+    status: "saved",
+    message: "A guia voltou para aguardando pagamento.",
+  };
+}
+
+/** Takes the comprovante off; the file stays in the history. */
+export async function withdrawGuideReceiptAction(
+  _previous: GuideStatusFormState,
+  formData: FormData,
+): Promise<GuideStatusFormState> {
+  const auth = await guideManager();
+  const guideId = String(formData.get("guideId") ?? "");
+  if (!auth || !guideId) {
+    return { status: "error", message: NO_PERMISSION, fieldErrors: {} };
+  }
+  await withdrawGuideReceiptWith(
+    db,
+    auth.tenant.slug,
+    guideId,
+    auth.session.user.id,
+  );
+  revalidatePath("/admin/utilitarios/guias", "layout");
+  return { status: "saved", message: "Comprovante retirado da guia." };
 }

@@ -157,7 +157,7 @@ test("opening a payment receipt attachment writes no audit entry", async () => {
   );
 });
 
-test("a file past its 30 days after the closing answers 410, before the purge reaches it", async () => {
+test("a file past its 90 days after the closing answers 410, before the purge reaches it", async () => {
   const { id } = await createServiceRequestWith(db, TENANT, ACT, {
     applicantName: "Helena",
     contact: "helena@exemplo.com",
@@ -208,5 +208,5 @@ test("a file past its 30 days after the closing answers 410, before the purge re
     attachment.id,
   );
   assert.equal(expired.status, 410);
-  assert.match(await expired.text(), /apagado 30 dias depois/);
+  assert.match(await expired.text(), /apagado 90 dias depois/);
 });

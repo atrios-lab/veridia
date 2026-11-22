@@ -16,6 +16,13 @@ import {
   retentionState,
 } from "@/core/guides/schema.ts";
 import {
+  GUIDE_STATUS_LABELS,
+  type GuideStatus,
+  type GuideStatusRecord,
+  guidePaymentOverdue,
+  guideStatusOf,
+} from "@/core/guides/status.ts";
+import {
   statusLabel,
   TERMINAL_SERVICE_REQUEST_STATUSES,
 } from "@/core/request/kinds.ts";
@@ -26,12 +33,13 @@ import {
   listGuideRequests,
 } from "@/lib/guide-requests.ts";
 import { getSession } from "@/lib/session.ts";
+import { listGuideStatuses } from "@/lib/tax-guide-status.ts";
 import {
   getGuideSettings,
   listGuides,
   type StoredGuide,
 } from "@/lib/tax-guides.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
 import { AdminPageHeader } from "../../../_components/page-header.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
@@ -67,6 +75,11 @@ export default async function GuidesPage({
     getGuideSettings(tenant),
     listGuideRequests(tenant.slug).catch(() => [] as GuideRequestRow[]),
   ]);
+  const statuses = await listGuideStatuses(tenant.slug, [
+    ...guides.map((g) => g.id),
+    ...requests.flatMap((r) => (r.guideId ? [r.guideId] : [])),
+  ]).catch(() => new Map<string, GuideStatusRecord>());
+  const todayIso = today();
   const now = new Date();
   const kept = guides.filter(
     (g) => retentionState(g.createdAt, now) !== "past",
@@ -108,7 +121,11 @@ export default async function GuidesPage({
           </p>
         )}
 
-        <GuideRequests requests={requests} />
+        <GuideRequests
+          requests={requests}
+          statuses={statuses}
+          today={todayIso}
+        />
 
         {deleted && (
           <p className="rounded-lg bg-success-soft px-4 py-3 text-sm font-semibold text-success-text">
@@ -143,10 +160,18 @@ export default async function GuidesPage({
             year={year}
             guides={kept.filter((g) => g.year === year)}
             now={now}
+            statuses={statuses}
+            today={todayIso}
           />
         ))}
         {past.length > 0 && (
-          <GuideYear title="Prazo de guarda vencido" guides={past} now={now} />
+          <GuideYear
+            title="Prazo de guarda vencido"
+            guides={past}
+            now={now}
+            statuses={statuses}
+            today={todayIso}
+          />
         )}
 
         <section className="rounded-xl border bg-card px-5 py-4">
@@ -191,16 +216,51 @@ export default async function GuidesPage({
   );
 }
 
+const STATUS_TONE: Record<GuideStatus, string> = {
+  "aguardando-pagamento": "bg-warning-soft text-warning-text",
+  paga: "bg-info-soft text-info",
+  concluida: "bg-success-soft text-success-text",
+};
+
+/** The guia's step as a small badge; red when the day to pay has passed. */
+function StatusBadge({
+  record,
+  today,
+}: {
+  record: GuideStatusRecord | undefined;
+  today: string;
+}) {
+  const empty: GuideStatusRecord = { current: null, history: [] };
+  const status = guideStatusOf(record ?? empty);
+  const overdue = guidePaymentOverdue(record ?? empty, today);
+  return (
+    <span
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ${
+        overdue ? "bg-destructive/10 text-destructive" : STATUS_TONE[status]
+      }`}
+    >
+      {overdue ? "Pagamento atrasado" : GUIDE_STATUS_LABELS[status]}
+      {status !== "aguardando-pagamento" && record?.current?.receipt
+        ? " · comprovante"
+        : ""}
+    </span>
+  );
+}
+
 function GuideYear({
   title,
   year,
   guides,
   now,
+  statuses,
+  today,
 }: {
   title: string;
   year?: number;
   guides: StoredGuide[];
   now: Date;
+  statuses: Map<string, GuideStatusRecord>;
+  today: string;
 }) {
   return (
     <section className="overflow-hidden rounded-xl border bg-card">
@@ -252,6 +312,9 @@ function GuideYear({
               Imposto
             </TableHead>
             <TableHead className="px-4 text-xs font-medium text-muted-foreground">
+              Situação
+            </TableHead>
+            <TableHead className="px-4 text-xs font-medium text-muted-foreground">
               Arquivos
             </TableHead>
           </TableRow>
@@ -298,6 +361,14 @@ function GuideYear({
                     ? ""
                     : `R$ ${formatMoneyBRL(amount.taxCents)}`}
                 </TableCell>
+                <TableCell className="px-4 py-2.5">
+                  <Link href={base} className="hover:underline">
+                    <StatusBadge
+                      record={statuses.get(stored.id)}
+                      today={today}
+                    />
+                  </Link>
+                </TableCell>
                 <TableCell className="px-4 py-2.5 whitespace-normal">
                   <a
                     href={`${base}/arquivo?formato=pdf`}
@@ -329,7 +400,15 @@ const CLOSED = new Set<string>(TERMINAL_SERVICE_REQUEST_STATUSES);
  * Pedidos queue. Each opens its request, where the guia is checked, the
  * documents read, the exigência made and the signed guia delivered.
  */
-function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
+function GuideRequests({
+  requests,
+  statuses,
+  today,
+}: {
+  requests: GuideRequestRow[];
+  statuses: Map<string, GuideStatusRecord>;
+  today: string;
+}) {
   const open = requests.filter((row) => !CLOSED.has(row.status));
   const closed = requests.filter((row) => CLOSED.has(row.status)).slice(0, 20);
   return (
@@ -342,9 +421,11 @@ function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
           </span>
         </h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          A guia de cada pedido é gerada sozinha e só a serventia vê. Abra o
-          pedido para conferir os documentos, corrigir a guia, fazer exigência e
-          entregar a guia assinada com o boleto.
+          Cada pedido do site gera uma guia: é um atendimento só. O protocolo
+          (REQ) é o que o cliente acompanha; a guia (nº) é o documento, com a
+          situação dela (aguardando pagamento, paga ou concluída). Abra o pedido
+          para conferir os documentos, fazer exigência e entregar a guia
+          assinada; abra a guia para marcar o pagamento e anexar o comprovante.
         </p>
       </header>
       {requests.length === 0 ? (
@@ -395,7 +476,22 @@ function GuideRequests({ requests }: { requests: GuideRequestRow[] }) {
                   {statusLabel("service-request", row.status)}
                 </TableCell>
                 <TableCell className="px-4 py-2.5 tabular-nums">
-                  {row.guideNumber ?? "sem guia"}
+                  {row.guideId && row.guideNumber ? (
+                    <Link
+                      href={`/admin/utilitarios/guias/${row.guideId}`}
+                      className="inline-flex flex-wrap items-center gap-1.5 hover:underline"
+                    >
+                      <span className="font-semibold">
+                        nº {row.guideNumber}
+                      </span>
+                      <StatusBadge
+                        record={statuses.get(row.guideId)}
+                        today={today}
+                      />
+                    </Link>
+                  ) : (
+                    "sem guia"
+                  )}
                 </TableCell>
                 <TableCell className="px-4 py-2.5 tabular-nums">
                   {formatShortDate(toIsoDate(row.createdAt, OFFICE_TIME_ZONE))}

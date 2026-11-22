@@ -45,6 +45,7 @@ import {
   type OverviewKpi,
 } from "./_components/overview-header.tsx";
 import { PipelineCard } from "./_components/pipeline-card.tsx";
+import { RequestFilesDueCard } from "./_components/request-files-due-card.tsx";
 import { ResumeCard } from "./_components/resume-card.tsx";
 import { TodayAgenda } from "./_components/today-agenda.tsx";
 import { TutorialTrailCard } from "./_components/tutorial-trail-card.tsx";
@@ -367,6 +368,13 @@ export default async function AdminHome() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-4">
+            {/* Every day of the last 10 before a closed protocol's files
+                are deleted, until they are downloaded or marked as saved. */}
+            <RequestFilesDueCard
+              tenantSlug={tenant.slug}
+              today={todayIso}
+              kinds={kinds}
+            />
             <DeskList
               items={rankedDesk}
               totalCount={deskCount}

@@ -75,6 +75,15 @@ const EXACT: Record<string, AuditLevel> = {
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",
+  // Money: whether the party paid the tax, and the proof of it.
+  "tax-guide.status": "atencao",
+  "tax-guide.status-withdrawn": "atencao",
+  "tax-guide.receipt-attach": "atencao",
+  "tax-guide.receipt-withdrawn": "atencao",
+  // Undoing "Já salvei" brings the daily reminder back: only a note.
+  "service-request.files-saved-undone": "analise",
+  "data-rights.files-saved-undone": "analise",
+  "ombudsman.files-saved-undone": "analise",
   "compliance-intake.done": "analise",
   "compliance-intake.done-edited": "analise",
   "compliance-intake.done-withdrawn": "atencao",

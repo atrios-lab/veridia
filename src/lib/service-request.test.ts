@@ -822,9 +822,9 @@ test("responder a busca conclui o pedido e guarda a resposta sem perder o resto"
   assert.equal(entry?.actorId, "operador-1");
 });
 
-// The 30-day rule for a protocol's files (change
+// The 90-day rule for a protocol's files (change
 // `expurgar-arquivos-dos-pedidos`): `closed_at` follows every status write,
-// and the purge deletes only what is past its 30 days after the closing.
+// and the purge deletes only what is past its 90 days after the closing.
 
 test("closed_at is set on closing, kept between closed statuses, cleared on reopening", async () => {
   const { id } = await createServiceRequestWith(db, TENANT, ACT, {
@@ -846,7 +846,7 @@ test("closed_at is set on closing, kept between closed statuses, cleared on reop
   assert.ok(first, "concluir grava o encerramento");
 
   await updateRequestStatusWith(db, TENANT.slug, id, "archived", "staff-1");
-  assert.deepEqual(await closedAt(), first, "arquivar não reinicia os 30 dias");
+  assert.deepEqual(await closedAt(), first, "arquivar não reinicia os 90 dias");
 
   await updateRequestStatusWith(db, TENANT.slug, id, "processing", "staff-1");
   assert.equal(await closedAt(), null, "reabrir suspende a contagem");
@@ -890,7 +890,7 @@ test("answering a data-rights request closes it; a search answer closes a reques
   assert.ok(searched.closedAt);
 });
 
-test("the purge deletes files 30 days after the closing, keeps the record and logs it with no actor", async () => {
+test("the purge deletes files 90 days after the closing, keeps the record and logs it with no actor", async () => {
   const dir = await mkdtemp(join(tmpdir(), "veridia-purge-"));
   const stored = async (name: string) => {
     const path = join(dir, name);
@@ -904,7 +904,7 @@ test("the purge deletes files 30 days after the closing, keeps the record and lo
     };
   };
 
-  // Closed 40 days before "today": its file goes.
+  // Closed 102 days before "today": its file goes.
   const old = await createServiceRequestWith(db, TENANT, ACT, {
     applicantName: "Edite",
     contact: "edite@exemplo.com",
@@ -920,11 +920,11 @@ test("the purge deletes files 30 days after the closing, keeps the record and lo
   await updateRequestStatusWith(db, TENANT.slug, old.id, "done", "staff-1");
   await db
     .update(serviceRequests)
-    .set({ closedAt: new Date("2026-09-29T15:00:00Z") })
+    .set({ closedAt: new Date("2026-07-29T15:00:00Z") })
     .where(eq(serviceRequests.id, old.id));
   await db
     .update(serviceRequestAttachments)
-    .set({ createdAt: new Date("2026-09-20T15:00:00Z") })
+    .set({ createdAt: new Date("2026-07-20T15:00:00Z") })
     .where(eq(serviceRequestAttachments.id, oldFile.id));
 
   // Closed 10 days before: kept. Open for months: kept.

@@ -55,7 +55,7 @@ export async function handleDocumentWith(
     attachmentId,
   );
   if (!attachment) return new Response("Não encontrado", { status: 404 });
-  // Past its 30 days after the protocol closed: gone, even if the cleanup
+  // Past its 90 days after the protocol closed: gone, even if the cleanup
   // (run when the queues open, see purgeExpiredRequestFiles) has not
   // reached it yet. 410, not 404: the file existed and left by rule.
   const status = requestFileStatusOf(

@@ -48,7 +48,7 @@ export async function POST(request: Request): Promise<Response> {
   if (!attachment || attachment.heldForSignatureAt) {
     return new Response("Não encontrado", { status: 404 });
   }
-  // The 30 days after the closing are over: refused even before the purge
+  // The 90 days after the closing are over: refused even before the purge
   // (run when the panel's queues open) has deleted the bytes.
   const status = requestFileStatusOf(
     attachment,

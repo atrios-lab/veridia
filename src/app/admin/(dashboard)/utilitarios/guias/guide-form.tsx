@@ -406,7 +406,7 @@ export function GuideForm({
           Certidão da matrícula, escritura ou contrato e documentos das partes,
           em PDF pesquisável: o sistema lê e preenche os campos em branco, e
           você confere e salva. A leitura não guarda o arquivo. Os documentos
-          que o cliente envia ficam no pedido até 30 dias depois do
+          que o cliente envia ficam no pedido até 90 dias depois do
           encerramento: baixe e guarde no arquivo da serventia (nuvem ou HD).
         </p>
         <label className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring">

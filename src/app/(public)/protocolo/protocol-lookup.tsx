@@ -1654,7 +1654,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                         <div className="text-[11px] text-brand-faint">
                           recebido em {formatDate(doc.createdAt)}
                           {doc.gone &&
-                            " · apagado 30 dias depois da conclusão do pedido"}
+                            " · apagado 90 dias depois da conclusão do pedido"}
                         </div>
                       </div>
                       <input
@@ -1687,7 +1687,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   ) : (
                     !result.deliveredDocuments.every((d) => d.gone) && (
                       <p className="text-[11px] text-brand-faint">
-                        Disponível por <strong>30 dias</strong> depois da
+                        Disponível por <strong>90 dias</strong> depois da
                         conclusão do pedido.
                       </p>
                     )
@@ -1702,7 +1702,7 @@ function RequestDetail({ result }: { result: ServiceRequestDetail }) {
                   <p className="text-[12px] leading-relaxed text-brand-muted">
                     Nada por enquanto. Quando a serventia concluir, o arquivo
                     aparece aqui e avisamos pelo seu contato. Fica disponível
-                    por <strong>30 dias</strong> depois da conclusão do pedido.
+                    por <strong>90 dias</strong> depois da conclusão do pedido.
                   </p>
                 </div>
               )}

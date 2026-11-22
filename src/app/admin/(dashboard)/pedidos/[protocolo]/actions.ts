@@ -1084,7 +1084,7 @@ export async function deleteAttachmentAction(
     if (!deleted) {
       return { status: "error", message: "Documento não encontrado." };
     }
-    // Already gone if the 30-day rule purged it: only the row was left.
+    // Already gone if the 90-day rule purged it: only the row was left.
     if (deleted.path) await deleteStoredFile(deleted.path);
   } catch (error) {
     if (error instanceof AttachmentInUseError) {

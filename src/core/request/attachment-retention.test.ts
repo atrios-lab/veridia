@@ -15,51 +15,51 @@ test("nothing goes while the protocol is open, however old the file", () => {
   assert.equal(requestFileDueSoon(status), false);
 });
 
-test("a closed protocol keeps its files for 30 days from the closing", () => {
+test("a closed protocol keeps its files for 90 days from the closing", () => {
   const status = requestFileStatus(
     { ...file, closedOn: "2026-11-01" },
     "2026-11-08",
   );
   assert.deepEqual(status, {
     kind: "available",
-    until: "2026-12-01",
-    daysLeft: 23,
+    until: "2027-01-30",
+    daysLeft: 83,
   });
   assert.equal(requestFileServable(status), true);
   assert.equal(requestFileDueSoon(status), false);
 });
 
 test("the last day still counts; the day after, the file expires", () => {
-  const closed = { ...file, closedOn: "2026-10-01" };
-  const last = requestFileStatus(closed, "2026-10-31");
+  const closed = { ...file, closedOn: "2026-08-01" };
+  const last = requestFileStatus(closed, "2026-10-30");
   assert.equal(last.kind, "available");
   assert.equal(requestFileDueSoon(last), true);
-  const expired = requestFileStatus(closed, "2026-11-01");
-  assert.deepEqual(expired, { kind: "expired", until: "2026-10-31" });
+  const expired = requestFileStatus(closed, "2026-10-31");
+  assert.deepEqual(expired, { kind: "expired", until: "2026-10-30" });
   assert.equal(requestFileServable(expired), false);
 });
 
-test("the last 7 days are flagged for the office", () => {
-  const closed = { ...file, closedOn: "2026-10-10" };
+test("the last 10 days are flagged for the office", () => {
+  const closed = { ...file, closedOn: "2026-08-10" };
   assert.equal(
-    requestFileDueSoon(requestFileStatus(closed, "2026-11-01")),
+    requestFileDueSoon(requestFileStatus(closed, "2026-10-28")),
     false,
   );
   assert.equal(
-    requestFileDueSoon(requestFileStatus(closed, "2026-11-02")),
+    requestFileDueSoon(requestFileStatus(closed, "2026-10-29")),
     true,
   );
 });
 
-test("a file sent after the closing gets 30 days from its own sending", () => {
+test("a file sent after the closing gets 90 days from its own sending", () => {
   const status = requestFileStatus(
     { ...file, uploadedOn: "2026-11-05", closedOn: "2026-10-01" },
     "2026-11-08",
   );
   assert.deepEqual(status, {
     kind: "available",
-    until: "2026-12-05",
-    daysLeft: 27,
+    until: "2027-02-03",
+    daysLeft: 87,
   });
 });
 

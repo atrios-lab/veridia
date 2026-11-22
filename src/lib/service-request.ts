@@ -1268,7 +1268,7 @@ async function pendingRequirement(tenantSlug: string, requirementId: string) {
 /**
  * The citizen writes into a requirement, through the protocol consult. The
  * files ride along on the message but belong to the request as well
- * (`requestId` filled), so the 30-day purge finds them by walking the request.
+ * (`requestId` filled), so the 90-day purge finds them by walking the request.
  *
  * Returns null when the requirement is not open, which the caller answers the
  * same way it answers a wrong key: without saying which it was.
@@ -1431,7 +1431,7 @@ export async function deleteRequirement(
   );
   return {
     requestId: requirement.requestId,
-    // A file already purged by the 30-day rule has nothing left to delete.
+    // A file already purged by the 90-day rule has nothing left to delete.
     paths: files.flatMap((f) => (f.path ? [f.path] : [])),
   };
 }
@@ -1889,7 +1889,7 @@ export async function getAttachmentWith(
   const [attachment] = await database
     .select({
       ...getTableColumns(serviceRequestAttachments),
-      // What the 30-day rule reads (`requestFileStatusOf`): every route that
+      // What the 90-day rule reads (`requestFileStatusOf`): every route that
       // serves the file has to know whether it is still servable.
       requestClosedAt: serviceRequests.closedAt,
     })
@@ -1921,7 +1921,7 @@ export async function getAttachment(
 /**
  * What `closed_at` becomes when a protocol moves to `status`: cleared when the
  * andamento is open for its kind, kept when it was already closed (going from
- * "Concluído" to "Arquivado" must not restart the 30 days its files have),
+ * "Concluído" to "Arquivado" must not restart the 90 days its files have),
  * set now otherwise. In SQL, so the "kept" reads the row being written and
  * not a copy read earlier.
  */
@@ -1932,7 +1932,7 @@ function closedAtOnMove(kind: RequestKind, status: string) {
 }
 
 /**
- * Where one of a protocol's files stands today under the 30-day rule (see
+ * Where one of a protocol's files stands today under the 90-day rule (see
  * `src/core/request/attachment-retention.ts`). Every reader that serves or
  * shows a file goes through here, so the routes refuse an expired file even
  * before `purgeExpiredRequestFiles` has reached it.
@@ -1976,7 +1976,7 @@ export async function purgeExpiredRequestFilesWith(
   today: IsoDate,
 ): Promise<number> {
   // A wide net in SQL, the rule decides: a file can only be expired if its
-  // protocol closed more than 30 days ago, and one extra day of margin keeps
+  // protocol closed more than 90 days ago, and one extra day of margin keeps
   // the office's time zone out of this comparison.
   const cutoff = new Date(
     Date.parse(`${today}T00:00:00Z`) -
@@ -2027,7 +2027,7 @@ export async function purgeExpiredRequestFilesWith(
     if (row.path) await deleteStoredFile(row.path);
     await recordAuditWith(database, {
       tenantSlug,
-      // The platform did it, by the 30-day rule: no person to name.
+      // The platform did it, by the 90-day rule: no person to name.
       actorId: null,
       action: `${row.kind}.attachment-purge`,
       // Keyed by the protocol, not by the file, so the entry shows up in the
