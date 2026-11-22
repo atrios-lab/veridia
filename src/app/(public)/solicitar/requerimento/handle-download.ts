@@ -5,11 +5,10 @@ import {
   pdfLinkFileName,
   signPdfLink,
 } from "@/core/request/pdf-link.ts";
-import { buildAccessReceipt } from "@/core/request/requerimento.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
+import { renderAccessReceiptWith } from "@/lib/access-receipt.ts";
 import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument } from "@/lib/pdf.ts";
 import { pdfLinkKey } from "@/lib/pdf-link-key.ts";
 import { buildRequestDocuments } from "@/lib/request-documents.ts";
 import { findByProtocolWith } from "@/lib/service-request.ts";
@@ -60,12 +59,11 @@ export async function handleRequerimentoDownloadWith(
       // host the citizen is on, which is the tenant's own domain.
       `${origin}/protocolo`,
     );
-    const bytes = await renderDocument(
-      buildAccessReceipt(tenant, {
-        protocolNumber: stored.protocolNumber,
-        accessKey,
-        createdAt: stored.createdAt,
-      }),
+    const bytes = await renderAccessReceiptWith(
+      database,
+      tenant,
+      stored,
+      accessKey,
       brand,
     );
     return new Response(new Uint8Array(bytes), {

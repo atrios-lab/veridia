@@ -165,6 +165,34 @@ test("the key is nowhere in the file that gets signed", () => {
   assert.match(signed, /REQ\.2026\.000148/);
 });
 
+test("the receipt says what was protocolled, to show a bank", () => {
+  const document = buildAccessReceipt(cartorioMarinho, {
+    ...receipt,
+    applicantName: "Maria Fictícia de Souza",
+    service: "Certidão de inteiro teor",
+    documents: ["RG de Maria", "Comprovante de endereço"],
+    withQr: true,
+  });
+  assert.match(document.title, /Comprovante de protocolo e de acesso/);
+  const text = document.sections.map((s) => s.highlight ?? "").join("\n");
+  assert.match(
+    text,
+    /Maria Fictícia de Souza protocolou nesta serventia, em .*, o pedido de Certidão de inteiro teor, sob o protocolo nº REQ\.2026\.000148/,
+  );
+  assert.match(
+    flatten(document.sections),
+    /Requerente: Maria Fictícia de Souza/,
+  );
+  const table = document.sections.find((s) => s.table)?.table;
+  assert.deepEqual(table?.rows, [
+    ["1", "RG de Maria"],
+    ["2", "Comprovante de endereço"],
+  ]);
+  assert.match(document.credentials?.note ?? "", /com ou sem os traços/);
+  assert.match(document.credentials?.note ?? "", /QR Code/);
+  assert.equal(document.signee, undefined);
+});
+
 test("the access receipt is a document nobody signs", () => {
   const document = buildAccessReceipt(cartorioMarinho, receipt);
   assert.equal(document.signee, undefined);

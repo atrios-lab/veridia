@@ -1,11 +1,11 @@
 import { PDFDocument } from "pdf-lib";
 import { verifyAccessKey } from "@/core/request/access-key.ts";
-import { buildAccessReceipt } from "@/core/request/requerimento.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
+import { renderAccessReceiptWith } from "@/lib/access-receipt.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import type { DocumentBrand } from "@/lib/document-brand.ts";
-import { renderDocument, renderDocuments } from "@/lib/pdf.ts";
+import { renderDocuments } from "@/lib/pdf.ts";
 import { buildRequestDocuments } from "@/lib/request-documents.ts";
 import type { findByProtocol } from "@/lib/service-request.ts";
 
@@ -86,12 +86,11 @@ export async function printReceiptWith(
     return new Response("Não encontrado", { status: 404 });
   }
 
-  const bytes = await renderDocument(
-    buildAccessReceipt(tenant, {
-      protocolNumber: stored.protocolNumber,
-      accessKey,
-      createdAt: stored.createdAt,
-    }),
+  const bytes = await renderAccessReceiptWith(
+    database,
+    tenant,
+    stored,
+    accessKey,
     brand,
   );
   await recordAuditWith(database, {
@@ -185,14 +184,7 @@ export async function printSelectionWith(
       built.push({
         document,
         draw: () =>
-          renderDocument(
-            buildAccessReceipt(tenant, {
-              protocolNumber: stored.protocolNumber,
-              accessKey,
-              createdAt: stored.createdAt,
-            }),
-            brand,
-          ),
+          renderAccessReceiptWith(database, tenant, stored, accessKey, brand),
       });
       continue;
     }

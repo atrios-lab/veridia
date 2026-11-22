@@ -6,7 +6,7 @@ import {
   officialName,
 } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
-import { formatOfficeDate } from "../time/office-time.ts";
+import { formatOfficeDate, formatOfficeDateTime } from "../time/office-time.ts";
 import type { SignedFormDocument } from "./attachment.ts";
 import { dataRightOption, dataRightsDeadlineIsLegal } from "./channels.ts";
 import {
@@ -123,6 +123,9 @@ export interface RequerimentoCredentials {
   heading: string;
   rows: RequerimentoRow[];
   note: string;
+  /** The rows side by side, in a shorter card: for a receipt that also
+   * says what was protocolled and must fit on one sheet. */
+  compact?: boolean;
 }
 
 export interface RequerimentoDocument {
@@ -407,6 +410,15 @@ export interface AccessReceiptData {
   protocolNumber: string;
   accessKey: string;
   createdAt: Date;
+  /** Who protocolled, the service and the files that came with it
+   * (decision of 22/11/2026: "que no protocolo saia as informações do que
+   * foi protocolado", to show the bank). Absent on a receipt built without
+   * them, which then carries only the credentials. */
+  applicantName?: string;
+  service?: string;
+  documents?: string[];
+  /** Whether the letterhead carries the QR that opens the request. */
+  withQr?: boolean;
 }
 
 /**
@@ -415,37 +427,83 @@ export interface AccessReceiptData {
  * is what comes back to the office through the site. A page the citizen was
  * told to detach only protects whoever prints; a separate file protects
  * everyone.
+ *
+ * It is also the proof of the protocol (decision of 22/11/2026): who
+ * protocolled what, when, and with which documents, so the citizen can
+ * show a bank that the request is in the office, and the QR that opens it
+ * with protocol and key already filled.
  */
 export function buildAccessReceipt(
   tenant: Tenant,
   data: AccessReceiptData,
 ): RequerimentoDocument {
+  const sections: RequerimentoSection[] = [];
+  if (data.applicantName || data.service) {
+    const rows: RequerimentoRow[] = [
+      {
+        label: "Data e hora do protocolo",
+        value: formatOfficeDateTime(data.createdAt),
+      },
+    ];
+    if (data.applicantName) {
+      rows.push({ label: "Requerente", value: data.applicantName });
+    }
+    if (data.service)
+      rows.push({ label: "Serviço pedido", value: data.service });
+    sections.push({
+      heading: "O que foi protocolado",
+      rows,
+      highlight: `Certifica-se que ${data.applicantName || "o(a) requerente"} protocolou nesta serventia, em ${formatOfficeDateTime(data.createdAt)}, o pedido${data.service ? ` de ${data.service}` : ""}, sob o protocolo nº ${data.protocolNumber}. Este comprovante prova a entrada do pedido, não que o ato já foi praticado: o andamento se confere pelo QR Code ou na consulta de protocolo do site.`,
+    });
+    const documents = data.documents ?? [];
+    sections.push({
+      heading: "Documentos apresentados",
+      table: {
+        columns: [
+          { label: "Nº", weight: 0.4 },
+          { label: "Documento", weight: 4 },
+        ],
+        rows: documents.map((name, i) => [String(i + 1), name]),
+        empty: "Nenhum documento anexado no protocolo.",
+      },
+    });
+  }
   return {
     eyebrow: "Solicitação de atos",
-    title: "Comprovante de acesso",
+    title: sections.length
+      ? "Comprovante de protocolo e de acesso"
+      : "Comprovante de acesso",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       officialName(tenant),
       tenant.subtitle,
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
-    // No sections and no signee: there is nothing to sign on a receipt.
-    sections: [],
+    // No signee: there is nothing to sign on a receipt.
+    sections,
     signature: [],
     footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
     credentials: {
       heading: "Guarde estes dados",
+      compact: sections.length > 0,
       rows: [
         { label: "Protocolo", value: data.protocolNumber },
         { label: "Chave de acesso", value: data.accessKey },
       ],
-      note:
-        "É com o protocolo e a chave acima que você acompanha o pedido e lê " +
-        "a resposta da serventia, na consulta de protocolo do site. O site " +
-        "não mostra a chave de novo; se perder, peça outra à serventia. " +
-        "Guarde este arquivo só para você: ele não faz parte do " +
-        "requerimento e não deve ser enviado junto com o requerimento " +
-        "assinado.",
+      note: [
+        "Com o protocolo e a chave você acompanha o pedido na consulta de " +
+          "protocolo do site. A chave vale com ou sem os traços; o protocolo, " +
+          "com ou sem os pontos.",
+        data.withQr
+          ? "O QR Code no alto da folha já abre o pedido com os dois " +
+            "preenchidos (serviço, documentos e andamento): mostre-o só a " +
+            "quem você quiser dar acesso, como o banco."
+          : "",
+        "Se perder a chave, peça outra à serventia. Este comprovante não " +
+          "deve ser enviado junto com o requerimento assinado.",
+      ]
+        .filter(Boolean)
+        .join(" "),
     },
   };
 }
