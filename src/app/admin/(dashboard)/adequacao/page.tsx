@@ -17,12 +17,14 @@ import {
 } from "@/core/compliance/pendencies.ts";
 import { SECTIONS, text } from "@/core/compliance/sections.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
-import { loadIntake } from "@/lib/compliance.ts";
+import { db } from "@/db/index.ts";
+import { getComplianceDoneWith, loadIntake } from "@/lib/compliance.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
+import { DoneCard } from "./_components/done-card.tsx";
 
 export const metadata = { title: "Adequação ao Provimento" };
 
@@ -62,7 +64,13 @@ export default async function CompliancePage() {
   // export. The route behind the button checks the role again.
   const atrios = session.user.role === "superadmin";
 
-  const { intake, answers } = await loadIntake(tenant);
+  const [{ intake, answers }, done] = await Promise.all([
+    loadIntake(tenant),
+    getComplianceDoneWith(db, tenant.slug).catch(() => ({
+      current: null,
+      history: [],
+    })),
+  ]);
   const state = progress(answers, intake.sectionUpdatedAt);
   const resume = resumeSection(state, intake.sectionUpdatedAt);
   const pendencies = detectPendencies(answers);
@@ -81,6 +89,7 @@ export default async function CompliancePage() {
       <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_348px] lg:items-start">
           <div className="flex min-w-0 flex-col gap-6">
+            <DoneCard done={done.current} today={today()} />
             {intake.submittedAt && (
               <p className="flex items-start gap-2.5 rounded-lg border border-success/30 bg-success-soft p-4 text-sm text-success-text">
                 <AdminIcon

@@ -30,6 +30,11 @@ const EXACT: Record<string, string> = {
   "service-request.delivery-rename": "Renomeou um documento entregue",
   "service-request.pickup":
     "Registrou quem retirou o documento no balcão e concluiu o pedido",
+  "compliance-intake.done": "Marcou a Adequação ao Provimento como cumprida",
+  "compliance-intake.done-edited":
+    "Alterou a data ou o Justiça Aberta da Adequação cumprida",
+  "compliance-intake.done-withdrawn":
+    "Desfez a marcação de Adequação ao Provimento cumprida",
   "tax-guide.issue": "Emitiu uma guia de transmissão de bens",
   "tax-guide.update": "Corrigiu uma guia de transmissão de bens",
   "tax-guide.renumber": "Alterou o número de uma guia",

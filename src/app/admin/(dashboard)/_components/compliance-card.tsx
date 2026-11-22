@@ -2,7 +2,8 @@ import Link from "next/link";
 import { progress, resumeSection } from "@/core/compliance/answers.ts";
 import { formatDate, toIsoDate } from "@/core/scheduling/calendar.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { loadIntake } from "@/lib/compliance.ts";
+import { db } from "@/db/index.ts";
+import { getComplianceDoneWith, loadIntake } from "@/lib/compliance.ts";
 import { OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { cn } from "../../_ui/cn.ts";
@@ -29,6 +30,46 @@ export async function ComplianceCard({ tenant }: { tenant: Tenant }) {
     return null;
   }
   const { intake, answers } = loaded;
+  // "Já cumpri" (decision of 22/11/2026): marked, the card stops asking.
+  const done = (
+    await getComplianceDoneWith(db, tenant.slug).catch(() => ({
+      current: null,
+    }))
+  ).current;
+  if (done) {
+    const br = (iso: string) =>
+      `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+    return (
+      <section className="rounded-xl border bg-card p-6 shadow-xs">
+        <h2 className="text-base font-semibold text-foreground">
+          Adequação ao Provimento
+        </h2>
+        <p className="mt-3 text-sm font-semibold text-success-text">
+          Cumprido em {br(done.doneOn)}
+        </p>
+        <p
+          className={
+            done.justicaAberta
+              ? "mt-0.5 text-sm text-muted-foreground"
+              : "mt-0.5 text-sm font-medium text-warning-text"
+          }
+        >
+          {done.justicaAberta
+            ? `Inserido no Justiça Aberta${done.justicaAbertaOn ? ` em ${br(done.justicaAbertaOn)}` : ""}.`
+            : "Falta inserir no Justiça Aberta."}
+        </p>
+        <Link
+          href="/admin/adequacao"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "mt-4",
+          )}
+        >
+          Ver ou editar
+        </Link>
+      </section>
+    );
+  }
 
   if (intake.submittedAt) {
     return (

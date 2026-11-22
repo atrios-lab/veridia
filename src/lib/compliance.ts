@@ -1,6 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { z } from "zod";
 import { effectiveAnswers, prefillAnswers } from "@/core/compliance/answers.ts";
 import {
   type Answers,
@@ -8,9 +9,9 @@ import {
   type Value,
 } from "@/core/compliance/sections.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
-import { db } from "@/db/index.ts";
-import { complianceIntakes } from "@/db/schema.ts";
-import { recordAudit } from "./audit.ts";
+import { type Database, db } from "@/db/index.ts";
+import { complianceIntakes, tenantContent } from "@/db/schema.ts";
+import { recordAudit, recordAuditWith } from "./audit.ts";
 import type { StoredAttachment } from "./uploads.ts";
 
 export interface IntakeAttachment extends StoredAttachment {
@@ -255,4 +256,152 @@ export async function removeAttachment(
     targetId: id,
   });
   return removed;
+}
+
+// ------------------------------------------------- "Já cumpri"
+
+/** Where the office says it already complied (decision of 22/11/2026). */
+export const COMPLIANCE_DONE_KEY = "compliance-done";
+
+const doneEntrySchema = z.object({
+  /** ISO day the office complied. */
+  doneOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Whether it was entered in the Justiça Aberta, and when. */
+  justicaAberta: z.boolean(),
+  justicaAbertaOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .or(z.literal(""))
+    .default(""),
+  note: z.string().max(1000).default(""),
+});
+export type ComplianceDoneInput = z.infer<typeof doneEntrySchema>;
+
+const doneStoredSchema = z.object({
+  current: doneEntrySchema
+    .extend({ at: z.string(), by: z.string() })
+    .nullable(),
+  /** Every previous version, kept when it is edited or withdrawn. */
+  history: z
+    .array(
+      doneEntrySchema.extend({
+        at: z.string(),
+        by: z.string(),
+        change: z.enum(["edited", "withdrawn"]),
+      }),
+    )
+    .max(200)
+    .default([]),
+});
+export type ComplianceDone = z.infer<typeof doneStoredSchema>;
+
+export function parseComplianceDone(input: unknown): ComplianceDoneInput {
+  return doneEntrySchema.parse(input);
+}
+
+export async function getComplianceDoneWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<ComplianceDone> {
+  const [row] = await database
+    .select({ published: tenantContent.published })
+    .from(tenantContent)
+    .where(
+      and(
+        eq(tenantContent.tenantSlug, tenantSlug),
+        eq(tenantContent.key, COMPLIANCE_DONE_KEY),
+      ),
+    )
+    .limit(1);
+  const parsed = doneStoredSchema.safeParse(row?.published ?? {});
+  return parsed.success ? parsed.data : { current: null, history: [] };
+}
+
+async function writeDone(
+  database: Database,
+  tenantSlug: string,
+  value: ComplianceDone,
+  actorId: string,
+): Promise<void> {
+  await database
+    .insert(tenantContent)
+    .values({
+      tenantSlug,
+      key: COMPLIANCE_DONE_KEY,
+      published: value,
+      updatedBy: actorId,
+    })
+    .onConflictDoUpdate({
+      target: [tenantContent.tenantSlug, tenantContent.key],
+      set: { published: value, updatedAt: new Date(), updatedBy: actorId },
+    });
+}
+
+/**
+ * Marks (or corrects) that the office complied, with the day and the
+ * Justiça Aberta. A correction keeps the previous version in the history
+ * and in the audit.
+ */
+export async function setComplianceDoneWith(
+  database: Database,
+  tenantSlug: string,
+  input: ComplianceDoneInput,
+  actorId: string,
+): Promise<void> {
+  const stored = await getComplianceDoneWith(database, tenantSlug);
+  const now = new Date().toISOString();
+  const history = stored.current
+    ? [
+        ...stored.history,
+        { ...stored.current, change: "edited" as const },
+      ].slice(-200)
+    : stored.history;
+  await writeDone(
+    database,
+    tenantSlug,
+    { current: { ...input, at: now, by: actorId }, history },
+    actorId,
+  );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: stored.current
+      ? "compliance-intake.done-edited"
+      : "compliance-intake.done",
+    targetType: "compliance-intake",
+    targetId: input.doneOn,
+    reason: stored.current
+      ? `antes: cumprido em ${stored.current.doneOn}, Justiça Aberta ${stored.current.justicaAberta ? "sim" : "não"}`
+      : undefined,
+  });
+}
+
+/** Withdraws the mark: the intake is pending again; the mark stays in the
+ * history and in the audit. */
+export async function withdrawComplianceDoneWith(
+  database: Database,
+  tenantSlug: string,
+  actorId: string,
+): Promise<void> {
+  const stored = await getComplianceDoneWith(database, tenantSlug);
+  if (!stored.current) return;
+  await writeDone(
+    database,
+    tenantSlug,
+    {
+      current: null,
+      history: [
+        ...stored.history,
+        { ...stored.current, change: "withdrawn" as const },
+      ].slice(-200),
+    },
+    actorId,
+  );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "compliance-intake.done-withdrawn",
+    targetType: "compliance-intake",
+    targetId: stored.current.doneOn,
+  });
 }
