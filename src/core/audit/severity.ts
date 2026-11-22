@@ -75,6 +75,9 @@ const EXACT: Record<string, AuditLevel> = {
   "signed-document.remove": "urgente",
   "appointment.remove": "urgente",
   "compliance-intake.detach": "urgente",
+  "compliance-intake.done": "analise",
+  "compliance-intake.done-edited": "analise",
+  "compliance-intake.done-withdrawn": "atencao",
   // A cohort nobody joined, but still an exclusion: urgent like the others.
   "cohort.delete": "urgente",
   // Wipes what every course participant did in the demonstration office.

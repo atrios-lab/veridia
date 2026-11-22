@@ -5,14 +5,19 @@ import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { parseAnswer, progress } from "@/core/compliance/answers.ts";
 import { findSection, SECTIONS } from "@/core/compliance/sections.ts";
+import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   addAttachments,
+  type ComplianceDoneInput,
   loadIntake,
+  parseComplianceDone,
   removeAttachment,
   saveAnswer,
+  setComplianceDoneWith,
   submitIntake,
   touchSection,
+  withdrawComplianceDoneWith,
 } from "@/lib/compliance.ts";
 import { sendComplianceSubmittedEmails } from "@/lib/email/compliance.ts";
 import { getSession } from "@/lib/session.ts";
@@ -218,4 +223,75 @@ export async function deleteAttachmentAction(
   }
   revalidatePath("/admin/adequacao");
   return { status: "success" };
+}
+
+export type DoneState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | { status: "error"; message: string };
+
+/**
+ * "Já cumpri" (decision of 22/11/2026): the day the office complied and
+ * whether it entered it in the Justiça Aberta, so the screen and the Visão
+ * geral stop showing it as pending. Editable any time; the previous answer
+ * stays in the history and in the audit.
+ */
+export async function saveComplianceDoneAction(
+  _previous: DoneState,
+  formData: FormData,
+): Promise<DoneState> {
+  const auth = await authorize();
+  if (!auth) return { status: "error", message: NO_PERMISSION };
+  const justicaAberta = formData.get("justicaAberta") === "sim";
+  let input: ComplianceDoneInput;
+  try {
+    input = parseComplianceDone({
+      doneOn: String(formData.get("doneOn") ?? ""),
+      justicaAberta,
+      justicaAbertaOn: justicaAberta
+        ? String(formData.get("justicaAbertaOn") ?? "")
+        : "",
+      note: String(formData.get("note") ?? "")
+        .trim()
+        .slice(0, 1000),
+    });
+  } catch {
+    return { status: "error", message: "Informe a data em que cumpriu." };
+  }
+  try {
+    await setComplianceDoneWith(
+      db,
+      auth.tenant.slug,
+      input,
+      auth.session.user.id,
+    );
+  } catch (error) {
+    console.error("compliance.done", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidatePath("/admin/adequacao");
+  revalidatePath("/admin");
+  return { status: "saved" };
+}
+
+/** Undoes "Já cumpri": pending again, the mark kept in the history. */
+export async function withdrawComplianceDoneAction(
+  _previous: DoneState,
+  _formData: FormData,
+): Promise<DoneState> {
+  const auth = await authorize();
+  if (!auth) return { status: "error", message: NO_PERMISSION };
+  try {
+    await withdrawComplianceDoneWith(
+      db,
+      auth.tenant.slug,
+      auth.session.user.id,
+    );
+  } catch (error) {
+    console.error("compliance.done-withdraw", error);
+    return { status: "error", message: GENERIC_ERROR };
+  }
+  revalidatePath("/admin/adequacao");
+  revalidatePath("/admin");
+  return { status: "saved" };
 }
