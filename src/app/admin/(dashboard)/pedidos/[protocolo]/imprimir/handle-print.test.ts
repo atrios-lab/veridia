@@ -393,3 +393,36 @@ test("protocol with dashes and key without them still print the receipt, with th
   assert.equal(response.status, 200);
   assert.equal(await pageCount(response), 1);
 });
+
+test("o comprovante de apresentação sai sem a chave e fica na auditoria", async () => {
+  const { id, protocolNumber } = await createServiceRequestWith(
+    db,
+    TENANT,
+    ACT,
+    {
+      applicantName: "Lia Fictícia Prado",
+      contact: "lia.ficticia@exemplo.com",
+      accessKeyHash: hashAccessKey("TEST-KEYS-2010"),
+    },
+  );
+  const stored = await findByProtocolWith(db, TENANT.slug, protocolNumber);
+  if (!stored) throw new Error("fixture: pedido precisa existir");
+  const response = await printRequerimentoWith(
+    db,
+    TENANT,
+    stored,
+    "staff-1",
+    { ...BRAND, lookupUrl: "https://cartorio.exemplo/protocolo" },
+    "protocolo",
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await auditCount("service-request.print.protocolo", id), 1);
+  // At the counter, with the others, it needs no key.
+  const both = await printSelectionWith(db, TENANT, stored, "staff-1", BRAND, {
+    documents: ["requerimento", "protocolo"],
+    accessKey: "",
+    mode: "imprimir",
+  });
+  assert.equal(both.status, 200);
+  assert.equal(await auditCount("service-request.print.protocolo", id), 2);
+});

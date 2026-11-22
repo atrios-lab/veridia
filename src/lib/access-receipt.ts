@@ -3,18 +3,26 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { actVariantName, getActForTenant } from "@/core/acts/catalog.ts";
 import { readActVariant } from "@/core/request/kinds.ts";
 import { protocolAccessLink } from "@/core/request/protocol.ts";
-import { buildAccessReceipt } from "@/core/request/requerimento.ts";
+import {
+  protocolProofLink,
+  protocolProofSeal,
+} from "@/core/request/protocol-proof.ts";
+import {
+  buildAccessReceipt,
+  buildProtocolProof,
+} from "@/core/request/requerimento.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
 import { serviceRequestAttachments } from "@/db/schema.ts";
 import type { DocumentBrand } from "./document-brand.ts";
 import { renderDocument } from "./pdf.ts";
+import { proofLinkKey } from "./proof-link-key.ts";
 import type { findByProtocol } from "./service-request.ts";
 
 type StoredRequest = NonNullable<Awaited<ReturnType<typeof findByProtocol>>>;
 
 /** The files the citizen brought with the request, by the name shown. */
-async function protocolledDocumentsWith(
+export async function protocolledDocumentsWith(
   database: Database,
   tenantSlug: string,
   requestId: string,
@@ -36,7 +44,10 @@ async function protocolledDocumentsWith(
 }
 
 /** The act asked for, as the requerimento names it. */
-function serviceOf(tenant: Tenant, stored: StoredRequest): string | undefined {
+export function serviceOf(
+  tenant: Tenant,
+  stored: StoredRequest,
+): string | undefined {
   const act = stored.actId ? getActForTenant(tenant, stored.actId) : undefined;
   if (!act) return undefined;
   return actVariantName(act, readActVariant(stored.details)) ?? act.name;
@@ -49,17 +60,12 @@ function serviceOf(tenant: Tenant, stored: StoredRequest): string | undefined {
  * comes from whoever just verified it; it is never read from the database.
  */
 export async function renderAccessReceiptWith(
-  database: Database,
+  _database: Database,
   tenant: Tenant,
   stored: StoredRequest,
   accessKey: string,
   brand: DocumentBrand,
 ): Promise<Buffer> {
-  const documents = await protocolledDocumentsWith(
-    database,
-    tenant.slug,
-    stored.id,
-  ).catch(() => []);
   const withQr = Boolean(brand.lookupUrl);
   return renderDocument(
     buildAccessReceipt(tenant, {
@@ -68,7 +74,6 @@ export async function renderAccessReceiptWith(
       createdAt: stored.createdAt,
       applicantName: stored.applicantName ?? undefined,
       service: serviceOf(tenant, stored),
-      documents,
       withQr,
     }),
     brand.lookupUrl
@@ -80,6 +85,49 @@ export async function renderAccessReceiptWith(
             accessKey,
           ),
           lookupCaption: "Leia para ver o pedido e o andamento",
+        }
+      : brand,
+  );
+}
+
+/**
+ * The proof of protocol (decision of 22/11/2026): a separate file the
+ * requerente may share, to prove the request was presented. No key: its QR
+ * opens the public check page, which only shows. Null for a record that is
+ * not a service request.
+ */
+export async function renderProtocolProofWith(
+  database: Database,
+  tenant: Tenant,
+  stored: StoredRequest,
+  brand: DocumentBrand,
+): Promise<Buffer | null> {
+  const service = serviceOf(tenant, stored);
+  if (!service || !stored.applicantName) return null;
+  const documents = await protocolledDocumentsWith(
+    database,
+    tenant.slug,
+    stored.id,
+  ).catch(() => []);
+  const withQr = Boolean(brand.lookupUrl);
+  return renderDocument(
+    buildProtocolProof(tenant, {
+      protocolNumber: stored.protocolNumber,
+      createdAt: stored.createdAt,
+      applicantName: stored.applicantName,
+      service,
+      documents,
+      withQr,
+    }),
+    brand.lookupUrl
+      ? {
+          ...brand,
+          lookupUrl: protocolProofLink(
+            new URL(brand.lookupUrl).origin,
+            stored.protocolNumber,
+            protocolProofSeal(proofLinkKey, tenant.slug, stored.protocolNumber),
+          ),
+          lookupCaption: "Leia para conferir o protocolo e o andamento",
         }
       : brand,
   );

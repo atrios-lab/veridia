@@ -834,7 +834,7 @@ type SuccessState = Extract<ManualEntryState, { status: "success" }>;
 
 /** One of the documents the counter prints, as data. */
 interface Printable {
-  key: "requerimento" | "comprovante" | "declaracao";
+  key: "requerimento" | "comprovante" | "declaracao" | "protocolo";
   title: string;
   /** How the action button names it when it is the only one ticked. */
   short: string;
@@ -869,9 +869,21 @@ const BASE_PRINTABLES: Printable[] = [
     tagTone: "leaves",
     icon: "lock",
     description:
-      "A única folha com a chave, para imprimir ou entregar em PDF. Só sai " +
-      "enquanto esta tela estiver aberta: depois, apenas emitindo uma chave " +
-      "nova, o que invalida esta.",
+      "Confidencial, só para o requerente: a única folha com a chave. Só " +
+      "sai enquanto esta tela estiver aberta: depois, apenas emitindo uma " +
+      "chave nova, o que invalida esta.",
+  },
+  {
+    key: "protocolo",
+    title: "Comprovante de apresentação",
+    short: "o comprovante de apresentação",
+    tag: "Pode ser compartilhado",
+    tagTone: "leaves",
+    icon: "file",
+    description:
+      "Prova ao banco ou ao órgão que o pedido foi protocolado: quem, o " +
+      "quê, quando e os documentos. Sem a chave, não movimenta o pedido; " +
+      "pode ser reimpresso depois, pelo detalhe do pedido.",
   },
 ];
 
@@ -882,7 +894,7 @@ const BASE_PRINTABLES: Printable[] = [
  * PDF comes out (`COUNTER_DOCUMENTS` in the imprimir route). */
 function printablesFor(hasExemption: boolean): Printable[] {
   if (!hasExemption) return BASE_PRINTABLES;
-  const [requerimento, comprovante] = BASE_PRINTABLES;
+  const [requerimento, comprovante, protocolo] = BASE_PRINTABLES;
   return [
     requerimento,
     {
@@ -898,6 +910,7 @@ function printablesFor(hasExemption: boolean): Printable[] {
         "assinar.",
     },
     comprovante,
+    protocolo,
   ];
 }
 
@@ -911,7 +924,7 @@ function emitLabel(
   if (chosen.length === 0) return verb;
   if (chosen.length === 1) return `${verb} ${chosen[0].short}`;
   if (chosen.length === total) {
-    return `${verb} ${total === 2 ? "os dois" : "os três"}`;
+    return `${verb} ${total === 2 ? "os dois" : total === 3 ? "os três" : `os ${total}`}`;
   }
   return `${verb} os ${chosen.length} marcados`;
 }

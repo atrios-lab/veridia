@@ -410,16 +410,28 @@ export interface AccessReceiptData {
   protocolNumber: string;
   accessKey: string;
   createdAt: Date;
-  /** Who protocolled, the service and the files that came with it
-   * (decision of 22/11/2026: "que no protocolo saia as informações do que
-   * foi protocolado", to show the bank). Absent on a receipt built without
-   * them, which then carries only the credentials. */
+  /** Who protocolled and the service (decision of 22/11/2026), so the
+   * requerente knows which request the key opens. */
   applicantName?: string;
   service?: string;
-  documents?: string[];
   /** Whether the letterhead carries the QR that opens the request. */
   withQr?: boolean;
 }
+
+/** Said at the top of the access receipt (decision of 22/11/2026). */
+export const CONFIDENTIAL_NOTICE =
+  "DOCUMENTO CONFIDENCIAL: APENAS PARA O REQUERENTE. Com o protocolo e a " +
+  "chave abaixo, qualquer pessoa acompanha e movimenta o pedido (envia " +
+  "documentos, responde exigências). Não compartilhe este documento. Para " +
+  "comprovar a um banco ou órgão que o pedido foi protocolado, use o " +
+  "Comprovante de apresentação para protocolo, que pode ser compartilhado.";
+
+/** Said at the top of the proof of protocol (decision of 22/11/2026). */
+export const SHAREABLE_NOTICE =
+  "ESTE DOCUMENTO PODE SER COMPARTILHADO. Ele comprova a apresentação do " +
+  "pedido para protocolo, por exemplo ao banco ou ao órgão que o exigir, e " +
+  "não dá acesso para movimentar o protocolo: quem o recebe só confere os " +
+  "dados abaixo e o andamento, pelo QR Code.";
 
 /**
  * The access credential, as a file of its own. It is deliberately not part of
@@ -428,51 +440,28 @@ export interface AccessReceiptData {
  * told to detach only protects whoever prints; a separate file protects
  * everyone.
  *
- * It is also the proof of the protocol (decision of 22/11/2026): who
- * protocolled what, when, and with which documents, so the citizen can
- * show a bank that the request is in the office, and the QR that opens it
- * with protocol and key already filled.
+ * Confidential (decision of 22/11/2026): its QR opens the request with the
+ * key, so it says at the top that it is only for the requerente. What may
+ * be shown to others is `buildProtocolProof`, a separate file.
  */
 export function buildAccessReceipt(
   tenant: Tenant,
   data: AccessReceiptData,
 ): RequerimentoDocument {
-  const sections: RequerimentoSection[] = [];
-  if (data.applicantName || data.service) {
-    const rows: RequerimentoRow[] = [
-      {
-        label: "Data e hora do protocolo",
-        value: formatOfficeDateTime(data.createdAt),
-      },
-    ];
-    if (data.applicantName) {
-      rows.push({ label: "Requerente", value: data.applicantName });
-    }
-    if (data.service)
-      rows.push({ label: "Serviço pedido", value: data.service });
-    sections.push({
-      heading: "O que foi protocolado",
-      rows,
-      highlight: `Certifica-se que ${data.applicantName || "o(a) requerente"} protocolou nesta serventia, em ${formatOfficeDateTime(data.createdAt)}, o pedido${data.service ? ` de ${data.service}` : ""}, sob o protocolo nº ${data.protocolNumber}. Este comprovante prova a entrada do pedido, não que o ato já foi praticado: o andamento se confere pelo QR Code ou na consulta de protocolo do site.`,
-    });
-    const documents = data.documents ?? [];
-    sections.push({
-      heading: "Documentos apresentados",
-      table: {
-        columns: [
-          { label: "Nº", weight: 0.4 },
-          { label: "Documento", weight: 4 },
-        ],
-        rows: documents.map((name, i) => [String(i + 1), name]),
-        empty: "Nenhum documento anexado no protocolo.",
-      },
-    });
+  const rows: RequerimentoRow[] = [
+    {
+      label: "Data e hora do protocolo",
+      value: formatOfficeDateTime(data.createdAt),
+    },
+  ];
+  if (data.applicantName) {
+    rows.push({ label: "Requerente", value: data.applicantName });
   }
+  if (data.service) rows.push({ label: "Serviço pedido", value: data.service });
+  const detailed = Boolean(data.applicantName || data.service);
   return {
     eyebrow: "Solicitação de atos",
-    title: sections.length
-      ? "Comprovante de protocolo e de acesso"
-      : "Comprovante de acesso",
+    title: "Comprovante de acesso",
     subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
     office: [
       officialName(tenant),
@@ -480,24 +469,31 @@ export function buildAccessReceipt(
       `${tenant.contacts.phone} · ${tenant.contacts.email}`,
     ],
     // No signee: there is nothing to sign on a receipt.
-    sections,
+    sections: detailed
+      ? [
+          {
+            heading: "Documento confidencial",
+            highlight: CONFIDENTIAL_NOTICE,
+          },
+          { heading: "Pedido", rows },
+        ]
+      : [],
     signature: [],
-    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · ${tenant.legalFooter}`,
+    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · Documento confidencial · ${tenant.legalFooter}`,
     credentials: {
       heading: "Guarde estes dados",
-      compact: sections.length > 0,
+      compact: detailed,
       rows: [
         { label: "Protocolo", value: data.protocolNumber },
         { label: "Chave de acesso", value: data.accessKey },
       ],
       note: [
-        "Com o protocolo e a chave você acompanha o pedido na consulta de " +
-          "protocolo do site. A chave vale com ou sem os traços; o protocolo, " +
-          "com ou sem os pontos.",
+        "Com o protocolo e a chave você acompanha o pedido e lê a resposta " +
+          "da serventia, na consulta de protocolo do site. A chave vale com ou " +
+          "sem os traços; o protocolo, com ou sem os pontos.",
         data.withQr
-          ? "O QR Code no alto da folha já abre o pedido com os dois " +
-            "preenchidos (serviço, documentos e andamento): mostre-o só a " +
-            "quem você quiser dar acesso, como o banco."
+          ? "O QR Code no alto da folha abre o pedido já com os dois " +
+            "preenchidos."
           : "",
         "Se perder a chave, peça outra à serventia. Este comprovante não " +
           "deve ser enviado junto com o requerimento assinado.",
@@ -505,6 +501,71 @@ export function buildAccessReceipt(
         .filter(Boolean)
         .join(" "),
     },
+  };
+}
+
+export interface ProtocolProofData {
+  protocolNumber: string;
+  createdAt: Date;
+  applicantName: string;
+  service: string;
+  documents: string[];
+  /** Whether the letterhead carries the QR to the public check page. */
+  withQr?: boolean;
+}
+
+/**
+ * The proof of protocol (decision of 22/11/2026: "o outro documento para
+ * comprovar a apresentação para protocolo, ao órgão que exigir; pode ser
+ * compartilhado, ele não tem acesso para movimentar o protocolo"). Who
+ * presented what, when, with which documents. No key: its QR opens a page
+ * that only shows these data and the andamento.
+ */
+export function buildProtocolProof(
+  tenant: Tenant,
+  data: ProtocolProofData,
+): RequerimentoDocument {
+  const when = formatOfficeDateTime(data.createdAt);
+  return {
+    eyebrow: "Solicitação de atos",
+    title: "Comprovante de apresentação para protocolo",
+    subtitle: `Protocolo ${data.protocolNumber} · ${formatOfficeDate(data.createdAt)}`,
+    office: [
+      officialName(tenant),
+      tenant.subtitle,
+      `${tenant.contacts.phone} · ${tenant.contacts.email}`,
+    ],
+    sections: [
+      { heading: "Documento compartilhável", highlight: SHAREABLE_NOTICE },
+      {
+        heading: "Apresentação",
+        rows: [
+          { label: "Protocolo", value: data.protocolNumber },
+          { label: "Data e hora do protocolo", value: when },
+          { label: "Requerente", value: data.applicantName },
+          { label: "Serviço pedido", value: data.service },
+        ],
+      },
+      {
+        heading: "Certificação",
+        paragraphs: [
+          `Certifica-se que ${data.applicantName} apresentou a esta serventia, em ${when}, o pedido de ${data.service}, registrado sob o protocolo nº ${data.protocolNumber}. Este comprovante prova a apresentação do pedido, não que o ato já foi praticado.${data.withQr ? " O andamento atual se confere pelo QR Code no alto da folha." : ""}`,
+        ],
+      },
+      {
+        heading: "Documentos apresentados",
+        table: {
+          columns: [
+            { label: "Nº", weight: 0.4 },
+            { label: "Documento", weight: 4 },
+          ],
+          rows: data.documents.map((name, i) => [String(i + 1), name]),
+          empty: "Nenhum documento anexado no protocolo.",
+        },
+      },
+    ],
+    signature: [],
+    footer: `${officialName(tenant)} · Protocolo ${data.protocolNumber} · Documento compartilhável, sem acesso ao pedido · ${tenant.legalFooter}`,
   };
 }
 
