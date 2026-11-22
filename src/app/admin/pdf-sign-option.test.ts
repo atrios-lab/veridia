@@ -65,6 +65,8 @@ const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
     "prévia marcada 'sem valor de certidão', para conferir antes de emitir",
   "(dashboard)/utilitarios/cedulas/[id]/modelo":
     "minuta para conferência: o ato é lavrado e assinado no sistema da serventia",
+  "(dashboard)/transparencia/tabela/assistente/pdf":
+    "prévia da tabela de custas para conferência; a publicada é um documento da Transparência",
 };
 
 const ROOT = new URL(".", import.meta.url).pathname;

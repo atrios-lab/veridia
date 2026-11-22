@@ -154,3 +154,19 @@ export const ATRIOS_BRAND = {
   white: "#ffffff",
   alert: "#b42318",
 } as const;
+
+/**
+ * The tabela de custas in the office's standard (decision of 22/11/2026):
+ * the navy of the mark, black text, grey rules and the light shades of the
+ * header row, the captions and the watermark, as the table has them.
+ */
+export const FEE_TABLE_PALETTE = {
+  navy: "#1f2a5c",
+  ink: "#111111",
+  muted: "#555555",
+  line: "#222222",
+  shade: "#eef0f4",
+  groupShade: "#f6f7f9",
+  rule: "#999999",
+  watermark: "#8a8fa3",
+} as const;

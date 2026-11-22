@@ -246,6 +246,7 @@ const EXACT: Record<string, AuditLevel> = {
   "transparency.document.publish": "analise",
   "transparency.document.unpublish": "analise",
   "transparency.document.current": "analise",
+  "transparency.fee-table.generated": "analise",
   "transparency.bulletin.publish": "analise",
   "transparency.bulletin.remove": "atencao",
   "service-request.delivery-rename": "analise",
