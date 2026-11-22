@@ -4,12 +4,9 @@ import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
-import {
-  enabledSections,
-  SECTION_ROUTES,
-  sectionNavLinks,
-} from "@/core/tenant/gating.ts";
+import { SECTION_ROUTES, sectionNavLinks } from "@/core/tenant/gating.ts";
 import { jsonLdScript, organizationJsonLd } from "@/core/tenant/seo.ts";
+import { linkedSections } from "@/core/tenant/site.ts";
 import { isChatEnabled } from "@/lib/chat.ts";
 import { SERIF } from "@/lib/fonts.ts";
 import { publicNewsList } from "@/lib/news.ts";
@@ -106,21 +103,18 @@ export default async function PublicLayout({
   const tenant = await getTenant();
   // Every page the office offers, in gating order, each one knowing its
   // section: that attribute is what the gating e2e reads off the footer.
-  // The team's page joins the menus only once someone is published on it:
-  // an empty "Nossa equipe" is not worth a link.
-  // The same for the notice board: no link until something is published.
+  // The team's page and the notice board join the menus only once something
+  // is published on them, by the same rule the sitemap follows.
   const [team, news] = await Promise.all([
     publicTeam(tenant.slug),
     publicNewsList(tenant.slug),
   ]);
-  const hasTeam = team.groups.length > 0;
-  const hasNews = news.length > 0;
-  const links = enabledSections(tenant)
-    .filter((section) => section !== "equipe" || hasTeam)
-    .filter((section) => section !== "noticias" || hasNews)
-    .flatMap((section) =>
-      sectionNavLinks(section).map((link) => ({ ...link, section })),
-    );
+  const links = linkedSections(tenant, {
+    hasTeam: team.groups.length > 0,
+    hasNews: news.length > 0,
+  }).flatMap((section) =>
+    sectionNavLinks(section).map((link) => ({ ...link, section })),
+  );
   // By address, in the order given, skipping what the office does not offer.
   const pick = (hrefs: readonly string[]) =>
     hrefs.flatMap((href) => links.filter((link) => link.href === href));

@@ -1,5 +1,5 @@
 import { enabledSections, sectionNavLinks } from "./gating.ts";
-import type { Tenant } from "./schema.ts";
+import type { Section, Tenant } from "./schema.ts";
 
 /**
  * The origin the site is served from, built from the host the browser
@@ -23,17 +23,60 @@ export function siteOrigin(host: string): string {
 // gated by any section, so `enabledSections` does not know them.
 const INSTITUTIONAL_PATHS = ["/plataforma", "/privacidade"] as const;
 
+/** What the office has put on its team page and its notice board. */
+export interface PublishedContent {
+  hasTeam: boolean;
+  hasNews: boolean;
+}
+
 /**
- * Every public page the office offers, in navigation order: the enabled
+ * The sections the site links to: the enabled ones, minus the team page
+ * while nobody is published on it and the notice board while it has no
+ * post. An empty "Nossa equipe" is not worth a link, and the menus and the
+ * sitemap both go by this one rule, so the sitemap never lists a page no
+ * link reaches (the search engine files those as discovered and leaves them
+ * there).
+ */
+export function linkedSections(
+  tenant: Tenant,
+  content: PublishedContent,
+): Section[] {
+  return enabledSections(tenant)
+    .filter((section) => section !== "equipe" || content.hasTeam)
+    .filter((section) => section !== "noticias" || content.hasNews);
+}
+
+/**
+ * Every public page the office links to, in navigation order: the linked
  * sections (a section can open two pages, see `sectionNavLinks`) and the
  * institutional pages. Gated the same way the menus are, so the sitemap
- * never lists a page the office answers with 404.
+ * never lists a page the office answers with 404 or leaves empty.
  */
-export function sitemapPaths(tenant: Tenant): string[] {
-  const sectionPaths = enabledSections(tenant).flatMap((section) =>
+export function sitemapPaths(
+  tenant: Tenant,
+  content: PublishedContent,
+): string[] {
+  const sectionPaths = linkedSections(tenant, content).flatMap((section) =>
     sectionNavLinks(section).map((link) => link.href),
   );
   return [...sectionPaths, ...INSTITUTIONAL_PATHS];
+}
+
+/**
+ * One sitemap entry per published post, by the address its card links to.
+ * `lastModified` is the day the post went to the site, the one date that is
+ * really the page's; a post without it is listed with no date rather than a
+ * made-up one.
+ */
+export function newsSitemapEntries(
+  posts: readonly { id: string; publishedAt: string | null }[],
+): { path: string; lastModified?: string }[] {
+  return posts.map((post) => {
+    const day = post.publishedAt?.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day ?? "")
+      ? { path: `/noticias/${post.id}`, lastModified: day }
+      : { path: `/noticias/${post.id}` };
+  });
 }
 
 /**

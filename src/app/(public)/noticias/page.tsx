@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   categoryLabel,
@@ -5,10 +6,24 @@ import {
   type PublicNews,
 } from "@/core/news/news.ts";
 import { publicNewsList } from "@/lib/news.ts";
+import { getTenant } from "@/lib/tenant.ts";
 import { publicMetadata } from "../_lib/metadata.ts";
 import { requireSection } from "../_lib/section.ts";
 
-export const generateMetadata = publicMetadata("/noticias");
+const pageMetadata = publicMetadata("/noticias");
+
+// With no post the board is only its empty state: no menu links to it and
+// the sitemap leaves it out, and a noindex keeps it out of the index too.
+export async function generateMetadata(): Promise<Metadata> {
+  const tenant = await getTenant();
+  const [metadata, news] = await Promise.all([
+    pageMetadata(),
+    publicNewsList(tenant.slug),
+  ]);
+  return news.length > 0
+    ? metadata
+    : { ...metadata, robots: { index: false, follow: true } };
+}
 
 /** "2026-11-14" as "14/11/2026". */
 export const brDate = (iso: string) => iso.split("-").reverse().join("/");
