@@ -386,7 +386,7 @@ export const TEAM_FILE_RULES: Record<
   TeamFileKind,
   { label: string; types: readonly TeamFileType[]; maxBytes: number }
 > = {
-  photo: { label: "foto", types: ["png", "jpeg", "webp"], maxBytes: 2 * MB },
+  photo: { label: "foto", types: ["png", "jpeg", "webp"], maxBytes: 3 * MB },
   portaria: { label: "portaria", types: ["pdf"], maxBytes: 4 * MB },
   word: { label: "Word da portaria", types: ["docx", "doc"], maxBytes: 4 * MB },
 };

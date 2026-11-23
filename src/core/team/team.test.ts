@@ -247,11 +247,15 @@ test("o tipo do arquivo vem do conteúdo, e cada campo aceita só o seu", () => 
   // A Word in the portaria slot (which is the public PDF) is refused.
   assert.equal(checkTeamFile("portaria", docx, "a.docx").ok, false);
   assert.equal(checkTeamFile("photo", new Uint8Array(), "a.png").ok, false);
-  const big = new Uint8Array(3 * 1024 * 1024);
+  // Up to 3 MB (decision of 23/11/2026); above it, refused.
+  const fits = new Uint8Array(3 * 1024 * 1024);
+  fits.set(png);
+  assert.equal(checkTeamFile("photo", fits, "a.png").ok, true);
+  const big = new Uint8Array(3 * 1024 * 1024 + 1);
   big.set(png);
   const tooBig = checkTeamFile("photo", big, "a.png");
   assert.equal(tooBig.ok, false);
-  assert.match(!tooBig.ok ? tooBig.message : "", /até 2 MB/);
+  assert.match(!tooBig.ok ? tooBig.message : "", /até 3 MB/);
 });
 
 test("o enquadramento da foto: padrão, leitura segura e o CSS que o site usa", () => {
