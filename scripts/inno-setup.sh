@@ -19,9 +19,17 @@ export WINEPREFIX="${INNO_PREFIX:-$HOME/.cache/veridia-inno}" WINEDEBUG=-all
 export XDG_RUNTIME_DIR="$WINEPREFIX.run"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 
-# No runner do GitHub, o Ubuntu não cria o /usr/bin/wineserver (vem das
-# "alternatives"): o programa fica só em /usr/lib/wine.
-wineserver="$(command -v wineserver || echo /usr/lib/wine/wineserver)"
+# Espera o Wine terminar (o que faria "wineserver -w"). Não chama o
+# wineserver pelo nome: no runner do GitHub (Ubuntu 26.04, Wine 10) ele não
+# está no PATH nem na pasta do Ubuntu 24.04, e cada versão o guarda num lugar.
+esperar_wine() {
+  for _ in $(seq 1 120); do
+    pgrep -u "$(id -u)" wineserver >/dev/null || return 0
+    sleep 1
+  done
+  echo "O Wine não terminou em 2 minutos." >&2
+  return 1
+}
 
 iscc="$WINEPREFIX/drive_c/inno-$VERSAO/ISCC.exe"
 if [ ! -f "$iscc" ]; then
@@ -29,12 +37,12 @@ if [ ! -f "$iscc" ]; then
   curl -fsSL -o "$baixado" "$URL"
   echo "$SHA256  $baixado" | sha256sum -c --quiet - >&2
   wine wineboot -i >/dev/null 2>&1
-  "$wineserver" -w
+  esperar_wine
   # Para todos os usuários: no Wine, a pasta de programas do usuário
   # ({autopf} com /CURRENTUSER) não existe e o instalador para.
   xvfb-run -a wine "$baixado" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART \
     /ALLUSERS "/DIR=C:\\inno-$VERSAO" >/dev/null 2>&1 || true
-  "$wineserver" -w
+  esperar_wine
   rm -rf "$(dirname "$baixado")"
   if [ ! -f "$iscc" ]; then
     echo "O Inno Setup $VERSAO não instalou no Wine ($WINEPREFIX)." >&2
