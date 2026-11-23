@@ -16,6 +16,7 @@ import {
   signersFrom,
   slugFor,
   sniffTeamFile,
+  storedLevels,
   uniqueLevelId,
 } from "./team.ts";
 
@@ -50,6 +51,8 @@ test("os níveis começam na ordem do Tabelião, sem escrevente substituto", () 
       "Escrevente autorizado",
       "Escrevente",
       "Auxiliar de cartório",
+      "Estagiário(a)",
+      "Jovem aprendiz",
       "Serviços gerais",
     ],
   );
@@ -65,6 +68,9 @@ test("os níveis começam na ordem do Tabelião, sem escrevente substituto", () 
     [
       { id: "a", label: "Um" },
       { id: "b", label: "Dois" },
+      // A list saved before them gets the levels added on 23/11/2026.
+      { id: "estagiario", label: "Estagiário(a)" },
+      { id: "jovem-aprendiz", label: "Jovem aprendiz" },
     ],
   );
 });
@@ -241,11 +247,15 @@ test("o tipo do arquivo vem do conteúdo, e cada campo aceita só o seu", () => 
   // A Word in the portaria slot (which is the public PDF) is refused.
   assert.equal(checkTeamFile("portaria", docx, "a.docx").ok, false);
   assert.equal(checkTeamFile("photo", new Uint8Array(), "a.png").ok, false);
-  const big = new Uint8Array(3 * 1024 * 1024);
+  // Up to 3 MB (decision of 23/11/2026); above it, refused.
+  const fits = new Uint8Array(3 * 1024 * 1024);
+  fits.set(png);
+  assert.equal(checkTeamFile("photo", fits, "a.png").ok, true);
+  const big = new Uint8Array(3 * 1024 * 1024 + 1);
   big.set(png);
   const tooBig = checkTeamFile("photo", big, "a.png");
   assert.equal(tooBig.ok, false);
-  assert.match(!tooBig.ok ? tooBig.message : "", /até 2 MB/);
+  assert.match(!tooBig.ok ? tooBig.message : "", /até 3 MB/);
 });
 
 test("o enquadramento da foto: padrão, leitura segura e o CSS que o site usa", () => {
@@ -299,4 +309,34 @@ test("o enquadramento da foto: padrão, leitura segura e o CSS que o site usa", 
   );
   // The visitor gets the frame with the person.
   assert.deepEqual(publicPerson(person({ frame: square }))?.frame, square);
+});
+
+test("lista salva antes ganha Estagiário(a) e Jovem aprendiz uma vez; a salva depois fica como está", () => {
+  const old = [
+    { id: "tabeliao", label: "Tabelião e Registrador" },
+    { id: "escrevente", label: "Escrevente" },
+    { id: "servicos-gerais", label: "Serviços gerais" },
+  ];
+  assert.deepEqual(
+    levelsFrom(old).map((l) => l.id),
+    [
+      "tabeliao",
+      "escrevente",
+      "estagiario",
+      "jovem-aprendiz",
+      "servicos-gerais",
+    ],
+  );
+  // Already there by another id (renamed by the office): not added twice.
+  assert.deepEqual(
+    levelsFrom([...old, { id: "estagio", label: "Estagiário(a)" }]).filter(
+      (l) => l.label === "Estagiário(a)",
+    ).length,
+    1,
+  );
+  // Saved after (version 2), without them on purpose: they stay out.
+  assert.deepEqual(
+    levelsFrom(storedLevels(old)).map((l) => l.id),
+    ["tabeliao", "escrevente", "servicos-gerais"],
+  );
 });

@@ -381,7 +381,7 @@ export function PersonForm({
               }}
             />
             <p className="text-xs text-muted-foreground">
-              PNG, JPEG ou WebP, até 2 MB. Qualquer proporção: você ajusta o
+              PNG, JPEG ou WebP, até 3 MB. Qualquer proporção: você ajusta o
               enquadramento abaixo.
             </p>
           </div>
