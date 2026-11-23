@@ -17,7 +17,7 @@ import (
 )
 
 // Versao do Assinador Veridia, mostrada no painel.
-const Versao = "1.1.0"
+const Versao = "1.2.0"
 
 // Porta fixa: o painel procura o assinador nela.
 const Porta = 47820

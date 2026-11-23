@@ -5,17 +5,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-	"golang.org/x/sys/windows/registry"
 )
 
 var (
@@ -255,66 +250,4 @@ func avisar(titulo, texto string) {
 func emUso(err error) bool {
 	var codigo syscall.Errno
 	return errors.As(err, &codigo) && codigo == windows.WSAEADDRINUSE
-}
-
-// instalar copia o programa para %LOCALAPPDATA%\VeridiaAssinador e o liga
-// ao iniciar do Windows (só para este usuário, sem pedir administrador).
-// Devolve true quando abriu a cópia instalada e esta deve terminar.
-func instalar() bool {
-	atual, err := os.Executable()
-	if err != nil {
-		return false
-	}
-	base := os.Getenv("LOCALAPPDATA")
-	if base == "" {
-		return false
-	}
-	destino := filepath.Join(base, "VeridiaAssinador", "AssinadorVeridia.exe")
-	if !strings.EqualFold(filepath.Clean(atual), filepath.Clean(destino)) {
-		if err := copiarArquivo(atual, destino); err != nil {
-			return false
-		}
-		registrarInicio(destino)
-		if exec.Command(destino).Start() == nil {
-			return true
-		}
-		return false
-	}
-	registrarInicio(destino)
-	return false
-}
-
-func registrarInicio(destino string) {
-	chave, _, err := registry.CreateKey(registry.CURRENT_USER,
-		`Software\Microsoft\Windows\CurrentVersion\Run`, registry.SET_VALUE)
-	if err != nil {
-		return
-	}
-	defer chave.Close()
-	_ = chave.SetStringValue("AssinadorVeridia", `"`+destino+`"`)
-}
-
-func copiarArquivo(origem, destino string) error {
-	if err := os.MkdirAll(filepath.Dir(destino), 0o700); err != nil {
-		return err
-	}
-	de, err := os.Open(origem)
-	if err != nil {
-		return err
-	}
-	defer de.Close()
-	temporario := destino + ".novo"
-	para, err := os.Create(temporario)
-	if err != nil {
-		return err
-	}
-	if _, err := io.Copy(para, de); err != nil {
-		para.Close()
-		return err
-	}
-	if err := para.Close(); err != nil {
-		return err
-	}
-	// Uma versão antiga em uso não pode ser substituída: fica a antiga.
-	return os.Rename(temporario, destino)
 }

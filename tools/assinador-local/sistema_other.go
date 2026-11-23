@@ -26,6 +26,4 @@ func confirmar(titulo, texto string) bool { return false }
 
 func avisar(titulo, texto string) { fmt.Println(titulo + ": " + texto) }
 
-func instalar() bool { return false }
-
 func emUso(err error) bool { return strings.Contains(err.Error(), "address already in use") }

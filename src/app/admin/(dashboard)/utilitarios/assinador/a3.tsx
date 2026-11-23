@@ -20,7 +20,7 @@ import {
  * Only the computer itself answers on this address.
  */
 const LOCAL = "http://127.0.0.1:47820";
-export const DOWNLOAD_HREF = "/downloads/AssinadorVeridia.exe";
+export const DOWNLOAD_HREF = "/downloads/InstalarAssinadorVeridia.exe";
 
 export interface TokenCertificate {
   id: string;
@@ -271,7 +271,10 @@ export function LocalSignerPicker({
           computador (Windows). É uma vez só.
         </p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
-          <li>Baixe o programa e abra o arquivo.</li>
+          <li>
+            Baixe o instalador, abra e siga os passos (Avançar e Instalar). Não
+            pede administrador.
+          </li>
           <li>
             Se o Windows avisar &quot;O Windows protegeu o computador&quot;,
             clique em &quot;Mais informações&quot; e depois em &quot;Executar
@@ -314,7 +317,7 @@ export function LocalSignerPicker({
         <p className="mt-1">
           Na janela do Assinador Veridia, responda Sim para este site. Se você
           respondeu Não, feche e abra o Assinador de novo (ele está no menu
-          Iniciar como AssinadorVeridia).
+          Iniciar como Assinador Veridia).
         </p>
         <Button
           type="button"
