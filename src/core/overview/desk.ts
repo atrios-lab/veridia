@@ -54,6 +54,66 @@ export interface DeskItemInput {
   manifestationType?: ManifestationType;
 }
 
+/**
+ * Whose move a service request's andamento says it is (decision of
+ * 23/11/2026: "estou atualizando os status e os pedidos ainda estão ficando
+ * na mesa"). The andamento is the office's own statement of whose turn it
+ * is, so it decides first:
+ *
+ * - "office": the office has work to do (analyse, check a payment, execute
+ *   the act), and the pedido stays on the desk whoever acted last;
+ * - "citizen": the office is waiting (payment, exigência, the tax of a guia,
+ *   the pickup), and the pedido leaves the desk until the citizen moves
+ *   again after that andamento (a reply, a file, a comprovante);
+ * - undefined: decided by who acted last, as before.
+ */
+export type DeskTurn = "office" | "citizen";
+
+const OFFICE_TURN: readonly string[] = [
+  "new",
+  "in-review",
+  "payment-reported",
+  "processing",
+];
+const CITIZEN_TURN: readonly string[] = [
+  "awaiting-payment",
+  "awaiting-compliance",
+  "awaiting-guide-payment",
+  "ready-for-pickup",
+];
+
+export function serviceRequestTurn(status: string): DeskTurn | undefined {
+  if (OFFICE_TURN.includes(status)) return "office";
+  if (CITIZEN_TURN.includes(status)) return "citizen";
+  return undefined;
+}
+
+/**
+ * Whether a service request is the office's to move now: by its andamento
+ * (`serviceRequestTurn`) and, while waiting on the citizen, by whether the
+ * citizen acted after the office last moved it. Every time is optional.
+ */
+export function serviceRequestAwaitsOffice(input: {
+  status: string;
+  /** The office's last answer, or the andamento's last change. */
+  lastOfficeMoveAt?: Date;
+  /** The citizen's last reply or file after filing (not the filing). */
+  lastCitizenMoveAt?: Date;
+  /** Fallback: the old "who acted last", filing included. */
+  byLastActor: boolean;
+}): boolean {
+  const turn = serviceRequestTurn(input.status);
+  if (turn === "office") return true;
+  if (turn === "citizen") {
+    if (!input.lastCitizenMoveAt) return false;
+    return (
+      !input.lastOfficeMoveAt ||
+      input.lastCitizenMoveAt.getTime() > input.lastOfficeMoveAt.getTime()
+    );
+  }
+  return input.byLastActor;
+}
+
 export type DeskChipTone = "error" | "warning" | "neutral";
 
 export interface RankedDeskItem {
