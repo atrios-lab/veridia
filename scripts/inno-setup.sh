@@ -19,18 +19,22 @@ export WINEPREFIX="${INNO_PREFIX:-$HOME/.cache/veridia-inno}" WINEDEBUG=-all
 export XDG_RUNTIME_DIR="$WINEPREFIX.run"
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 
+# No runner do GitHub, o Ubuntu não cria o /usr/bin/wineserver (vem das
+# "alternatives"): o programa fica só em /usr/lib/wine.
+wineserver="$(command -v wineserver || echo /usr/lib/wine/wineserver)"
+
 iscc="$WINEPREFIX/drive_c/inno-$VERSAO/ISCC.exe"
 if [ ! -f "$iscc" ]; then
   baixado="$(mktemp -d)/innosetup-$VERSAO.exe"
   curl -fsSL -o "$baixado" "$URL"
   echo "$SHA256  $baixado" | sha256sum -c --quiet - >&2
   wine wineboot -i >/dev/null 2>&1
-  wineserver -w
+  "$wineserver" -w
   # Para todos os usuários: no Wine, a pasta de programas do usuário
   # ({autopf} com /CURRENTUSER) não existe e o instalador para.
   xvfb-run -a wine "$baixado" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART \
     /ALLUSERS "/DIR=C:\\inno-$VERSAO" >/dev/null 2>&1 || true
-  wineserver -w
+  "$wineserver" -w
   rm -rf "$(dirname "$baixado")"
   if [ ! -f "$iscc" ]; then
     echo "O Inno Setup $VERSAO não instalou no Wine ($WINEPREFIX)." >&2
