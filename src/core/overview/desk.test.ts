@@ -304,8 +304,8 @@ test("a contagem da mesa ignora o que aguarda o cidadão", () => {
 test("o andamento decide de quem é a vez na mesa (pedidos)", () => {
   const office = new Date("2026-11-22T10:00:00Z");
   const later = new Date("2026-11-22T11:00:00Z");
-  // The office's work stays on the desk, whoever acted last.
-  for (const status of ["new", "in-review", "payment-reported", "processing"]) {
+  // Nobody picked it up yet: on the desk, whoever acted last.
+  for (const status of ["new", "payment-reported"]) {
     assert.equal(
       serviceRequestAwaitsOffice({
         status,
@@ -314,6 +314,44 @@ test("o andamento decide de quem é a vez na mesa (pedidos)", () => {
       }),
       true,
       status,
+    );
+  }
+  // Picked up (em análise, em execução do ato): off the desk once the
+  // office set that andamento, back when the citizen sends something after.
+  for (const status of ["in-review", "processing"]) {
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: later,
+        byLastActor: true,
+      }),
+      false,
+      `${status}: o cartório já pegou o pedido`,
+    );
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: later,
+        lastCitizenMoveAt: office,
+        byLastActor: true,
+      }),
+      false,
+      `${status}: o cidadão agiu antes do andamento`,
+    );
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: office,
+        lastCitizenMoveAt: later,
+        byLastActor: false,
+      }),
+      true,
+      `${status}: o cidadão enviou algo depois`,
+    );
+    assert.equal(
+      serviceRequestAwaitsOffice({ status, byLastActor: true }),
+      false,
+      `${status}: só o cartório põe esse andamento, mesmo sem registro de quem`,
     );
   }
   // Waiting on the citizen: off the desk, even with no office action at all

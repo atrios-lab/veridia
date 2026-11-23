@@ -55,26 +55,26 @@ export interface DeskItemInput {
 }
 
 /**
- * Whose move a service request's andamento says it is (decision of
+ * Whose move a service request's andamento says it is (decisions of
  * 23/11/2026: "estou atualizando os status e os pedidos ainda estão ficando
- * na mesa"). The andamento is the office's own statement of whose turn it
- * is, so it decides first:
+ * na mesa" and, for a pedido "em execução", "ele mesmo ainda está na mesa,
+ * conserte geral"). The desk shows what nobody has picked up yet, so the
+ * andamento decides first:
  *
- * - "office": the office has work to do (analyse, check a payment, execute
- *   the act), and the pedido stays on the desk whoever acted last;
+ * - "office": nobody at the office has picked it up (a new pedido, a
+ *   comprovante to check), and it stays on the desk whoever acted last;
+ * - "working": the office already picked it up (analysing it, executing
+ *   the act), and the andamento it set is the proof: off the desk until the
+ *   citizen moves again after that (a reply, a file);
  * - "citizen": the office is waiting (payment, exigência, the tax of a guia,
  *   the pickup), and the pedido leaves the desk until the citizen moves
  *   again after that andamento (a reply, a file, a comprovante);
  * - undefined: decided by who acted last, as before.
  */
-export type DeskTurn = "office" | "citizen";
+export type DeskTurn = "office" | "working" | "citizen";
 
-const OFFICE_TURN: readonly string[] = [
-  "new",
-  "in-review",
-  "payment-reported",
-  "processing",
-];
+const OFFICE_TURN: readonly string[] = ["new", "payment-reported"];
+const WORKING_TURN: readonly string[] = ["in-review", "processing"];
 const CITIZEN_TURN: readonly string[] = [
   "awaiting-payment",
   "awaiting-compliance",
@@ -84,14 +84,16 @@ const CITIZEN_TURN: readonly string[] = [
 
 export function serviceRequestTurn(status: string): DeskTurn | undefined {
   if (OFFICE_TURN.includes(status)) return "office";
+  if (WORKING_TURN.includes(status)) return "working";
   if (CITIZEN_TURN.includes(status)) return "citizen";
   return undefined;
 }
 
 /**
  * Whether a service request is the office's to move now: by its andamento
- * (`serviceRequestTurn`) and, while waiting on the citizen, by whether the
- * citizen acted after the office last moved it. Every time is optional.
+ * (`serviceRequestTurn`) and, once the office picked it up or is waiting on
+ * the citizen, by whether the citizen acted after the office last moved it.
+ * Every time is optional.
  */
 export function serviceRequestAwaitsOffice(input: {
   status: string;
@@ -104,13 +106,14 @@ export function serviceRequestAwaitsOffice(input: {
 }): boolean {
   const turn = serviceRequestTurn(input.status);
   if (turn === "office") return true;
-  if (turn === "citizen") {
-    if (!input.lastCitizenMoveAt) return false;
-    return (
-      !input.lastOfficeMoveAt ||
-      input.lastCitizenMoveAt.getTime() > input.lastOfficeMoveAt.getTime()
-    );
-  }
+  const citizenMovedLast =
+    input.lastCitizenMoveAt !== undefined &&
+    (!input.lastOfficeMoveAt ||
+      input.lastCitizenMoveAt.getTime() > input.lastOfficeMoveAt.getTime());
+  // Picked up or waiting on the citizen: only the office sets these
+  // andamentos, so they hold even on an old record with no trace of who
+  // set them, until the citizen sends something.
+  if (turn === "working" || turn === "citizen") return citizenMovedLast;
   return input.byLastActor;
 }
 
@@ -197,11 +200,20 @@ function defaultSummary(item: DeskItemInput): string {
       if (item.status === "awaiting-signed-form") {
         return "Requerimento a punho a conferir";
       }
+      // In analysis or in execution, a pedido is back on the desk only
+      // because the citizen sent something after the office's last move.
+      if (item.status === "in-review") {
+        return "Pedido em análise: o cidadão enviou algo novo";
+      }
+      if (item.status === "processing") {
+        return "Ato em execução: o cidadão enviou algo novo";
+      }
+      if (CITIZEN_TURN.includes(item.status)) {
+        return "O cidadão respondeu: conferir o que chegou";
+      }
       return item.status === "payment-reported"
         ? "Comprovante de pagamento a conferir"
-        : item.status === "in-review"
-          ? "Pedido em análise"
-          : "Novo pedido de serviço";
+        : "Novo pedido de serviço";
     case "ombudsman":
       return item.manifestationType
         ? manifestationLabel(item.manifestationType)
