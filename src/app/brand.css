@@ -532,3 +532,30 @@
     -webkit-hyphens: auto;
   }
 }
+
+/*
+ * The office's name on the home hero (core/tenant/hero-title.ts). On a
+ * phone it wraps in balanced lines at a size that follows the screen; from
+ * md up it gets a fixed room and a size worked out from the name and the
+ * theme's font, so every office's name sits harmonised: one line when it
+ * fits, two (or three) balanced lines when it does not.
+ */
+@layer components {
+  .hero-title {
+    font-size: var(--hero-title-phone, clamp(1.25rem, 6.8vw, 1.75rem));
+    text-wrap: balance;
+  }
+
+  @media (min-width: 768px) {
+    .hero-title {
+      --hero-title-room: min(60rem, 100vw - 5rem);
+      width: var(--hero-title-room);
+      font-size: clamp(
+        1.75rem,
+        var(--hero-title-room) /
+        var(--hero-title-ems, 20),
+        var(--hero-title-max, 3rem)
+      );
+    }
+  }
+}
