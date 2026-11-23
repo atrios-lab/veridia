@@ -19,7 +19,7 @@ import { Switch } from "../../../_ui/switch.tsx";
 import { saveVisualIdentity, type VisualIdentityState } from "./actions.ts";
 import { VisualIdentityPreview } from "./preview.tsx";
 
-// Same five styles as globals.css. Written here, not derived from the
+// Same styles as brand-palettes.css. Written here, not derived from the
 // stylesheet, because a card needs prose (what the style feels like), and
 // prose does not belong in a token file.
 const THEME_META: Record<Theme, { label: string; description: string }> = {
@@ -42,6 +42,26 @@ const THEME_META: Record<Theme, { label: string; description: string }> = {
   "oliva-terracota": {
     label: "Oliva & Terracota",
     description: "Leve, tom interiorano",
+  },
+  "petroleo-ouro": {
+    label: "Petróleo & Ouro",
+    description: "Sereno e confiável",
+  },
+  "ameixa-champanhe": {
+    label: "Ameixa & Champanhe",
+    description: "Sofisticado e discreto",
+  },
+  "cafe-caramelo": {
+    label: "Café & Caramelo",
+    description: "Caloroso, tom de tradição",
+  },
+  "indigo-areia": {
+    label: "Índigo & Areia",
+    description: "Contemporâneo e calmo",
+  },
+  "azul-prata": {
+    label: "Azul & Prata",
+    description: "Institucional, tons frios",
   },
 };
 

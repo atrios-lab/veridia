@@ -1,5 +1,5 @@
 /*
- * The five palettes and the brand tokens, with the hero scrim mixed from
+ * The site palettes and the brand tokens, with the hero scrim mixed from
  * them. Imported by brand.css for the public site, and by the panel's
  * admin.css for the one thing the panel draws in an office's colours: the
  * previews of the site (Identidade visual, Publicações), each on a box with
@@ -12,7 +12,10 @@
  * these, it never adds CSS.
  *
  * Values transcribed from the approved redesign (Claude Design project
- * 558c4556, section "Turno 2": the same flow in five themes).
+ * 558c4556, section "Turno 2": the same flow in five themes). The other five
+ * (petróleo, ameixa, café, índigo, azul) were added on 23/11/2026 under the
+ * same contrast floors: every text pair at 4.5:1 or more, and the accent in
+ * the band the first five already sit in.
  */
 @theme static {
   --palette-verde-dourado-primary: #123c2a;
@@ -79,6 +82,71 @@
   --palette-oliva-terracota-border: #e2ddcc;
   --palette-oliva-terracota-tint: #ebeee2;
   --palette-oliva-terracota-muted: #6a6d58;
+
+  --palette-petroleo-ouro-primary: #0f3d44;
+  --palette-petroleo-ouro-primary-soft: #175560;
+  --palette-petroleo-ouro-shade: #071e22;
+  --palette-petroleo-ouro-accent: #957434;
+  --palette-petroleo-ouro-accent-ink: #7c6130;
+  --palette-petroleo-ouro-accent-soft: #efe7d3;
+  --palette-petroleo-ouro-on-dark-accent: #dcc68f;
+  --palette-petroleo-ouro-on-dark-heading: #ead8a8;
+  --palette-petroleo-ouro-surface: #f2f4f2;
+  --palette-petroleo-ouro-border: #dde2dd;
+  --palette-petroleo-ouro-tint: #e5eeee;
+  --palette-petroleo-ouro-muted: #57656a;
+
+  --palette-ameixa-champanhe-primary: #3d2347;
+  --palette-ameixa-champanhe-primary-soft: #553160;
+  --palette-ameixa-champanhe-shade: #1e1023;
+  --palette-ameixa-champanhe-accent: #9a7a50;
+  --palette-ameixa-champanhe-accent-ink: #7e633f;
+  --palette-ameixa-champanhe-accent-soft: #efe6d8;
+  --palette-ameixa-champanhe-on-dark-accent: #dcc39c;
+  --palette-ameixa-champanhe-on-dark-heading: #ecdbbe;
+  --palette-ameixa-champanhe-surface: #f5f2f1;
+  --palette-ameixa-champanhe-border: #e3dcdc;
+  --palette-ameixa-champanhe-tint: #eee8ee;
+  --palette-ameixa-champanhe-muted: #665d68;
+
+  --palette-cafe-caramelo-primary: #3a2a20;
+  --palette-cafe-caramelo-primary-soft: #523b2d;
+  --palette-cafe-caramelo-shade: #1d140f;
+  --palette-cafe-caramelo-accent: #a5702f;
+  --palette-cafe-caramelo-accent-ink: #87592a;
+  --palette-cafe-caramelo-accent-soft: #f1e4d3;
+  --palette-cafe-caramelo-on-dark-accent: #e0bf8c;
+  --palette-cafe-caramelo-on-dark-heading: #edd6ad;
+  --palette-cafe-caramelo-surface: #f6f2ec;
+  --palette-cafe-caramelo-border: #e5ddd1;
+  --palette-cafe-caramelo-tint: #efe9e1;
+  --palette-cafe-caramelo-muted: #6a5f55;
+
+  --palette-indigo-areia-primary: #2b2f63;
+  --palette-indigo-areia-primary-soft: #3b417e;
+  --palette-indigo-areia-shade: #14162f;
+  --palette-indigo-areia-accent: #9a7b4f;
+  --palette-indigo-areia-accent-ink: #7b623e;
+  --palette-indigo-areia-accent-soft: #efe6d6;
+  --palette-indigo-areia-on-dark-accent: #d9c39b;
+  --palette-indigo-areia-on-dark-heading: #e8d8b6;
+  --palette-indigo-areia-surface: #f3f3f2;
+  --palette-indigo-areia-border: #dedfe0;
+  --palette-indigo-areia-tint: #e8e9f2;
+  --palette-indigo-areia-muted: #5d6072;
+
+  --palette-azul-prata-primary: #1c3f7a;
+  --palette-azul-prata-primary-soft: #27509a;
+  --palette-azul-prata-shade: #0d1f3d;
+  --palette-azul-prata-accent: #66748a;
+  --palette-azul-prata-accent-ink: #556275;
+  --palette-azul-prata-accent-soft: #e6eaf0;
+  --palette-azul-prata-on-dark-accent: #c8d2e0;
+  --palette-azul-prata-on-dark-heading: #dde4ee;
+  --palette-azul-prata-surface: #f3f5f8;
+  --palette-azul-prata-border: #dce1e8;
+  --palette-azul-prata-tint: #e6ecf5;
+  --palette-azul-prata-muted: #586274;
 
   /* Neutrals and the one alert red, identical in every theme. */
   --palette-card: #ffffff;
@@ -213,8 +281,83 @@
   --brand-muted: var(--palette-oliva-terracota-muted);
 }
 
+[data-theme="petroleo-ouro"] {
+  --brand-primary: var(--palette-petroleo-ouro-primary);
+  --brand-primary-soft: var(--palette-petroleo-ouro-primary-soft);
+  --brand-shade: var(--palette-petroleo-ouro-shade);
+  --brand-accent: var(--palette-petroleo-ouro-accent);
+  --brand-accent-ink: var(--palette-petroleo-ouro-accent-ink);
+  --brand-accent-soft: var(--palette-petroleo-ouro-accent-soft);
+  --brand-on-dark-accent: var(--palette-petroleo-ouro-on-dark-accent);
+  --brand-on-dark-heading: var(--palette-petroleo-ouro-on-dark-heading);
+  --brand-surface: var(--palette-petroleo-ouro-surface);
+  --brand-border: var(--palette-petroleo-ouro-border);
+  --brand-tint: var(--palette-petroleo-ouro-tint);
+  --brand-muted: var(--palette-petroleo-ouro-muted);
+}
+
+[data-theme="ameixa-champanhe"] {
+  --brand-primary: var(--palette-ameixa-champanhe-primary);
+  --brand-primary-soft: var(--palette-ameixa-champanhe-primary-soft);
+  --brand-shade: var(--palette-ameixa-champanhe-shade);
+  --brand-accent: var(--palette-ameixa-champanhe-accent);
+  --brand-accent-ink: var(--palette-ameixa-champanhe-accent-ink);
+  --brand-accent-soft: var(--palette-ameixa-champanhe-accent-soft);
+  --brand-on-dark-accent: var(--palette-ameixa-champanhe-on-dark-accent);
+  --brand-on-dark-heading: var(--palette-ameixa-champanhe-on-dark-heading);
+  --brand-surface: var(--palette-ameixa-champanhe-surface);
+  --brand-border: var(--palette-ameixa-champanhe-border);
+  --brand-tint: var(--palette-ameixa-champanhe-tint);
+  --brand-muted: var(--palette-ameixa-champanhe-muted);
+}
+
+[data-theme="cafe-caramelo"] {
+  --brand-primary: var(--palette-cafe-caramelo-primary);
+  --brand-primary-soft: var(--palette-cafe-caramelo-primary-soft);
+  --brand-shade: var(--palette-cafe-caramelo-shade);
+  --brand-accent: var(--palette-cafe-caramelo-accent);
+  --brand-accent-ink: var(--palette-cafe-caramelo-accent-ink);
+  --brand-accent-soft: var(--palette-cafe-caramelo-accent-soft);
+  --brand-on-dark-accent: var(--palette-cafe-caramelo-on-dark-accent);
+  --brand-on-dark-heading: var(--palette-cafe-caramelo-on-dark-heading);
+  --brand-surface: var(--palette-cafe-caramelo-surface);
+  --brand-border: var(--palette-cafe-caramelo-border);
+  --brand-tint: var(--palette-cafe-caramelo-tint);
+  --brand-muted: var(--palette-cafe-caramelo-muted);
+}
+
+[data-theme="indigo-areia"] {
+  --brand-primary: var(--palette-indigo-areia-primary);
+  --brand-primary-soft: var(--palette-indigo-areia-primary-soft);
+  --brand-shade: var(--palette-indigo-areia-shade);
+  --brand-accent: var(--palette-indigo-areia-accent);
+  --brand-accent-ink: var(--palette-indigo-areia-accent-ink);
+  --brand-accent-soft: var(--palette-indigo-areia-accent-soft);
+  --brand-on-dark-accent: var(--palette-indigo-areia-on-dark-accent);
+  --brand-on-dark-heading: var(--palette-indigo-areia-on-dark-heading);
+  --brand-surface: var(--palette-indigo-areia-surface);
+  --brand-border: var(--palette-indigo-areia-border);
+  --brand-tint: var(--palette-indigo-areia-tint);
+  --brand-muted: var(--palette-indigo-areia-muted);
+}
+
+[data-theme="azul-prata"] {
+  --brand-primary: var(--palette-azul-prata-primary);
+  --brand-primary-soft: var(--palette-azul-prata-primary-soft);
+  --brand-shade: var(--palette-azul-prata-shade);
+  --brand-accent: var(--palette-azul-prata-accent);
+  --brand-accent-ink: var(--palette-azul-prata-accent-ink);
+  --brand-accent-soft: var(--palette-azul-prata-accent-soft);
+  --brand-on-dark-accent: var(--palette-azul-prata-on-dark-accent);
+  --brand-on-dark-heading: var(--palette-azul-prata-on-dark-heading);
+  --brand-surface: var(--palette-azul-prata-surface);
+  --brand-border: var(--palette-azul-prata-border);
+  --brand-tint: var(--palette-azul-prata-tint);
+  --brand-muted: var(--palette-azul-prata-muted);
+}
+
 /*
- * Derived from the theme rather than listed per theme: mixing keeps the five
+ * Derived from the theme rather than listed per theme: mixing keeps the
  * blocks above short and guarantees the derived tone always belongs to the
  * palette it came from.
  *
@@ -225,7 +368,7 @@
  * "derived from the theme" above was a promise the CSS did not keep.
  *
  * The muted tone is 70% white, not less: at 62% the oliva-terracota primary
- * (the lightest of the five) landed on the 4.5:1 line for 12px text and the
+ * (the lightest of them) landed on the 4.5:1 line for 12px text and the
  * a11y sweep refused it. At 70% the worst theme sits at 5.3:1 and the muted
  * tone still reads as muted next to the 86% body.
  */
