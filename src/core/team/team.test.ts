@@ -16,6 +16,7 @@ import {
   signersFrom,
   slugFor,
   sniffTeamFile,
+  storedLevels,
   uniqueLevelId,
 } from "./team.ts";
 
@@ -50,6 +51,8 @@ test("os níveis começam na ordem do Tabelião, sem escrevente substituto", () 
       "Escrevente autorizado",
       "Escrevente",
       "Auxiliar de cartório",
+      "Estagiário(a)",
+      "Jovem aprendiz",
       "Serviços gerais",
     ],
   );
@@ -65,6 +68,9 @@ test("os níveis começam na ordem do Tabelião, sem escrevente substituto", () 
     [
       { id: "a", label: "Um" },
       { id: "b", label: "Dois" },
+      // A list saved before them gets the levels added on 23/11/2026.
+      { id: "estagiario", label: "Estagiário(a)" },
+      { id: "jovem-aprendiz", label: "Jovem aprendiz" },
     ],
   );
 });
@@ -299,4 +305,34 @@ test("o enquadramento da foto: padrão, leitura segura e o CSS que o site usa", 
   );
   // The visitor gets the frame with the person.
   assert.deepEqual(publicPerson(person({ frame: square }))?.frame, square);
+});
+
+test("lista salva antes ganha Estagiário(a) e Jovem aprendiz uma vez; a salva depois fica como está", () => {
+  const old = [
+    { id: "tabeliao", label: "Tabelião e Registrador" },
+    { id: "escrevente", label: "Escrevente" },
+    { id: "servicos-gerais", label: "Serviços gerais" },
+  ];
+  assert.deepEqual(
+    levelsFrom(old).map((l) => l.id),
+    [
+      "tabeliao",
+      "escrevente",
+      "estagiario",
+      "jovem-aprendiz",
+      "servicos-gerais",
+    ],
+  );
+  // Already there by another id (renamed by the office): not added twice.
+  assert.deepEqual(
+    levelsFrom([...old, { id: "estagio", label: "Estagiário(a)" }]).filter(
+      (l) => l.label === "Estagiário(a)",
+    ).length,
+    1,
+  );
+  // Saved after (version 2), without them on purpose: they stay out.
+  assert.deepEqual(
+    levelsFrom(storedLevels(old)).map((l) => l.id),
+    ["tabeliao", "escrevente", "servicos-gerais"],
+  );
 });
