@@ -54,22 +54,32 @@ jobs:
 
       - run: pnpm build
 
-      # The Assinador Veridia (A3 tokens) is Go: its tests, a vet for Windows,
-      # and a check that the program and its installer (Inno Setup, run in
-      # Wine) are exactly this code's.
+  # The Assinador Veridia (A3 tokens) is Go: its tests, a vet for Windows,
+  # and a check that the program and its installer (Inno Setup, run in Wine)
+  # are exactly this code's. A job of its own, in parallel with verify:
+  # installing Wine takes minutes. Pinned to Ubuntu 24.04 (Wine 9), where the
+  # installer was built: an image change must not turn a pull request red.
+  assinador:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: 1.24.7
           cache-dependency-path: tools/assinador-local/go.sum
       - name: wine (para o Inno Setup)
+        timeout-minutes: 15
         run: |
+          # Sem reconstruir o índice das páginas de manual a cada pacote.
+          sudo rm -f /var/lib/man-db/auto-update
           sudo dpkg --add-architecture i386
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq --no-install-recommends wine wine64 wine32:i386 xvfb
+          sudo apt-get -o Acquire::Retries=3 update -qq
+          sudo apt-get -o Acquire::Retries=3 install -y -qq --no-install-recommends \
+            wine wine64 wine32:i386 xvfb
       - uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/veridia-inno
-          key: inno-${{ runner.os }}-${{ hashFiles('scripts/inno-setup.sh') }}
+          path: ~/.cache/veridia-inno
+          key: inno-ubuntu-24.04-${{ hashFiles('scripts/inno-setup.sh') }}
       - name: assinador local
         run: scripts/build-assinador.sh --check

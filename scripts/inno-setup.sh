@@ -21,7 +21,7 @@ mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 
 # Espera o Wine terminar (o que faria "wineserver -w"). Não chama o
 # wineserver pelo nome: no runner do GitHub (Ubuntu 26.04, Wine 10) ele não
-# está no PATH nem na pasta do Ubuntu 24.04, e cada versão o guarda num lugar.
+# está no PATH nem em /usr/lib/wine, e cada versão o guarda num lugar.
 esperar_wine() {
   for _ in $(seq 1 120); do
     pgrep -u "$(id -u)" wineserver >/dev/null || return 0
