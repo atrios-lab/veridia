@@ -104,14 +104,24 @@ const nextConfig: NextConfig = {
   // browser and Google itself go by, already reads the office's current
   // seal correctly and is unaffected by this fallback for the legacy path.
   async redirects() {
-    return Object.values(TENANTS).flatMap((tenant) =>
-      tenant.hosts.map((host) => ({
-        source: "/favicon.ico",
-        has: [{ type: "host" as const, value: host }],
-        destination: tenant.logos.seal.light,
+    return [
+      // The Assinador Veridia used to be offered as the bare program, which
+      // installed itself; now it comes with an installer (Inno Setup). An
+      // old link or bookmark gets the installer.
+      {
+        source: "/downloads/AssinadorVeridia.exe",
+        destination: "/downloads/InstalarAssinadorVeridia.exe",
         permanent: false,
-      })),
-    );
+      },
+      ...Object.values(TENANTS).flatMap((tenant) =>
+        tenant.hosts.map((host) => ({
+          source: "/favicon.ico",
+          has: [{ type: "host" as const, value: host }],
+          destination: tenant.logos.seal.light,
+          permanent: false,
+        })),
+      ),
+    ];
   },
 };
 

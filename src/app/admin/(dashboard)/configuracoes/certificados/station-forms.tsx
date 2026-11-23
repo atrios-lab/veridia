@@ -158,7 +158,7 @@ export function PairStation() {
             download
             className="font-medium underline underline-offset-4"
           >
-            Baixe a versão nova
+            Baixe o instalador da versão nova
           </a>
           , instale por cima e tente de novo.
         </p>

@@ -31,12 +31,8 @@ func main() {
 		log.SetOutput(arquivo)
 	}
 
-	// Copia para a pasta do usuário e liga ao iniciar o Windows. Quando
-	// isso abre a cópia instalada, esta aqui termina.
-	if instalar() {
-		return
-	}
-
+	// A instalação (pasta, atalho, abrir com o Windows e desinstalar) é do
+	// instalador, em instalador/AssinadorVeridia.iss. O programa só roda.
 	ouvinte, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", Porta))
 	if err != nil {
 		if errors.Is(err, syscall.EADDRINUSE) || emUso(err) {
