@@ -1,5 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
 import { counterStatus, counterStatusLabel } from "@/core/chat/hours.ts";
 import { publicationHeadline } from "@/core/publications/notice-types.ts";
@@ -14,6 +16,7 @@ import {
   SECTION_LABELS,
   SECTION_ROUTES,
 } from "@/core/tenant/gating.ts";
+import { heroTitleFit } from "@/core/tenant/hero-title.ts";
 import type { Section } from "@/core/tenant/schema.ts";
 import { today } from "@/lib/office-config.ts";
 import { livePublications } from "@/lib/publications.ts";
@@ -77,6 +80,7 @@ export default async function Home() {
     isSectionEnabled(tenant, l.section),
   );
   const canLookUp = isSectionEnabled(tenant, "consulta-protocolo");
+  const titleFit = heroTitleFit(tenant.home.title, tenant.theme);
   // At request time: the page is rendered per request (the office comes from
   // the host), so the card says what is true when the citizen looks.
   const now = new Date();
@@ -127,9 +131,21 @@ export default async function Home() {
             </span>
             {/* Uppercased here, not in the configured text: every office
                 writes its own title and they would drift apart otherwise,
-                and the office still edits it in ordinary case. */}
-            <h1 className="mt-2 font-serif text-[28px] font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5 md:text-5xl">
-              {tenant.home.title}
+                and the office still edits it in ordinary case. Its size
+                comes from the name and the theme's font (hero-title.ts):
+                one line when it fits, balanced lines when it does not,
+                and never "/ RN" alone (23/11/2026). */}
+            <h1
+              className="hero-title mt-2 font-serif font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5"
+              style={
+                {
+                  "--hero-title-ems": titleFit.ems,
+                  "--hero-title-max": `${titleFit.maxRem}rem`,
+                  "--hero-title-phone": titleFit.phoneSize,
+                } as CSSProperties
+              }
+            >
+              <PlaceName text={tenant.home.title} />
             </h1>
             {/* A short display line: justified, it would open holes. */}
             <p className="mt-2 text-left text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">

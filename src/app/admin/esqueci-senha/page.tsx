@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../_components/icon.tsx";
@@ -32,7 +33,7 @@ export default async function ForgotPasswordPage({
         <div>
           <OfficeMark tenant={tenant} />
           <p className="mt-1 pl-11.5 text-xs text-sidebar-label">
-            {tenant.subtitle}
+            <PlaceName text={tenant.subtitle} />
           </p>
         </div>
 
