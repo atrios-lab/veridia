@@ -69,13 +69,13 @@ test("os níveis começam no padrão e não saem enquanto tiverem gente", async 
     [
       { id: "servicos-gerais", label: "Serviços gerais e limpeza" },
       ...withoutLast,
-      { id: "estagiario", label: "Estagiário" },
+      { id: "conciliador", label: "Conciliador" },
     ],
     ACTOR,
   );
   const levels = await getLevelsWith(db, OFFICE);
   assert.equal(levels[0]?.label, "Serviços gerais e limpeza");
-  assert.equal(levels.at(-1)?.id, "estagiario");
+  assert.equal(levels.at(-1)?.id, "conciliador");
   // Another office keeps its own.
   assert.deepEqual(await getLevelsWith(db, OTHER), [...DEFAULT_TEAM_LEVELS]);
   await archiveStaffWith(db, OFFICE, id, ACTOR);

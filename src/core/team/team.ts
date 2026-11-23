@@ -26,8 +26,47 @@ export const DEFAULT_TEAM_LEVELS: readonly TeamLevel[] = [
   { id: "escrevente-autorizado", label: "Escrevente autorizado" },
   { id: "escrevente", label: "Escrevente" },
   { id: "auxiliar", label: "Auxiliar de cartório" },
+  { id: "estagiario", label: "Estagiário(a)" },
+  { id: "jovem-aprendiz", label: "Jovem aprendiz" },
   { id: "servicos-gerais", label: "Serviços gerais" },
 ];
+
+/**
+ * Levels added to the default list after offices had already saved their
+ * own (decision of 23/11/2026: "faltou a opção de estagiária(o) e Jovem
+ * Aprendiz"). A list saved before them gets them once, before "Serviços
+ * gerais"; a list saved after (`version` 2) is taken as the office left it,
+ * so a level the office removed on purpose does not come back.
+ */
+const ADDED_IN_VERSION_2: readonly TeamLevel[] = [
+  { id: "estagiario", label: "Estagiário(a)" },
+  { id: "jovem-aprendiz", label: "Jovem aprendiz" },
+];
+
+/** How a list of levels is kept: with the version it was saved under. */
+export function storedLevels(levels: readonly TeamLevel[]) {
+  return { version: 2, levels: [...levels] };
+}
+
+function withAddedLevels(levels: TeamLevel[]): TeamLevel[] {
+  const out = [...levels];
+  const labels = new Set(
+    out.map((level) =>
+      level.label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase(),
+    ),
+  );
+  for (const added of ADDED_IN_VERSION_2) {
+    const key = added.label.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+    if (out.some((level) => level.id === added.id) || labels.has(key)) {
+      continue;
+    }
+    if (out.length >= MAX_LEVELS) break;
+    const before = out.findIndex((level) => level.id === "servicos-gerais");
+    if (before >= 0) out.splice(before, 0, added);
+    else out.push(added);
+  }
+  return out;
+}
 
 export const MAX_LEVELS = 20;
 export const LEVEL_LABEL_MAX = 60;
@@ -39,8 +78,19 @@ const LevelSchema = z.object({
   label: z.string().trim().min(1).max(LEVEL_LABEL_MAX),
 });
 
-/** The levels as stored: a broken or empty list reads as the default. */
+/** The levels as stored: a broken or empty list reads as the default. A
+ * list saved before version 2 gets the levels added since. */
 export function levelsFrom(raw: unknown): TeamLevel[] {
+  const versioned =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? (raw as { version?: unknown; levels?: unknown })
+      : undefined;
+  if (versioned?.version === 2) return parseLevels(versioned.levels);
+  const parsed = parseLevels(raw);
+  return Array.isArray(raw) ? withAddedLevels(parsed) : parsed;
+}
+
+function parseLevels(raw: unknown): TeamLevel[] {
   if (!Array.isArray(raw)) return [...DEFAULT_TEAM_LEVELS];
   const out: TeamLevel[] = [];
   const seen = new Set<string>();
@@ -336,7 +386,7 @@ export const TEAM_FILE_RULES: Record<
   TeamFileKind,
   { label: string; types: readonly TeamFileType[]; maxBytes: number }
 > = {
-  photo: { label: "foto", types: ["png", "jpeg", "webp"], maxBytes: 2 * MB },
+  photo: { label: "foto", types: ["png", "jpeg", "webp"], maxBytes: 3 * MB },
   portaria: { label: "portaria", types: ["pdf"], maxBytes: 4 * MB },
   word: { label: "Word da portaria", types: ["docx", "doc"], maxBytes: 4 * MB },
 };

@@ -14,6 +14,7 @@ import {
   type StaffParsed,
   type StaffRecord,
   signersFrom,
+  storedLevels,
   type TeamFileKind,
   type TeamGroup,
   type TeamLevel,
@@ -106,14 +107,14 @@ export async function saveLevelsWith(
     .values({
       tenantSlug,
       key: OFFICE_TEAM_LEVELS_KEY,
-      published: levels,
+      published: storedLevels(levels),
       publishedAt: now,
       updatedBy: actorId,
     })
     .onConflictDoUpdate({
       target: [tenantContent.tenantSlug, tenantContent.key],
       set: {
-        published: levels,
+        published: storedLevels(levels),
         publishedAt: now,
         updatedAt: now,
         updatedBy: actorId,
