@@ -5,6 +5,8 @@ import {
   type DeskItemInput,
   rankDeskItems,
   rankTodayAppointments,
+  serviceRequestAwaitsOffice,
+  serviceRequestTurn,
 } from "./desk.ts";
 
 const TODAY = "2026-08-06";
@@ -297,4 +299,57 @@ test("a contagem da mesa ignora o que aguarda o cidadão", () => {
   ];
 
   assert.equal(countDeskItems(items, TODAY), 1);
+});
+
+test("o andamento decide de quem é a vez na mesa (pedidos)", () => {
+  const office = new Date("2026-11-22T10:00:00Z");
+  const later = new Date("2026-11-22T11:00:00Z");
+  // The office's work stays on the desk, whoever acted last.
+  for (const status of ["new", "in-review", "payment-reported", "processing"]) {
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: later,
+        byLastActor: false,
+      }),
+      true,
+      status,
+    );
+  }
+  // Waiting on the citizen: off the desk, even with no office action at all
+  // (a requerimento signed digitally releases the pedido to the payment).
+  for (const status of [
+    "awaiting-payment",
+    "awaiting-compliance",
+    "awaiting-guide-payment",
+    "ready-for-pickup",
+  ]) {
+    assert.equal(
+      serviceRequestAwaitsOffice({ status, byLastActor: true }),
+      false,
+      status,
+    );
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: later,
+        lastCitizenMoveAt: office,
+        byLastActor: true,
+      }),
+      false,
+      `${status}: o cidadão agiu antes do andamento`,
+    );
+    // Back on the desk when the citizen moves after it.
+    assert.equal(
+      serviceRequestAwaitsOffice({
+        status,
+        lastOfficeMoveAt: office,
+        lastCitizenMoveAt: later,
+        byLastActor: false,
+      }),
+      true,
+      `${status}: o cidadão respondeu depois`,
+    );
+  }
+  assert.equal(serviceRequestTurn("awaiting-signed-form"), undefined);
 });

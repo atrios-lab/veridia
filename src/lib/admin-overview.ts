@@ -1,4 +1,5 @@
 import { getAct } from "@/core/acts/catalog.ts";
+import { serviceRequestAwaitsOffice } from "@/core/overview/desk.ts";
 import { waitsOnSignedForm } from "@/core/request/signed-form-check.ts";
 import "server-only";
 import {
@@ -267,6 +268,37 @@ async function lastOfficeActionAt(
 }
 
 /**
+ * When each pedido last changed andamento or value, whoever did it (the
+ * system included: a requerimento signed digitally releases the pedido with
+ * no actor). The reference for "did the citizen move after that?".
+ */
+async function lastStatusChangeAt(
+  tenantSlug: string,
+  requestIds: readonly string[],
+): Promise<Map<string, Date>> {
+  if (requestIds.length === 0) return new Map();
+  const rows = await db
+    .select({ targetId: auditLog.targetId, at: max(auditLog.createdAt) })
+    .from(auditLog)
+    .where(
+      and(
+        eq(auditLog.tenantSlug, tenantSlug),
+        inArray(auditLog.action, [
+          "service-request.status",
+          "service-request.amount",
+        ]),
+        inArray(auditLog.targetId, [...requestIds]),
+      ),
+    )
+    .groupBy(auditLog.targetId);
+  return new Map(
+    rows.flatMap((row) =>
+      row.targetId && row.at ? [[row.targetId, row.at]] : [],
+    ),
+  );
+}
+
+/**
  * When the citizen last wrote in a requirement conversation, per request. This
  * is a second source on purpose: the citizen's message is deliberately not
  * audited (see `writeStaffMessage`), so the audit log alone would never show
@@ -421,16 +453,22 @@ export async function listDeskItems(
   const serviceRequestIds = rows
     .filter((row) => row.kind === "service-request")
     .map((row) => row.id);
-  const [officeAt, citizenMessageAt, citizenAttachmentAt, signedForms] =
-    await Promise.all([
-      lastOfficeActionAt(tenantSlug, [
-        ...rows.map((row) => row.id),
-        ...rows.map((row) => row.protocolNumber),
-      ]),
-      lastCitizenMessageAt(tenantSlug, serviceRequestIds),
-      lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
-      withSignedForm(tenantSlug, serviceRequestIds),
-    ]);
+  const [
+    officeAt,
+    citizenMessageAt,
+    citizenAttachmentAt,
+    signedForms,
+    statusAt,
+  ] = await Promise.all([
+    lastOfficeActionAt(tenantSlug, [
+      ...rows.map((row) => row.id),
+      ...rows.map((row) => row.protocolNumber),
+    ]),
+    lastCitizenMessageAt(tenantSlug, serviceRequestIds),
+    lastCitizenAttachmentAt(tenantSlug, serviceRequestIds),
+    withSignedForm(tenantSlug, serviceRequestIds),
+    lastStatusChangeAt(tenantSlug, serviceRequestIds),
+  ]);
 
   // A pedido from the site waiting on its signed requerimento has not
   // reached the office (decisions of 12/11/2026 and 13/11/2026), the ones
@@ -469,11 +507,38 @@ export async function listDeskItems(
     ]
       .filter((at): at is Date => at !== undefined)
       .sort((a, b) => b.getTime() - a.getTime())[0];
+    const byLastActor = !office || citizen > office;
+    if (row.kind !== "service-request") {
+      return {
+        ...row,
+        kind: row.kind as RequestKind,
+        hasFulfilledPendingRequirement: false,
+        awaitingOffice: byLastActor,
+      };
+    }
+    // The andamento decides first (decision of 23/11/2026): a pedido
+    // waiting on the citizen leaves the desk, even when it got there with
+    // nobody from the office acting (a requerimento signed digitally
+    // releases it straight to the payment), until the citizen moves again.
+    const officeMove = [office, statusAt.get(row.id)]
+      .filter((at): at is Date => at !== undefined)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    const citizenMove = [
+      citizenMessageAt.get(row.id),
+      citizenAttachmentAt.get(row.id),
+    ]
+      .filter((at): at is Date => at !== undefined)
+      .sort((a, b) => b.getTime() - a.getTime())[0];
     return {
       ...row,
       kind: row.kind as RequestKind,
       hasFulfilledPendingRequirement: false,
-      awaitingOffice: !office || citizen > office,
+      awaitingOffice: serviceRequestAwaitsOffice({
+        status: row.status,
+        lastOfficeMoveAt: officeMove,
+        lastCitizenMoveAt: citizenMove,
+        byLastActor,
+      }),
     };
   });
 }
