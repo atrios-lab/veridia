@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import { SECTION_ROUTES, sectionNavLinks } from "@/core/tenant/gating.ts";
 import { jsonLdScript, organizationJsonLd } from "@/core/tenant/seo.ts";
 import { linkedSections } from "@/core/tenant/site.ts";
@@ -185,7 +186,7 @@ export default async function PublicLayout({
                     {tenant.name}
                   </span>
                   <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-[0.1em] text-brand-accent-ink md:text-[10px]">
-                    {tenant.subtitle}
+                    <PlaceName text={tenant.subtitle} />
                   </span>
                 </span>
               </Link>
@@ -340,7 +341,7 @@ export default async function PublicLayout({
                         {tenant.name}
                       </span>
                       <span className="block text-xs text-brand-on-dark-body">
-                        {tenant.subtitle}
+                        <PlaceName text={tenant.subtitle} />
                       </span>
                     </span>
                   </div>
@@ -423,8 +424,8 @@ export default async function PublicLayout({
 
               <div className="mt-8 flex flex-col gap-2 border-t border-white/15 pt-5 text-xs text-brand-on-dark-muted md:flex-row md:items-center md:justify-between">
                 <span>
-                  {tenant.name} · {tenant.subtitle}. Todos os direitos
-                  reservados.
+                  {tenant.name} · <PlaceName text={tenant.subtitle} />. Todos os
+                  direitos reservados.
                 </span>
                 <span className="flex items-center gap-2">
                   {/* Duas paths e fill currentColor: inline, a marca acompanha a

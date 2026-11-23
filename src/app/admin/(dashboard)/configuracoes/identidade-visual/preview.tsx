@@ -1,3 +1,4 @@
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import type { Theme } from "@/core/tenant/schema.ts";
 import { SERIF } from "@/lib/fonts.ts";
 
@@ -72,7 +73,7 @@ export function VisualIdentityPreview({
           {/* Same uppercase as the live hero, or the office edits the title
               here and the site renders it differently. */}
           <h1 className="mt-1.5 font-serif text-[25px] font-semibold uppercase leading-tight text-brand-on-dark-heading">
-            {title || " "}
+            {title ? <PlaceName text={title} /> : " "}
           </h1>
           <div className="mt-3.5 flex gap-1.5 rounded-xl bg-brand-card p-1.5">
             <div className="flex-1 px-2 py-2 text-[12.5px] text-brand-faint">

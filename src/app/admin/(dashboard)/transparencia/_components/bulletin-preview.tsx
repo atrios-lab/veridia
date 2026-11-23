@@ -1,3 +1,4 @@
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import {
   BALANCE_LABEL,
   BULLETIN_LEGAL_BASIS,
@@ -77,7 +78,9 @@ export function BulletinPreview({
     <div className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="bg-primary px-6 py-4 text-primary-foreground">
         <p className="text-base font-semibold">{officeName}</p>
-        <p className="text-xs text-primary-foreground/80">{officeSubtitle}</p>
+        <p className="text-xs text-primary-foreground/80">
+          <PlaceName text={officeSubtitle} />
+        </p>
       </div>
 
       <div className="p-6">
