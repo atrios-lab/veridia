@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PlaceName } from "@/app/_components/place-name.tsx";
 import { ATTRIBUTION_SHORT_NAMES } from "@/core/acts/catalog.ts";
 import { counterStatus, counterStatusLabel } from "@/core/chat/hours.ts";
 import { publicationHeadline } from "@/core/publications/notice-types.ts";
@@ -127,9 +128,12 @@ export default async function Home() {
             </span>
             {/* Uppercased here, not in the configured text: every office
                 writes its own title and they would drift apart otherwise,
-                and the office still edits it in ordinary case. */}
-            <h1 className="mt-2 font-serif text-[28px] font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5 md:text-5xl">
-              {tenant.home.title}
+                and the office still edits it in ordinary case. Wider than
+                the column below it from md up, so a short name ("Ofício
+                Único de Cruzeta / RN") fits one line; a long one breaks in
+                balanced lines and never leaves "/ RN" alone (23/11/2026). */}
+            <h1 className="mt-2 text-balance font-serif text-[clamp(1.25rem,6.8vw,1.75rem)] font-semibold uppercase leading-tight text-brand-on-dark-heading md:mt-3.5 md:w-[min(56rem,calc(100vw-5rem))] md:text-5xl">
+              <PlaceName text={tenant.home.title} />
             </h1>
             {/* A short display line: justified, it would open holes. */}
             <p className="mt-2 text-left text-sm leading-relaxed text-brand-on-dark-body md:mt-3.5 md:max-w-[44ch] md:text-base">
