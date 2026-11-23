@@ -97,6 +97,76 @@ export const PALETTES: Record<Theme, Palette> = {
     tint: "#ebeee2",
     muted: "#6a6d58",
   },
+  "petroleo-ouro": {
+    primary: "#0f3d44",
+    primarySoft: "#175560",
+    shade: "#071e22",
+    accent: "#957434",
+    accentInk: "#7c6130",
+    accentSoft: "#efe7d3",
+    onDarkAccent: "#dcc68f",
+    onDarkHeading: "#ead8a8",
+    surface: "#f2f4f2",
+    border: "#dde2dd",
+    tint: "#e5eeee",
+    muted: "#57656a",
+  },
+  "ameixa-champanhe": {
+    primary: "#3d2347",
+    primarySoft: "#553160",
+    shade: "#1e1023",
+    accent: "#9a7a50",
+    accentInk: "#7e633f",
+    accentSoft: "#efe6d8",
+    onDarkAccent: "#dcc39c",
+    onDarkHeading: "#ecdbbe",
+    surface: "#f5f2f1",
+    border: "#e3dcdc",
+    tint: "#eee8ee",
+    muted: "#665d68",
+  },
+  "cafe-caramelo": {
+    primary: "#3a2a20",
+    primarySoft: "#523b2d",
+    shade: "#1d140f",
+    accent: "#a5702f",
+    accentInk: "#87592a",
+    accentSoft: "#f1e4d3",
+    onDarkAccent: "#e0bf8c",
+    onDarkHeading: "#edd6ad",
+    surface: "#f6f2ec",
+    border: "#e5ddd1",
+    tint: "#efe9e1",
+    muted: "#6a5f55",
+  },
+  "indigo-areia": {
+    primary: "#2b2f63",
+    primarySoft: "#3b417e",
+    shade: "#14162f",
+    accent: "#9a7b4f",
+    accentInk: "#7b623e",
+    accentSoft: "#efe6d6",
+    onDarkAccent: "#d9c39b",
+    onDarkHeading: "#e8d8b6",
+    surface: "#f3f3f2",
+    border: "#dedfe0",
+    tint: "#e8e9f2",
+    muted: "#5d6072",
+  },
+  "azul-prata": {
+    primary: "#1c3f7a",
+    primarySoft: "#27509a",
+    shade: "#0d1f3d",
+    accent: "#66748a",
+    accentInk: "#556275",
+    accentSoft: "#e6eaf0",
+    onDarkAccent: "#c8d2e0",
+    onDarkHeading: "#dde4ee",
+    surface: "#f3f5f8",
+    border: "#dce1e8",
+    tint: "#e6ecf5",
+    muted: "#586274",
+  },
 };
 
 /** Neutrals identical in every theme. */
@@ -114,9 +184,9 @@ export function paletteFor(theme: Theme): Palette {
 
 /**
  * The outgoing e-mail's own palette. Fixed and institutional, deliberately
- * not one of the five themes above: an e-mail client cannot read a CSS
- * variable, so every colour is inlined into the markup, and threading five
- * tenant palettes through that is work no recipient would notice.
+ * not one of the themes above: an e-mail client cannot read a CSS
+ * variable, so every colour is inlined into the markup, and threading every
+ * tenant palette through that is work no recipient would notice.
  *
  * It lives here rather than beside the renderer for one reason: this module is
  * where a colour is allowed to be written down, and the invariant is worth

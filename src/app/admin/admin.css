@@ -13,7 +13,7 @@
  */
 @import "tailwindcss";
 @import "tw-animate-css";
-/* The five palettes, for the previews of the site inside the panel
+/* The site palettes, for the previews of the site inside the panel
    (Identidade visual, Publicações): each sets its own [data-theme] on its
    box, and nothing else in the panel reads them. */
 @import "../brand-palettes.css";

@@ -73,6 +73,11 @@ export const THEMES = [
   "vinho-perola",
   "grafite-cobre",
   "oliva-terracota",
+  "petroleo-ouro",
+  "ameixa-champanhe",
+  "cafe-caramelo",
+  "indigo-areia",
+  "azul-prata",
 ] as const;
 export const ThemeSchema = z.enum(THEMES, "Escolha o estilo do site.");
 export type Theme = z.infer<typeof ThemeSchema>;
