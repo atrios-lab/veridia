@@ -141,6 +141,7 @@ export default async function Home() {
                 {
                   "--hero-title-ems": titleFit.ems,
                   "--hero-title-max": `${titleFit.maxRem}rem`,
+                  "--hero-title-phone": titleFit.phoneSize,
                 } as CSSProperties
               }
             >

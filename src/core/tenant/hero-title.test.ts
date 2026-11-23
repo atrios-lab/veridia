@@ -28,6 +28,11 @@ describe("heroTitleFit", () => {
     );
     assert.equal(fit.lines, 2);
     assert.ok(wideTitleRem(fit) <= 2.5);
+    // Smaller on a phone too, or it would take five lines there.
+    assert.notEqual(
+      fit.phoneSize,
+      heroTitleFit("Ofício Único de Cruzeta / RN", "vinho-perola").phoneSize,
+    );
   });
 
   it("never draws any office's name below 2rem on a wide screen, in any theme", () => {

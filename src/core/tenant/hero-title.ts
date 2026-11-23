@@ -47,22 +47,41 @@ export interface HeroTitleFit {
   ems: number;
   /** The largest size, in rem, however much room there is. */
   maxRem: number;
+  /**
+   * The size on a phone: a name that needs two lines on a wide screen
+   * would take four on a phone, so it gets slightly smaller letters there.
+   */
+  phoneSize: string;
 }
+
+const PHONE_SIZE = "clamp(1.25rem, 6.8vw, 1.75rem)";
+const PHONE_SIZE_LONG = "clamp(1.125rem, 5.6vw, 1.5rem)";
 
 export function heroTitleFit(title: string, theme: Theme): HeroTitleFit {
   const capital = CAPITAL_EM[theme] ?? WIDEST_EM;
   const oneLine = Math.max(1, [...title.trim()].length) * capital;
   if (TITLE_ROOM_REM / oneLine >= ONE_LINE_MIN_REM) {
-    return { lines: 1, ems: round(oneLine), maxRem: ONE_LINE_MAX_REM };
+    return {
+      lines: 1,
+      ems: round(oneLine),
+      maxRem: ONE_LINE_MAX_REM,
+      phoneSize: PHONE_SIZE,
+    };
   }
   const twoLines = (oneLine / 2) * UNEVEN_BREAK;
   if (TITLE_ROOM_REM / twoLines >= SMALLEST_WIDE_REM) {
-    return { lines: 2, ems: round(twoLines), maxRem: TWO_LINES_MAX_REM };
+    return {
+      lines: 2,
+      ems: round(twoLines),
+      maxRem: TWO_LINES_MAX_REM,
+      phoneSize: PHONE_SIZE_LONG,
+    };
   }
   return {
     lines: 3,
     ems: round((oneLine / 3) * UNEVEN_BREAK * 1.05),
     maxRem: THREE_LINES_MAX_REM,
+    phoneSize: PHONE_SIZE_LONG,
   };
 }
 
