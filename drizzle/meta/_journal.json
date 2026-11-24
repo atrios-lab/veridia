@@ -575,6 +575,13 @@
       "when": 1795555523765,
       "tag": "0081_equipe_excluir",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795556579414,
+      "tag": "0082_contas_excluir",
+      "breakpoints": true
     }
   ]
 }

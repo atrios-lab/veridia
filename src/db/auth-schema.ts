@@ -31,6 +31,11 @@ export const user = pgTable("user", {
   // free. Independent of whether a credential row exists: an account can be
   // both "already has its own password" and "access turned off".
   disabledAt: timestamp("disabled_at"),
+  // Excluded from the panel's list (decision of 24/11/2026). Never a
+  // DELETE: the row stays, so every act keeps its author; the account is
+  // also disabled, and "Desfazer exclusão" brings it back to the list.
+  deletedAt: timestamp("deleted_at"),
+  deletedBy: text("deleted_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

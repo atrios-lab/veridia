@@ -13,15 +13,7 @@ import { getTenant } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
 import { ROLE_LABELS } from "../../_components/role-labels.ts";
 import { Badge } from "../../_ui/badge.tsx";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../../_ui/table.tsx";
-import { AccountRowActions } from "./account-row-actions.tsx";
+import { AccountRowActions, UndeleteAction } from "./account-row-actions.tsx";
 import { CreateAccountForm } from "./create-account-form.tsx";
 
 export const metadata = { title: "Usuários" };
@@ -42,6 +34,7 @@ async function listAccounts(tenantSlug: string) {
       role: userTable.role,
       credentialId: accountTable.id,
       disabledAt: userTable.disabledAt,
+      deletedAt: userTable.deletedAt,
       pendingEmailValue: verificationTable.value,
     })
     .from(userTable)
@@ -88,7 +81,11 @@ export default async function UsuariosPage() {
     notFound();
 
   const tenant = await getTenant();
-  const accounts = await listAccounts(tenant.slug);
+  const all = await listAccounts(tenant.slug);
+  // Excluded accounts leave the list but never the database (decision of
+  // 24/11/2026): they wait below, in "Contas excluídas", to be brought back.
+  const accounts = all.filter((account) => !account.deletedAt);
+  const deleted = all.filter((account) => account.deletedAt);
 
   return (
     <>
@@ -98,79 +95,103 @@ export default async function UsuariosPage() {
           <div className="border-b px-5 py-3.5 text-base font-semibold text-foreground">
             Contas do painel
           </div>
-          <Table>
-            <TableHeader className="sr-only">
-              <TableRow>
-                <TableHead>Conta</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Situação</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {accounts.map((account) => (
-                <TableRow key={account.id} className="hover:bg-transparent">
-                  <TableCell className="w-full max-w-0 min-w-40 py-3.5 pl-5">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {account.name}
-                      {account.id === session.user.id && (
-                        <span className="ml-1 font-normal text-muted-foreground">
-                          {" "}
-                          (você)
-                        </span>
-                      )}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {account.email}
-                    </p>
-                    {/* A change nobody can see is a change nobody remembers
-                        asking for: the registrador saves, the list looks the
-                        same, and the pending confirmation is invisible. */}
-                    {account.pendingEmail && (
-                      <p className="truncate text-xs text-warning-text">
-                        Troca para {account.pendingEmail} aguardando confirmação
-                      </p>
+          {/* A list, not a table: the buttons are many and the panel's
+              column is narrow, so each account is its name, cargo and
+              situação on one line and its actions on the next, wrapping on
+              a phone instead of running off the screen. */}
+          <ul className="divide-y">
+            {accounts.map((account) => (
+              <li
+                key={account.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-5 py-3.5"
+              >
+                <div className="min-w-48 flex-1">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {account.name}
+                    {account.id === session.user.id && (
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        {" "}
+                        (você)
+                      </span>
                     )}
-                  </TableCell>
-                  <TableCell className="py-3.5">
-                    <Badge variant="outline">
-                      {ROLE_LABELS[account.role as Role] ?? account.role}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {account.email}
+                  </p>
+                  {/* A change nobody can see is a change nobody remembers
+                      asking for: the registrador saves, the list looks the
+                      same, and the pending confirmation is invisible. */}
+                  {account.pendingEmail && (
+                    <p className="truncate text-xs text-warning-text">
+                      Troca para {account.pendingEmail} aguardando confirmação
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">
+                    {ROLE_LABELS[account.role as Role] ?? account.role}
+                  </Badge>
+                  {account.disabled ? (
+                    <Badge className="bg-destructive text-destructive-foreground">
+                      Acesso desativado
                     </Badge>
-                  </TableCell>
-                  <TableCell className="py-3.5">
-                    {account.disabled ? (
-                      <Badge className="bg-destructive text-destructive-foreground">
-                        Acesso desativado
-                      </Badge>
-                    ) : account.active ? (
-                      <Badge className="bg-success text-success-foreground">
-                        Ativa
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-warning text-warning-foreground">
-                        Aguardando 1º acesso
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="py-3.5 pr-5">
-                    <div className="flex justify-end">
-                      <AccountRowActions
-                        account={{
-                          id: account.id,
-                          name: account.name,
-                          email: account.email,
-                          role: account.role,
-                        }}
-                        active={account.active}
-                        disabled={account.disabled}
-                        isSelf={account.id === session.user.id}
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  ) : account.active ? (
+                    <Badge className="bg-success text-success-foreground">
+                      Ativa
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-warning text-warning-foreground">
+                      Aguardando 1º acesso
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex w-full justify-end">
+                  <AccountRowActions
+                    account={{
+                      id: account.id,
+                      name: account.name,
+                      email: account.email,
+                      role: account.role,
+                    }}
+                    active={account.active}
+                    disabled={account.disabled}
+                    isSelf={account.id === session.user.id}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+          {deleted.length > 0 && (
+            <details className="border-t px-5 py-3.5">
+              <summary className="cursor-pointer text-sm font-semibold text-foreground">
+                Contas excluídas ({deleted.length})
+              </summary>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Não entram no painel. O registro fica guardado e os atos
+                continuam com o nome da pessoa. Ao desfazer, a conta volta para
+                a lista ainda sem acesso.
+              </p>
+              <ul className="mt-2 flex flex-col divide-y">
+                {deleted.map((account) => (
+                  <li
+                    key={account.id}
+                    className="flex flex-wrap items-center gap-3 py-2.5"
+                  >
+                    <span className="min-w-40 flex-1">
+                      <span className="block truncate text-sm text-muted-foreground line-through">
+                        {account.name}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {account.email} ·{" "}
+                        {ROLE_LABELS[account.role as Role] ?? account.role}
+                      </span>
+                    </span>
+                    <UndeleteAction userId={account.id} />
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
 
         <CreateAccountForm />

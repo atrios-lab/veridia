@@ -459,8 +459,9 @@ const ENTRIES: Record<string, ScreenHelp> = {
       "As contas da equipe: quem acessa o painel, com qual cargo, e os convites.",
     steps: [
       "Em 'Criar conta', informe nome, e-mail e cargo; a pessoa recebe o link para criar a senha.",
-      "Use 'Link de nova senha' (no menu da conta) para quem esqueceu a senha.",
-      "Use 'Desativar acesso' para quem saiu da serventia (o histórico fica guardado).",
+      "Use 'Link de nova senha' para quem esqueceu a senha.",
+      "Use 'Desativar' para tirar o acesso de quem saiu da serventia; a conta continua na lista e pode ser reativada.",
+      "Use 'Excluir' para tirar a conta da lista. Nada é apagado: os atos continuam com o nome da pessoa, e 'Desfazer exclusão' (em Contas excluídas) traz a conta de volta.",
     ],
     configure: {
       href: "/admin/configuracoes/perfis",
