@@ -1,4 +1,5 @@
 import {
+  AGENDA_IDS,
   type AgendaConfig,
   type AgendaId,
   addMinutes,
@@ -37,9 +38,24 @@ export interface CounterService {
   /** A sentence of guidance, when the list alone would mislead. */
   note?: string;
   /** Where a newly configured office starts it: the notary's own acts go to
-   * the notary's agenda, everything else to the counter. Only a suggestion:
-   * the office ticks what it wants in each agenda. */
-  suggestedAgenda: "geral" | "tabeliao";
+   * the notary's agenda, the e-Notariado's to its own, everything else to
+   * the counter. Only a suggestion: the office ticks what it wants in each
+   * agenda. */
+  suggestedAgenda: AgendaId;
+  /**
+   * "Como fazer" for whoever attends (rule of 21/11/2026): each step with
+   * its legal source, checked in the official text. Shown on the
+   * appointment in the panel.
+   */
+  howTo?: HowToStep[];
+  /** Whether the act is charged by the fee table in force, so the panel
+   * shows the reminder to check the table next to the "Como fazer". */
+  chargedByFeeTable?: boolean;
+}
+
+export interface HowToStep {
+  step: string;
+  source: string;
 }
 
 export const COUNTER_SERVICE_GROUPS = [
@@ -50,6 +66,7 @@ export const COUNTER_SERVICE_GROUPS = [
   "Protesto",
   "Títulos e Documentos",
   "Pessoas Jurídicas",
+  "e-Notariado",
 ] as const;
 export type CounterServiceGroup = (typeof COUNTER_SERVICE_GROUPS)[number];
 
@@ -71,6 +88,263 @@ const SPOUSE_DOCS =
   "Certidão de nascimento (solteiro) ou de casamento atualizada (casado, divorciado ou viúvo)";
 const PROPERTY_CERTIFICATE =
   "Certidão de matrícula do imóvel atualizada, com ônus reais (até 30 dias)";
+
+/**
+ * The Código Nacional de Normas do Foro Extrajudicial, where the e-Notariado
+ * rules live since the Provimento CNJ n. 100/2020 was revoked. Article
+ * numbers checked in the official text on 24/11/2026 (Section "Dos atos
+ * notariais eletrônicos por meio do e-Notariado", arts. 284 to 317).
+ */
+const CNN = "Código Nacional de Normas do CNJ (Provimento n. 149/2023)";
+
+const VIDEO_DEVICE =
+  "Celular ou computador com câmera, microfone e boa internet";
+
+/**
+ * The e-Notariado's agenda (decision of 24/11/2026): the Certificado
+ * Digital Notarizado, the electronic acts and the platform's other
+ * services, plus "Outro serviço" for whatever the list does not name.
+ */
+const ENOTARIADO_SERVICES: CounterService[] = [
+  {
+    id: "enotariado.certificado",
+    group: "e-Notariado",
+    label: "Emissão do Certificado Digital Notarizado (gratuito)",
+    bring: ["E-mail e número de celular que você vai usar no e-Notariado"],
+    note: "Gratuito (Código Nacional de Normas do CNJ, art. 292, § 4º). A identificação é presencial, perante o notário (art. 285, II): venha ao cartório no horário marcado.",
+    suggestedAgenda: "enotariado",
+    howTo: [
+      {
+        step: "Confira o documento de identidade original com foto e o CPF da pessoa, que precisa estar presente: o certificado é a identidade digital de quem o notário identificou pessoalmente.",
+        source: `${CNN}, art. 285, II`,
+      },
+      {
+        step: "No e-Notariado (www.e-notariado.org.br), com o seu acesso de usuário interno, emita o certificado para o e-mail e o celular informados pela pessoa.",
+        source: `${CNN}, art. 293, III`,
+      },
+      {
+        step: "Não cobre nada: o notário fornece o certificado gratuitamente aos clientes do serviço notarial.",
+        source: `${CNN}, art. 292, § 4º`,
+      },
+      {
+        step: "Explique que o certificado é de uso exclusivo no e-Notariado e nas plataformas autorizadas, vale por tempo determinado e pode ser revogado a pedido, para emitir outro em qualquer tabelionato.",
+        source: `${CNN}, art. 292, §§ 4º e 6º`,
+      },
+      {
+        step: "Terminado, marque o agendamento como atendido.",
+        source: "Painel: Agenda de atendimentos",
+      },
+    ],
+  },
+  {
+    id: "enotariado.certificado-renovacao",
+    group: "e-Notariado",
+    label: "Renovação ou nova emissão do certificado notarizado",
+    bring: ["E-mail e número de celular que você usa no e-Notariado"],
+    note: "Gratuito (art. 292, § 4º). Você pode pedir a revogação do certificado atual e emitir um novo em qualquer tabelionato (art. 292, § 6º).",
+    suggestedAgenda: "enotariado",
+    howTo: [
+      {
+        step: "Confira a identidade como na primeira emissão: documento original com foto e CPF, com a pessoa presente.",
+        source: `${CNN}, art. 285, II`,
+      },
+      {
+        step: "Se o certificado atual foi emitido por outro tabelionato, a pessoa pode pedir a revogação e a emissão de um novo aqui, mesmo antes de vencer.",
+        source: `${CNN}, art. 292, § 6º`,
+      },
+      {
+        step: "Emita o novo certificado no e-Notariado, sem cobrança.",
+        source: `${CNN}, art. 292, § 4º`,
+      },
+    ],
+  },
+  {
+    id: "enotariado.ato-eletronico",
+    group: "e-Notariado",
+    label:
+      "Assinatura de ato eletrônico por videoconferência (escritura, procuração, ata notarial e outros)",
+    bring: [
+      "Certificado Digital Notarizado (ou ICP-Brasil) válido",
+      VIDEO_DEVICE,
+      "Os documentos do ato que o cartório pediu (por exemplo, os da escritura ou da procuração)",
+    ],
+    note: "A videoconferência com o tabelião é obrigatória e acontece dentro da plataforma e-Notariado (Código Nacional de Normas do CNJ, arts. 286 e 287). O convite chega pela própria plataforma.",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "Confira a competência. Escritura: tabelião da circunscrição do imóvel ou do domicílio do adquirente. Ata notarial: do lugar do fato ou, se não couber, do domicílio do requerente. O domicílio se comprova pelo título de eleitor ou outro meio.",
+        source: `${CNN}, arts. 302, 303 e 304`,
+      },
+      {
+        step: "Deixe o ato pronto no e-Notariado antes do horário e envie, pela plataforma, o convite da videoconferência notarial às partes.",
+        source: `${CNN}, art. 287`,
+      },
+      {
+        step: "Na videoconferência, a gravação precisa ter: identificação, capacidade e livre manifestação das partes; o consentimento e a concordância; o objeto e o preço; a data e a hora; e o livro, a página e o tabelionato do ato.",
+        source: `${CNN}, art. 286, parágrafo único`,
+      },
+      {
+        step: "As partes assinam exclusivamente pelo e-Notariado, e o tabelião assina com certificado ICP-Brasil, em formato de longa duração.",
+        source: `${CNN}, art. 286, III a V`,
+      },
+      {
+        step: "Cobre os emolumentos do ato pela tabela de emolumentos vigente, como no ato feito no papel.",
+        source: "Tabela de emolumentos vigente (Transparência)",
+      },
+    ],
+  },
+  {
+    id: "enotariado.e-not-assina",
+    group: "e-Notariado",
+    label: "Reconhecimento de assinatura eletrônica (e-Not Assina)",
+    bring: [
+      "O documento em PDF assinado no e-Notariado",
+      "Certificado Digital Notarizado (ou ICP-Brasil) válido",
+    ],
+    note: "O reconhecimento tem a mesma força jurídica de um reconhecimento de firma (Código Nacional de Normas do CNJ, art. 306, III).",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "Receba o documento pelo módulo e-Not Assina do e-Notariado.",
+        source: `${CNN}, art. 293, XIII`,
+      },
+      {
+        step: "Confira a identidade de quem assinou pelos meios do e-Notariado e reconheça a assinatura eletrônica.",
+        source: `${CNN}, arts. 301 e 306, III`,
+      },
+      {
+        step: "Cobre como reconhecimento de firma, pela tabela de emolumentos vigente.",
+        source: `${CNN}, art. 306, III; tabela de emolumentos vigente`,
+      },
+    ],
+  },
+  {
+    id: "enotariado.firma-videoconferencia",
+    group: "e-Notariado",
+    label: "Reconhecimento de firma por autenticidade por videoconferência",
+    bring: ["O documento que você vai assinar", VIDEO_DEVICE],
+    note: "Na videoconferência o cartório confirma a sua identidade, a sua capacidade e a autoria da assinatura (Código Nacional de Normas do CNJ, art. 306, IV).",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "Por videoconferência, confirme a identidade, a capacidade de quem assina e a autoria da assinatura.",
+        source: `${CNN}, art. 306, IV`,
+      },
+      {
+        step: "Documento de veículo: é competente o tabelião do município de emplacamento ou do domicílio do adquirente indicados no CRV.",
+        source: `${CNN}, art. 306, § 1º`,
+      },
+      {
+        step: "Arquive o trecho da videoconferência em que a pessoa ratifica a assinatura, com menção expressa ao documento.",
+        source: `${CNN}, art. 306, § 2º`,
+      },
+      {
+        step: "Conste no ato que a assinatura foi feita perante o tabelião, o substituto ou o escrevente, em videoconferência.",
+        source: `${CNN}, art. 308`,
+      },
+      {
+        step: "Cobre como reconhecimento de firma por autenticidade, pela tabela de emolumentos vigente.",
+        source: "Tabela de emolumentos vigente (Transparência)",
+      },
+    ],
+  },
+  {
+    id: "enotariado.aev",
+    group: "e-Notariado",
+    label: "Autorização Eletrônica de Viagem (AEV) para criança ou adolescente",
+    bring: [
+      "Certidão de nascimento ou documento de identidade da criança ou do adolescente",
+      "Dados da viagem: destino, datas e, se houver, quem vai acompanhar",
+    ],
+    note: "A AEV é feita só pelo e-Notariado, para criança ou adolescente de até 16 anos que viaja sem um ou sem os dois pais (Código Nacional de Normas do CNJ, art. 444).",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "A AEV, nacional ou internacional, é emitida exclusivamente pelo e-Notariado, para criança ou adolescente de até 16 anos desacompanhado de um ou dos dois pais.",
+        source: `${CNN}, art. 444; Provimento CNJ n. 103/2020`,
+      },
+      {
+        step: "Confira a identidade dos responsáveis, presencialmente ou por videoconferência, e reconheça as assinaturas como autênticas.",
+        source: `${CNN}, arts. 301 e 306, IV`,
+      },
+      {
+        step: "Cobre pela tabela de emolumentos vigente.",
+        source: "Tabela de emolumentos vigente (Transparência)",
+      },
+    ],
+  },
+  {
+    id: "enotariado.autenticacao-digital",
+    group: "e-Notariado",
+    label: "Autenticação digital de documento (CENAD)",
+    bring: ["O documento original a ser autenticado"],
+    note: "A cópia autenticada digital tem a mesma força de uma autenticação de cópia, e quem a recebe confere pela CENAD por até cinco anos (Código Nacional de Normas do CNJ, art. 305, §§ 4º e 5º).",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "Confira o documento físico original.",
+        source: `${CNN}, art. 305, § 1º`,
+      },
+      {
+        step: "Faça a desmaterialização pela CENAD: ela gera o registro com o notário ou preposto, a data, a hora e o código de verificação.",
+        source: `${CNN}, art. 305, §§ 2º e 3º`,
+      },
+      {
+        step: "Entregue a cópia digital: tem a mesma força de uma autenticação de cópia e é conferida pela CENAD por até cinco anos.",
+        source: `${CNN}, art. 305, §§ 4º e 5º`,
+      },
+      {
+        step: "Cobre como autenticação de cópia, pela tabela de emolumentos vigente.",
+        source: `${CNN}, art. 305, § 5º; tabela de emolumentos vigente`,
+      },
+    ],
+  },
+  {
+    id: "enotariado.cadastro",
+    group: "e-Notariado",
+    label: "Ajuda para se cadastrar no e-Notariado",
+    bring: ["E-mail e número de celular que você usa"],
+    suggestedAgenda: "enotariado",
+    howTo: [
+      {
+        step: "Ajude a pessoa a se cadastrar em www.e-notariado.org.br/cadastro.",
+        source: `${CNN}, art. 297, § 1º`,
+      },
+      {
+        step: "Se ela vai assinar atos, ofereça a emissão do Certificado Digital Notarizado, que é gratuita.",
+        source: `${CNN}, art. 292, § 4º`,
+      },
+    ],
+  },
+  {
+    id: "enotariado.outro",
+    group: "e-Notariado",
+    label: "Outro serviço do e-Notariado (não listado acima)",
+    bring: ["Os documentos relacionados ao que você precisa"],
+    note: "Conte no campo de detalhes o que você precisa. O cartório confirma se é feito pelo e-Notariado (Código Nacional de Normas do CNJ, art. 309).",
+    suggestedAgenda: "enotariado",
+    chargedByFeeTable: true,
+    howTo: [
+      {
+        step: "Leia o que a pessoa descreveu e confira se o ato se pratica pelo e-Notariado: outros atos eletrônicos podem ser feitos pelo sistema, observadas as regras gerais.",
+        source: `${CNN}, art. 309`,
+      },
+      {
+        step: "Se for ato notarial eletrônico, cumpra os requisitos: videoconferência notarial, concordância das partes, assinatura delas pelo e-Notariado e do tabelião com certificado ICP-Brasil.",
+        source: `${CNN}, art. 286`,
+      },
+      {
+        step: "Cobre conforme o ato, pela tabela de emolumentos vigente.",
+        source: "Tabela de emolumentos vigente (Transparência)",
+      },
+    ],
+  },
+];
 
 export const COUNTER_SERVICES: CounterService[] = [
   /* -------------------------------------------------------------- geral */
@@ -508,6 +782,7 @@ export const COUNTER_SERVICES: CounterService[] = [
     bring: ["Nome ou CNPJ da entidade"],
     suggestedAgenda: "geral",
   },
+  ...ENOTARIADO_SERVICES,
 ];
 
 export function getCounterService(id: string): CounterService | undefined {
@@ -526,7 +801,7 @@ export function counterServicesByGroup(): Array<{
 }
 
 /** The catalogue ids a fresh agenda starts with. */
-export function suggestedServiceIds(agenda: "geral" | "tabeliao"): string[] {
+export function suggestedServiceIds(agenda: AgendaId): string[] {
   return COUNTER_SERVICES.filter(
     (service) => service.suggestedAgenda === agenda,
   ).map((service) => service.id);
@@ -613,11 +888,14 @@ export function servicesOfAgenda(
   return [...catalogue, ...own];
 }
 
-/** The agendas the site shows: a weekly grid and at least one service. */
+/** The agendas the site shows: on (not paused), with a weekly grid and at
+ * least one service. An office that never sets one up never shows it. */
 export function offeredAgendas(config: AgendaConfig): AgendaId[] {
-  return (["geral", "tabeliao"] as const).filter(
+  return AGENDA_IDS.filter(
     (id) =>
-      hasGrid(config.agendas[id]) && servicesOfAgenda(config, id).length > 0,
+      !config.agendas[id].paused &&
+      hasGrid(config.agendas[id]) &&
+      servicesOfAgenda(config, id).length > 0,
   );
 }
 
@@ -650,6 +928,8 @@ export function attendanceNotice(slotTime: SlotTime, mode: string): string {
       return `Atendimento por vídeo: às ${slotTime}, esteja num lugar tranquilo e com internet. O link da videochamada chega no seu e-mail. Tenha os documentos da lista em mãos.`;
     case "ligacao":
       return `Atendimento por ligação: às ${slotTime}, o tabelião liga no telefone que você informou. Deixe-o por perto e tenha os documentos da lista em mãos.`;
+    case "enotariado":
+      return `Videoconferência no e-Notariado: às ${slotTime}, entre na plataforma e-Notariado (www.e-notariado.org.br) com o e-mail do seu cadastro, num lugar tranquilo e com internet. O convite chega pela própria plataforma. Tenha o documento de identidade original em mãos.`;
     default:
       return arrivalNotice(slotTime);
   }

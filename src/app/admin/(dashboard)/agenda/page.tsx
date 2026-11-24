@@ -75,7 +75,7 @@ export const metadata = { title: "Agenda de atendimentos" };
 const AGENDA_TONE: Record<
   AgendaId,
   {
-    icon: "users" | "shield";
+    icon: "users" | "shield" | "signature";
     chosen: string;
     idle: string;
     iconBg: string;
@@ -99,6 +99,14 @@ const AGENDA_TONE: Record<
     badge: "bg-holder text-holder-foreground",
     chip: "bg-holder text-holder-foreground",
   },
+  enotariado: {
+    icon: "signature",
+    chosen: "border-info bg-info text-primary-foreground",
+    idle: "border-info/50 bg-card text-info hover:bg-info-soft",
+    iconBg: "bg-info-soft text-info",
+    badge: "bg-info text-primary-foreground",
+    chip: "bg-info text-primary-foreground",
+  },
 };
 
 /**
@@ -107,9 +115,12 @@ const AGENDA_TONE: Record<
  */
 function UpcomingPanel({
   items,
+  agendas,
   todayCounts,
   weekCount,
 }: {
+  /** The agendas the office uses, for the day's counts. */
+  agendas: readonly AgendaId[];
   items: {
     id: string;
     date: string;
@@ -133,7 +144,7 @@ function UpcomingPanel({
         <h2 className="mr-auto text-lg font-semibold text-foreground">
           Próximos agendamentos
         </h2>
-        {AGENDA_IDS.map((id) => (
+        {agendas.map((id) => (
           <Badge key={id} className={cn("h-6 px-3", AGENDA_TONE[id].chip)}>
             Hoje · {AGENDA_NAMES[id].short}: {todayCounts[id] ?? 0}
           </Badge>
@@ -379,6 +390,16 @@ export default async function AgendaPage({
       ({ name, title }) => ({ name, title }),
     ) ?? [];
 
+  // The e-Notariado's agenda shows only for an office that uses it (decision
+  // of 24/11/2026): set up with times, or with appointments, or open now.
+  const shownAgendas = AGENDA_IDS.filter(
+    (id) =>
+      id !== "enotariado" ||
+      id === agenda ||
+      hasGrid(agendaRules(agendaConfig, id)) ||
+      upcoming.some((a) => agendaIdOf(a.agenda) === id),
+  );
+
   const futureClosed = [...config.closedDates]
     .filter((item) => item.date >= today())
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -403,8 +424,9 @@ export default async function AgendaPage({
               service: a.serviceLabel,
               agenda: agendaIdOf(a.agenda),
             }))}
+          agendas={shownAgendas}
           todayCounts={Object.fromEntries(
-            AGENDA_IDS.map((id) => [
+            shownAgendas.map((id) => [
               id,
               upcoming.filter(
                 (a) => a.date === now.date && agendaIdOf(a.agenda) === id,
@@ -418,8 +440,14 @@ export default async function AgendaPage({
         {/* The two agendas, each with its own colour and the day's count,
             so it is never in doubt which one is open (decision of
             11/11/2026). */}
-        <nav aria-label="Agendas" className="grid gap-2.5 sm:grid-cols-2">
-          {AGENDA_IDS.map((id) => {
+        <nav
+          aria-label="Agendas"
+          className={cn(
+            "grid gap-2.5",
+            shownAgendas.length === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2",
+          )}
+        >
+          {shownAgendas.map((id) => {
             const chosen = id === agenda;
             const count =
               id === agenda
@@ -457,9 +485,11 @@ export default async function AgendaPage({
                         : "text-muted-foreground",
                     )}
                   >
-                    {hasGrid(agendaRules(agendaConfig, id))
-                      ? `${count} ${count === 1 ? "agendado" : "agendados"} em ${formatShortDate(date)}`
-                      : "sem horários configurados"}
+                    {agendaConfig.agendas[id].paused
+                      ? `desligada · ${count} ${count === 1 ? "agendado" : "agendados"} em ${formatShortDate(date)}`
+                      : hasGrid(agendaRules(agendaConfig, id))
+                        ? `${count} ${count === 1 ? "agendado" : "agendados"} em ${formatShortDate(date)}`
+                        : "sem horários configurados"}
                   </span>
                 </span>
                 {count > 0 && (
@@ -536,7 +566,8 @@ export default async function AgendaPage({
                   Configurar as agendas
                 </span>
                 <span className="block text-xs text-muted-foreground">
-                  dias, horários e serviços do cartório e do tabelião
+                  dias, horários e serviços do cartório, do tabelião e do
+                  e-Notariado
                 </span>
               </span>
             </Link>
@@ -622,6 +653,7 @@ export default async function AgendaPage({
 
             {usesChannels(agenda) && !closed && grid.length > 0 && (
               <DayChannelsCard
+                agenda={agenda}
                 date={date}
                 dateLabel={formatShortDate(date)}
                 channels={channelsOn(agendaConfig.agendas[agenda], date)}
@@ -645,8 +677,8 @@ export default async function AgendaPage({
                 </h3>
                 <p className="mt-1 text-xs text-warning-text">{dayOff}</p>
                 <p className="mt-1 text-xs leading-relaxed text-warning-text">
-                  As duas agendas ficam fechadas: o site não oferece esta data e
-                  o balcão não reserva. Os feriados do cartório ficam em{" "}
+                  As agendas ficam fechadas: o site não oferece esta data e o
+                  balcão não reserva. Os feriados do cartório ficam em{" "}
                   <Link
                     href="/admin/configuracoes"
                     className="font-medium underline"

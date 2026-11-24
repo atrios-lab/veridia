@@ -45,6 +45,7 @@ test("the catalogue covers every attribution of a cartório único", () => {
     "Protesto",
     "Títulos e Documentos",
     "Pessoas Jurídicas",
+    "e-Notariado",
   ]);
   // The notary's own acts start in the notary's agenda.
   assert.ok(suggestedServiceIds("tabeliao").includes("notas.testamento"));
@@ -168,4 +169,60 @@ test("the office's list replaces the catalogue's, base items included", () => {
   const untouched = resolveService(config, "rcpn.segunda-via");
   assert.equal(untouched?.hasOwnFile, false);
   assert.equal(untouched?.checklist[0], BASE_CHECKLIST[0]);
+});
+
+test("the e-Notariado's agenda: its services, an open option and the platform's videoconference", () => {
+  const ids = suggestedServiceIds("enotariado");
+  assert.ok(ids.includes("enotariado.certificado"));
+  assert.ok(ids.includes("enotariado.aev"));
+  // "Outro serviço", for whatever the list does not name.
+  assert.ok(ids.includes("enotariado.outro"));
+  // Every service carries its "Como fazer", each step with its source.
+  for (const id of ids) {
+    const service = getCounterService(id);
+    assert.ok(service?.howTo?.length, id);
+    for (const step of service?.howTo ?? []) assert.ok(step.source, id);
+  }
+  // The certificate is free: no fee table reminder for it.
+  assert.equal(
+    getCounterService("enotariado.certificado")?.chargedByFeeTable,
+    undefined,
+  );
+
+  const config = parseAgendaConfig({
+    agendas: {
+      enotariado: {
+        grid: { "1": ["08:00"] },
+        serviceIds: ["enotariado.certificado", "enotariado.outro"],
+        channels: { "1": ["presencial", "enotariado"] },
+      },
+    },
+  });
+  assert.deepEqual(offeredAgendas(config), ["enotariado"]);
+  assert.deepEqual(
+    servicesOfAgenda(config, "enotariado").map((s) => s.id),
+    ["enotariado.certificado", "enotariado.outro"],
+  );
+  assert.ok(
+    attendanceNotice("09:00", "Videoconferência no e-Notariado").includes(
+      "e-Notariado",
+    ),
+  );
+});
+
+test("a paused agenda keeps everything but leaves the site", () => {
+  const book = {
+    grid: { "1": ["08:00"] },
+    serviceIds: ["enotariado.certificado"],
+  };
+  const on = parseAgendaConfig({ agendas: { enotariado: book } });
+  assert.deepEqual(offeredAgendas(on), ["enotariado"]);
+  const off = parseAgendaConfig({
+    agendas: { enotariado: { ...book, paused: true } },
+  });
+  assert.deepEqual(offeredAgendas(off), []);
+  // Nothing is lost while it is off.
+  assert.deepEqual(off.agendas.enotariado.grid, { "1": ["08:00"] });
+  // Configs from before the switch read as on.
+  assert.equal(on.agendas.enotariado.paused, false);
 });

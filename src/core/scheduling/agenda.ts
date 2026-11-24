@@ -73,12 +73,15 @@ export const closedDateSchema = z.object({
 export type ClosedDate = z.infer<typeof closedDateSchema>;
 
 /**
- * The two agendas of a serventia: the counter's, for everything the clerks
- * attend, and the notary's own, for the acts the tabelião signs in person.
- * Fixed, not a list the office grows: what changes from one office to the
- * next is which days each one receives and which services each one takes.
+ * The agendas of a serventia: the counter's, for everything the clerks
+ * attend; the notary's own, for the acts the tabelião signs in person; and
+ * the e-Notariado's (decision of 24/11/2026), for the Certificado Digital
+ * Notarizado and the electronic acts, which keeps their own queue apart from
+ * the counter's. Fixed, not a list the office grows: what changes from one
+ * office to the next is which days each one receives and which services each
+ * one takes. An agenda with no times does not show on the site.
  */
-export const AGENDA_IDS = ["geral", "tabeliao"] as const;
+export const AGENDA_IDS = ["geral", "tabeliao", "enotariado"] as const;
 export type AgendaId = (typeof AGENDA_IDS)[number];
 
 export const AGENDA_NAMES: Record<
@@ -96,6 +99,12 @@ export const AGENDA_NAMES: Record<
     short: "Tabelião",
     description:
       "Escrituras, procurações, testamentos, inventários e divórcios, atendidos pelo tabelião da serventia.",
+  },
+  enotariado: {
+    name: "e-Notariado e certificado digital",
+    short: "e-Notariado",
+    description:
+      "Certificado Digital Notarizado, atos eletrônicos por videoconferência, e-Not Assina, Autorização Eletrônica de Viagem e os demais serviços do e-Notariado.",
   },
 };
 
@@ -121,7 +130,12 @@ export type AgendaGrid = z.infer<typeof gridSchema>;
  * when one day is different ("na quinta só presencial"); the counter's
  * agenda keeps the office's modes instead.
  */
-export const ATTENDANCE_CHANNELS = ["presencial", "video", "ligacao"] as const;
+export const ATTENDANCE_CHANNELS = [
+  "presencial",
+  "video",
+  "ligacao",
+  "enotariado",
+] as const;
 export type AttendanceChannel = (typeof ATTENDANCE_CHANNELS)[number];
 
 export const CHANNEL_NAMES: Record<
@@ -140,6 +154,26 @@ export const CHANNEL_NAMES: Record<
     label: "Por ligação",
     description: "O tabelião liga no telefone informado.",
   },
+  // The e-Notariado's own videoconference: the notarial one has to happen
+  // inside the platform (CNN/CN/CNJ-Extra, art. 287), so the office sends no
+  // link of its own.
+  enotariado: {
+    label: "Videoconferência no e-Notariado",
+    description:
+      "Pela plataforma e-Notariado (www.e-notariado.org.br); o convite chega pela própria plataforma.",
+  },
+};
+
+/**
+ * The channels each agenda may offer. The counter's keeps the office's modes
+ * (none here); the notary's, the three of its own; the e-Notariado's, the
+ * counter and the platform's videoconference: a phone call is no notarial
+ * videoconference (CNN/CN/CNJ-Extra, art. 286, I).
+ */
+export const AGENDA_CHANNELS: Record<AgendaId, readonly AttendanceChannel[]> = {
+  geral: [],
+  tabeliao: ["presencial", "video", "ligacao"],
+  enotariado: ["presencial", "enotariado"],
 };
 
 /** What a weekday or a date offers when nobody said otherwise. */
@@ -164,6 +198,11 @@ export type DayChannels = z.infer<typeof dayChannelsSchema>;
  * takes, as ids from the catalogue or from the office's own services. */
 export const agendaBookSchema = z.object({
   grid: gridSchema,
+  // Paused by the office (decision of 24/11/2026): the agenda keeps its
+  // times and services but leaves the site until it is turned back on, for
+  // an office that stopped using it or needs a break. Appointments already
+  // booked stay.
+  paused: z.boolean().default(false),
   serviceIds: z.array(z.string().min(1)).default([]),
   // The notary's channels per weekday, and the dates that differ. Empty for
   // the counter's agenda, and for configs saved before channels existed:
@@ -195,6 +234,7 @@ export type SlotServices = AgendaBook["slotServices"];
 
 const EMPTY_BOOK: AgendaBook = {
   grid: {},
+  paused: false,
   serviceIds: [],
   channels: {},
   dayChannels: [],
@@ -316,6 +356,7 @@ const storedConfigSchema = z.object({
     .object({
       geral: agendaBookSchema.optional(),
       tabeliao: agendaBookSchema.optional(),
+      enotariado: agendaBookSchema.optional(),
     })
     .optional(),
   // Before the two agendas, the single grid lived here. Read as the
@@ -354,6 +395,7 @@ export const agendaConfigSchema = storedConfigSchema.transform(
         serviceIds: stored.services.map((service) => service.id),
       },
       tabeliao: stored.agendas?.tabeliao ?? EMPTY_BOOK,
+      enotariado: stored.agendas?.enotariado ?? EMPTY_BOOK,
     },
     services: stored.services,
     modes: stored.modes,
@@ -375,7 +417,7 @@ export function serializeAgendaConfig(config: AgendaConfig) {
  * one.
  */
 export const DEFAULT_AGENDA_CONFIG: AgendaConfig = {
-  agendas: { geral: EMPTY_BOOK, tabeliao: EMPTY_BOOK },
+  agendas: { geral: EMPTY_BOOK, tabeliao: EMPTY_BOOK, enotariado: EMPTY_BOOK },
   services: [],
   modes: ["Presencial", "On-line"],
   closedDates: [],
@@ -491,7 +533,7 @@ export const OWN_SERVICE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
  * (the counter's). One rule, read by the site, the panel and the action.
  */
 export function usesChannels(agenda: AgendaId): boolean {
-  return agenda === "tabeliao";
+  return AGENDA_CHANNELS[agenda].length > 0;
 }
 
 /**
@@ -506,6 +548,21 @@ export function channelsOn(
   if (own) return own.channels;
   const key = String(weekday(date)) as `${AgendaWeekday}`;
   return book.channels[key] ?? DEFAULT_CHANNELS;
+}
+
+/**
+ * Only the channels the agenda may offer, in its order; in person when none
+ * is left. What the save keeps, so a config edited by hand never offers a
+ * phone call in the e-Notariado's agenda.
+ */
+export function allowedChannels(
+  agenda: AgendaId,
+  channels: readonly AttendanceChannel[],
+): AttendanceChannel[] {
+  const kept = AGENDA_CHANNELS[agenda].filter((channel) =>
+    channels.includes(channel),
+  );
+  return kept.length > 0 ? kept : [...DEFAULT_CHANNELS];
 }
 
 /** The labels a date offers, which is what the appointment's `mode` stores. */
@@ -527,5 +584,7 @@ export function channelOfMode(mode: string): AttendanceChannel | undefined {
  * notary's video or phone call. */
 export function isRemoteMode(mode: string): boolean {
   const channel = channelOfMode(mode);
-  return channel === "video" || channel === "ligacao";
+  return (
+    channel === "video" || channel === "ligacao" || channel === "enotariado"
+  );
 }

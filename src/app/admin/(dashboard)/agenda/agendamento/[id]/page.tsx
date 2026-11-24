@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BackLink } from "@/app/admin/_components/back-link";
 import { DemoHeldEmails } from "@/app/admin/_components/demo-held-emails.tsx";
+import { FeeTableReminder } from "@/app/admin/_components/fee-table-reminder.tsx";
 import { can } from "@/core/auth/roles.ts";
 import {
   AGENDA_NAMES,
@@ -11,13 +12,18 @@ import {
 } from "@/core/scheduling/agenda.ts";
 import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
-import { servicesOfAgenda } from "@/core/scheduling/services.ts";
+import {
+  getCounterService,
+  servicesOfAgenda,
+} from "@/core/scheduling/services.ts";
+import { db } from "@/db/index.ts";
 import {
   findAppointmentById,
   getAgendaConfig,
   listAppointmentAttachments,
   listAppointmentNotes,
 } from "@/lib/appointments.ts";
+import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
@@ -56,7 +62,10 @@ export default async function AppointmentDetailPage({
   if (!appointment) notFound();
 
   const agenda = agendaIdOf(appointment.agenda);
-  const [config, files, notes] = await Promise.all([
+  // "Como fazer" for the services that carry one (the e-Notariado's), with
+  // the reminder about the fee table when the act is charged by it.
+  const guide = getCounterService(appointment.serviceId);
+  const [config, files, notes, feeTable] = await Promise.all([
     getAgendaConfig(tenant.slug),
     listAppointmentAttachments(tenant.slug, [appointment.id]).catch(() => []),
     listAppointmentNotes(
@@ -64,6 +73,9 @@ export default async function AppointmentDetailPage({
       appointment.id,
       session.user.role === "superadmin",
     ).catch(() => []),
+    guide?.chargedByFeeTable
+      ? feeTableReferenceWith(db, tenant.slug).catch(() => null)
+      : Promise.resolve(null),
   ]);
   const citizenFiles = files.filter((file) => !file.uploadedBy);
   const officeFiles = files.filter((file) => file.uploadedBy);
@@ -110,6 +122,41 @@ export default async function AppointmentDetailPage({
               : "Agendado pelo site"}
           </p>
         </section>
+
+        {guide?.howTo && guide.howTo.length > 0 && (
+          <section className="rounded-xl border bg-card px-5 py-4">
+            <h3 className="text-sm font-semibold text-foreground">
+              Como fazer
+            </h3>
+            {guide.note && (
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {guide.note}
+              </p>
+            )}
+            <ol className="mt-3 flex list-decimal flex-col gap-2.5 pl-5 text-sm text-foreground">
+              {guide.howTo.map((item) => (
+                <li key={item.step}>
+                  {item.step}
+                  <span className="block text-xs text-muted-foreground">
+                    Fonte: {item.source}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            {guide.chargedByFeeTable && (
+              <div className="mt-3">
+                <FeeTableReminder
+                  table={feeTable}
+                  canUpdate={can(
+                    session.user.role ?? "",
+                    "transparency.manage",
+                    session.user.permissions,
+                  )}
+                />
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="rounded-xl border bg-card px-5 py-4">
           <h3 className="text-sm font-semibold text-foreground">

@@ -6,9 +6,13 @@ import {
   AGENDA_IDS,
   AGENDA_NAMES,
   type AgendaConfig,
+  type AgendaId,
+  ATTENDANCE_CHANNELS,
+  type AttendanceChannel,
   agendaBookSchema,
   agendaRules,
   agendaServiceSchema,
+  allowedChannels,
   capacityAt,
   channelLabelsOn,
   dayChannelsSchema,
@@ -520,7 +524,15 @@ export async function saveAgenda(
       const serviceIds = [...new Set(parsed.data.serviceIds)].filter(known);
       agendas[id] = {
         grid: parsed.data.grid,
-        channels: parsed.data.channels,
+        paused: parsed.data.paused,
+        // Only the channels this agenda may offer: the e-Notariado's never
+        // keeps a phone call (see AGENDA_CHANNELS).
+        channels: Object.fromEntries(
+          Object.entries(parsed.data.channels).map(([day, list]) => [
+            day,
+            allowedChannels(id, list ?? []),
+          ]),
+        ),
         // A single date's channels are set from the day itself, like the
         // closed dates: this form does not own them.
         dayChannels: current.agendas[id].dayChannels,
@@ -562,12 +574,13 @@ export async function saveAgenda(
     // and an empty list of services.
     for (const id of AGENDA_IDS) {
       if (
+        !config.agendas[id].paused &&
         hasGrid(config.agendas[id]) &&
         servicesOfAgenda(config, id).length === 0
       ) {
         return {
           status: "error",
-          message: `${AGENDA_NAMES[id].name}: marque ao menos um serviço, ou tire os horários para ela não aparecer no site.`,
+          message: `${AGENDA_NAMES[id].name}: marque ao menos um serviço, ou pause a agenda para ela não aparecer no site.`,
         };
       }
     }
@@ -635,9 +648,21 @@ export async function saveDayChannels(
 
   const date = String(formData.get("date") ?? "");
   const reset = formData.get("restore") === "1";
+  // The agenda whose day this is: the notary's or the e-Notariado's.
+  const requested = String(formData.get("agenda") ?? "tabeliao");
+  const agenda: AgendaId =
+    isAgendaId(requested) && usesChannels(requested) ? requested : "tabeliao";
   const parsed = dayChannelsSchema.safeParse({
     date,
-    channels: formData.getAll("channels").map(String),
+    channels: allowedChannels(
+      agenda,
+      formData
+        .getAll("channels")
+        .map(String)
+        .filter((channel): channel is AttendanceChannel =>
+          (ATTENDANCE_CHANNELS as readonly string[]).includes(channel),
+        ),
+    ),
   });
   if (!reset && !parsed.success) {
     return {
@@ -651,7 +676,7 @@ export async function saveDayChannels(
   const tenant = await getTenant();
   try {
     const config = await getAgendaConfig(tenant.slug);
-    const book = config.agendas.tabeliao;
+    const book = config.agendas[agenda];
     // Dates gone by drop out on the way: they decide nothing any more.
     const today = officeNow().date;
     const others = book.dayChannels.filter(
@@ -663,7 +688,7 @@ export async function saveDayChannels(
         ...config,
         agendas: {
           ...config.agendas,
-          tabeliao: {
+          [agenda]: {
             ...book,
             dayChannels:
               reset || !parsed.success ? others : [...others, parsed.data],

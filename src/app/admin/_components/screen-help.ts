@@ -165,7 +165,7 @@ const ENTRIES: Record<string, ScreenHelp> = {
   },
   "/admin/agenda": {
     purpose:
-      "Os agendamentos do site e do balcão, nas duas agendas: Atendimento do cartório e Atendimento com o tabelião.",
+      "Os agendamentos do site e do balcão, nas três agendas: Atendimento do cartório, Atendimento com o tabelião e e-Notariado e certificado digital.",
     steps: [
       "Escolha a agenda (cartório ou tabelião) nos cartões do alto.",
       "Clique no dia na faixa de datas; os horários agendados ficam destacados.",

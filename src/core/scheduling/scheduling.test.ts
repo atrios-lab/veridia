@@ -245,6 +245,7 @@ test("a config saved before the two agendas becomes the counter's agenda", () =>
   assert.deepEqual(config.agendas.geral.serviceIds, ["procuracao"]);
   assert.deepEqual(config.agendas.tabeliao, {
     grid: {},
+    paused: false,
     serviceIds: [],
     channels: {},
     dayChannels: [],
