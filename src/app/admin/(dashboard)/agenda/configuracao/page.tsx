@@ -39,12 +39,14 @@ export default async function AgendaSettingsPage() {
   const tenant = await getTenant();
 
   const from = today();
-  const [config, taken, futureGeral, futureTabeliao] = await Promise.all([
-    getAgendaConfig(tenant.slug),
-    takenTimesByDay(tenant.slug, from, addDays(from, PREVIEW_WINDOW_DAYS)),
-    futureLiveByWeekdayTime(tenant.slug, from, "geral"),
-    futureLiveByWeekdayTime(tenant.slug, from, "tabeliao"),
-  ]);
+  const [config, taken, futureGeral, futureTabeliao, futureEnotariado] =
+    await Promise.all([
+      getAgendaConfig(tenant.slug),
+      takenTimesByDay(tenant.slug, from, addDays(from, PREVIEW_WINDOW_DAYS)),
+      futureLiveByWeekdayTime(tenant.slug, from, "geral"),
+      futureLiveByWeekdayTime(tenant.slug, from, "tabeliao"),
+      futureLiveByWeekdayTime(tenant.slug, from, "enotariado"),
+    ]);
 
   const agendas = Object.fromEntries(
     AGENDA_IDS.map((id) => [
@@ -58,6 +60,7 @@ export default async function AgendaSettingsPage() {
         ),
         slotServices: config.agendas[id].slotServices,
         slotCapacity: config.agendas[id].slotCapacity,
+        paused: config.agendas[id].paused,
         serviceIds: config.agendas[id].serviceIds,
         channels: config.agendas[id].channels,
       },
@@ -70,6 +73,7 @@ export default async function AgendaSettingsPage() {
       slotCapacity: Record<string, Record<string, number>>;
       serviceIds: string[];
       channels: Record<string, AttendanceChannel[]>;
+      paused: boolean;
     }
   >;
 
@@ -123,7 +127,11 @@ export default async function AgendaSettingsPage() {
           takenByDate={Object.fromEntries(
             [...taken.entries()].map(([date, times]) => [date, [...times]]),
           )}
-          futureLive={{ geral: futureGeral, tabeliao: futureTabeliao }}
+          futureLive={{
+            geral: futureGeral,
+            tabeliao: futureTabeliao,
+            enotariado: futureEnotariado,
+          }}
           today={from}
         />
       </main>

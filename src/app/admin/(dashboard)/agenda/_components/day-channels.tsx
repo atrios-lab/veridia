@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
-  ATTENDANCE_CHANNELS,
+  AGENDA_CHANNELS,
+  type AgendaId,
   type AttendanceChannel,
   CHANNEL_NAMES,
 } from "@/core/scheduling/agenda.ts";
@@ -16,12 +17,15 @@ import { type ActionState, saveDayChannels } from "../actions.ts";
  * the choice on the site as soon as it is saved.
  */
 export function DayChannelsCard({
+  agenda = "tabeliao",
   date,
   dateLabel,
   channels,
   own,
   weekdayChannels,
 }: {
+  /** The agenda whose day this is: the notary's or the e-Notariado's. */
+  agenda?: AgendaId;
   date: string;
   dateLabel: string;
   /** What the date offers now. */
@@ -64,7 +68,9 @@ export function DayChannelsCard({
   return (
     <section className="rounded-xl border bg-card px-5 py-4">
       <h3 className="text-sm font-semibold text-foreground">
-        Como o tabelião atende em {dateLabel}
+        {agenda === "enotariado"
+          ? `Como o e-Notariado atende em ${dateLabel}`
+          : `Como o tabelião atende em ${dateLabel}`}
       </h3>
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         {own
@@ -73,7 +79,8 @@ export function DayChannelsCard({
       </p>
       <form action={formAction} className="mt-3 flex flex-col gap-2">
         <input type="hidden" name="date" value={date} />
-        {ATTENDANCE_CHANNELS.map((channel) => (
+        <input type="hidden" name="agenda" value={agenda} />
+        {AGENDA_CHANNELS[agenda].map((channel) => (
           <label
             key={channel}
             className="flex cursor-pointer items-start gap-2 text-sm text-foreground"

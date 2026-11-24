@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
+  AGENDA_CHANNELS,
   AGENDA_IDS,
   AGENDA_NAMES,
   type AgendaId,
@@ -50,6 +51,8 @@ interface BookDraft {
   serviceIds: string[];
   /** The notary's channels per weekday; empty for the counter's agenda. */
   channels: Record<string, AttendanceChannel[]>;
+  /** Turned off by the office: kept, but not on the site. */
+  paused: boolean;
 }
 
 type Books = Record<AgendaId, BookDraft>;
@@ -159,7 +162,17 @@ export function AgendaSettingsForm({
   const book = draft.agendas[tab];
   const setBook = (next: BookDraft) =>
     setDraft({ ...draft, agendas: { ...draft.agendas, [tab]: next } });
-  const other: AgendaId = tab === "geral" ? "tabeliao" : "geral";
+  // Where else each service of this agenda is ticked, for "também na
+  // agenda Tabelião" next to it.
+  const elsewhere: Record<string, string> = {};
+  for (const id of AGENDA_IDS) {
+    if (id === tab) continue;
+    for (const service of draft.agendas[id].serviceIds) {
+      elsewhere[service] = elsewhere[service]
+        ? `${elsewhere[service]} e ${AGENDA_NAMES[id].short}`
+        : AGENDA_NAMES[id].short;
+    }
+  }
 
   return (
     <form
@@ -172,10 +185,12 @@ export function AgendaSettingsForm({
         <section className={cardClass}>
           <h2 className="text-base font-semibold text-foreground">Agendas</h2>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            O cartório tem duas agendas, cada uma com os seus dias, horários e
-            serviços. Uma agenda sem horários não aparece no site.
+            O cartório tem três agendas, cada uma com os seus dias, horários e
+            serviços. Uma agenda só aparece no site quando está ligada e tem
+            horários. Quem não usa uma agenda deixa ela sem horários ou
+            desligada.
           </p>
-          <div role="tablist" className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div role="tablist" className="mt-3 grid gap-2 sm:grid-cols-3">
             {AGENDA_IDS.map((id) => {
               const chosen = id === tab;
               const entry = draft.agendas[id];
@@ -201,11 +216,46 @@ export function AgendaSettingsForm({
                   >
                     {times === 0
                       ? "Sem horários: não aparece no site"
-                      : `${times} ${times === 1 ? "horário" : "horários"} por semana · ${entry.serviceIds.length} ${entry.serviceIds.length === 1 ? "serviço" : "serviços"}`}
+                      : entry.paused
+                        ? "Desligada: não aparece no site"
+                        : `${times} ${times === 1 ? "horário" : "horários"} por semana · ${entry.serviceIds.length} ${entry.serviceIds.length === 1 ? "serviço" : "serviços"}`}
                   </span>
                 </button>
               );
             })}
+          </div>
+          {/* On and off for the agenda open (decision of 24/11/2026): an
+              agenda with times is on; turning it off keeps everything and
+              takes it off the site until it is turned back on. */}
+          <div
+            className={`mt-3 flex flex-wrap items-center gap-3 rounded-lg border px-3.5 py-3 ${
+              book.paused ? "border-warning/40 bg-warning-soft" : "bg-muted/40"
+            }`}
+          >
+            <span className="min-w-48 flex-1 text-sm">
+              <strong className="block font-semibold text-foreground">
+                {AGENDA_NAMES[tab].name}:{" "}
+                {book.paused
+                  ? "desligada"
+                  : Object.values(book.grid).flat().length === 0
+                    ? "sem horários"
+                    : "ligada"}
+              </strong>
+              <span className="block text-xs text-muted-foreground">
+                {book.paused
+                  ? "Não aparece no site. Os horários, os serviços e os agendamentos já feitos continuam guardados."
+                  : "Com horários, ela aparece no site. Desligue para pausar sem perder nada."}
+              </span>
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant={book.paused ? "default" : "outline"}
+              aria-pressed={!book.paused}
+              onClick={() => setBook({ ...book, paused: !book.paused })}
+            >
+              {book.paused ? "Ligar a agenda" : "Desligar (pausar)"}
+            </Button>
           </div>
         </section>
 
@@ -254,13 +304,14 @@ export function AgendaSettingsForm({
             setBook({ ...book, grid, slotServices, slotCapacity })
           }
           channels={usesChannels(tab) ? book.channels : undefined}
+          channelOptions={AGENDA_CHANNELS[tab]}
           onChannelsChange={(channels) => setBook({ ...book, channels })}
         />
         <ServicePicker
           key={`services-${tab}`}
           agenda={tab}
           selected={book.serviceIds}
-          otherSelected={draft.agendas[other].serviceIds}
+          elsewhere={elsewhere}
           own={draft.services}
           lists={lists}
           onChange={(serviceIds) =>
@@ -398,7 +449,7 @@ function tickedServices(
  * suggestion for it, or the whole catalogue when it suggests none.
  */
 function startingServices(
-  agenda: "geral" | "tabeliao",
+  agenda: AgendaId,
 ): Array<{ id: string; label: string }> {
   const suggested = suggestedServiceIds(agenda);
   return tickedServices(
@@ -432,6 +483,7 @@ function GridSection({
   futureLive,
   onChange,
   channels,
+  channelOptions,
   onChannelsChange,
 }: {
   title: string;
@@ -449,8 +501,11 @@ function GridSection({
     slotServices: SlotServicesDraft,
     slotCapacity: SlotCapacityDraft,
   ) => void;
-  /** Present for the notary's agenda: how he attends each weekday. */
+  /** Present for the agendas that book by channel: how each weekday
+   * attends. */
   channels?: Record<string, AttendanceChannel[]>;
+  /** The channels this agenda may offer, in order. */
+  channelOptions?: readonly AttendanceChannel[];
   onChannelsChange?: (channels: Record<string, AttendanceChannel[]>) => void;
 }) {
   function toggleChannel(day: string, channel: AttendanceChannel) {
@@ -686,7 +741,7 @@ function GridSection({
                     <span className="text-xs text-muted-foreground">
                       Atende:
                     </span>
-                    {ATTENDANCE_CHANNELS.map((channel) => {
+                    {(channelOptions ?? ATTENDANCE_CHANNELS).map((channel) => {
                       const on = (channels[day] ?? DEFAULT_CHANNELS).includes(
                         channel,
                       );
@@ -873,14 +928,15 @@ function SlotServicesEditor({
 function ServicePicker({
   agenda,
   selected,
-  otherSelected,
+  elsewhere,
   own,
   lists,
   onChange,
 }: {
   agenda: AgendaId;
   selected: string[];
-  otherSelected: string[];
+  /** Per service id, the other agendas that also take it. */
+  elsewhere: Record<string, string>;
   own: OwnServiceDraft[];
   lists: Record<string, ListSummary>;
   onChange: (ids: string[]) => void;
@@ -888,9 +944,6 @@ function ServicePicker({
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const ticked = new Set(selected);
-  const elsewhere = new Set(otherSelected);
-  const otherName =
-    AGENDA_NAMES[agenda === "geral" ? "tabeliao" : "geral"].short;
   const needle = normalize(query);
 
   const groups = [
@@ -995,9 +1048,9 @@ function ServicePicker({
                             {service.label}
                           </label>
                           <span className="flex flex-wrap items-center gap-x-2 text-xs">
-                            {elsewhere.has(service.id) && (
+                            {elsewhere[service.id] && (
                               <span className="text-muted-foreground">
-                                também na agenda {otherName}
+                                também na agenda {elsewhere[service.id]}
                               </span>
                             )}
                             <button
