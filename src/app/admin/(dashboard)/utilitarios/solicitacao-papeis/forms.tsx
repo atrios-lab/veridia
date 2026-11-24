@@ -8,7 +8,9 @@ import {
   useTransition,
 } from "react";
 import { toast } from "sonner";
+import { formatMoneyTyping, toMoneyText } from "@/core/money-input.ts";
 import { guessPaperKind, sameItem } from "@/core/paper-orders/catalog.ts";
+import { formatCnpj } from "@/core/tenant/pix.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { Button } from "../../../_ui/button.tsx";
 import { cn } from "../../../_ui/cn.ts";
@@ -375,11 +377,14 @@ export function OrderForm({
             <Input
               aria-label="Valor unitário (opcional)"
               placeholder="R$ (opcional)"
-              value={e.price}
+              inputMode="numeric"
+              value={toMoneyText(e.price)}
               onChange={(ev) =>
                 setExtras((prev) =>
                   prev.map((x) =>
-                    x.key === e.key ? { ...x, price: ev.target.value } : x,
+                    x.key === e.key
+                      ? { ...x, price: formatMoneyTyping(ev.target.value) }
+                      : x,
                   ),
                 )
               }
@@ -842,8 +847,12 @@ export function SupplierForm({
           <Input
             id="sp-cnpj"
             name="cnpj"
-            value={values.cnpj}
-            onChange={set("cnpj")}
+            inputMode="numeric"
+            placeholder="00.000.000/0000-00"
+            value={formatCnpj(values.cnpj)}
+            onChange={(e) =>
+              set("cnpj")({ target: { value: formatCnpj(e.target.value) } })
+            }
           />
         </div>
         <div>
@@ -980,11 +989,14 @@ export function SupplierForm({
             <Input
               aria-label="Valor unitário"
               placeholder="R$ (opcional)"
-              value={r.price}
+              inputMode="numeric"
+              value={toMoneyText(r.price)}
               onChange={(e) =>
                 setRows((p) =>
                   p.map((x) =>
-                    x.key === r.key ? { ...x, price: e.target.value } : x,
+                    x.key === r.key
+                      ? { ...x, price: formatMoneyTyping(e.target.value) }
+                      : x,
                   ),
                 )
               }

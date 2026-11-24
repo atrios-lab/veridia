@@ -23,6 +23,10 @@ import {
   rateFor,
   STABLE_UNION_OPTIONS,
 } from "@/core/guides/schema.ts";
+import { formatMoneyTyping, toMoneyText } from "@/core/money-input.ts";
+import { formatCpf } from "@/core/request/form.ts";
+import { formatTaxId } from "@/core/tax-id.ts";
+import { formatCnpj } from "@/core/tenant/pix.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
@@ -49,6 +53,14 @@ function parseMoney(input: string): number {
   return Math.round(Number(clean) * 100);
 }
 
+/** How a field writes what is typed (decision of 24/11/2026). */
+const MASKS = {
+  money: { show: toMoneyText, type: formatMoneyTyping },
+  cpf: { show: formatCpf, type: formatCpf },
+  cnpj: { show: formatCnpj, type: formatCnpj },
+  taxId: { show: formatTaxId, type: formatTaxId },
+} as const;
+
 function Field({
   label,
   value,
@@ -56,6 +68,7 @@ function Field({
   error,
   placeholder,
   wide,
+  mask,
 }: {
   label: string;
   value: string;
@@ -63,15 +76,23 @@ function Field({
   error?: string;
   placeholder?: string;
   wide?: boolean;
+  /** Dots, comma, slash and dash put in as the digits are typed. */
+  mask?: keyof typeof MASKS;
 }) {
+  const format = mask ? MASKS[mask] : null;
   return (
     <Label
       className={`block font-normal leading-normal ${wide ? "md:col-span-2" : ""}`}
     >
       <span className={LABEL}>{label}</span>
       <Input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        value={format ? format.show(value) : value}
+        onChange={(event) =>
+          onChange(
+            format ? format.type(event.target.value) : event.target.value,
+          )
+        }
+        inputMode={format ? "numeric" : undefined}
         placeholder={placeholder}
         aria-invalid={error ? true : undefined}
       />
@@ -236,6 +257,7 @@ function PartyCard({
         )}
         <Field
           label={pf ? "CPF" : "CNPJ"}
+          mask={pf ? "cpf" : "cnpj"}
           value={party.taxId}
           onChange={(value) => set("taxId", value)}
           error={error("taxId")}
@@ -501,6 +523,7 @@ export function GuideForm({
             />
             <Field
               label="CPF do procurador"
+              mask="cpf"
               value={guide.requester.taxId}
               onChange={(taxId) =>
                 update({ requester: { ...guide.requester, taxId } })
@@ -639,6 +662,7 @@ export function GuideForm({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <Field
             label="Valor declarado (R$)"
+            mask="money"
             value={value}
             onChange={setValue}
             placeholder="27.000,00"
@@ -688,6 +712,7 @@ export function GuideForm({
           <div className="max-w-[320px]">
             <Field
               label="Imposto: ajuste manual (opcional)"
+              mask="money"
               value={taxOverride}
               onChange={setTaxOverride}
               placeholder="Em branco, sai o calculado"

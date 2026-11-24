@@ -27,6 +27,7 @@ import {
 import { MAX_ASSETS, MAX_PARTIES } from "@/core/censec/form.ts";
 import { LONG_TEXT_MAX, MIN_JUSTIFICATION } from "@/core/text-limits.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { TaxIdInput } from "../../../_components/tax-id-input.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
@@ -77,6 +78,7 @@ function Text({
   type = "text",
   wide,
   base,
+  cpf,
 }: {
   name: string;
   label: string;
@@ -85,20 +87,31 @@ function Text({
   type?: string;
   wide?: boolean;
   base: string;
+  /** The dots and the dash go in by themselves (decision of 24/11/2026). */
+  cpf?: boolean;
 }) {
   return (
     <div
       className={`flex min-w-0 flex-col gap-1.5 ${wide ? "sm:col-span-2" : ""}`}
     >
       <Label htmlFor={`${base}-${name}`}>{label}</Label>
-      <Input
-        id={`${base}-${name}`}
-        name={name}
-        type={type}
-        defaultValue={value}
-        maxLength={300}
-        autoComplete="off"
-      />
+      {cpf ? (
+        <TaxIdInput
+          kind="cpf"
+          id={`${base}-${name}`}
+          name={name}
+          defaultValue={value}
+        />
+      ) : (
+        <Input
+          id={`${base}-${name}`}
+          name={name}
+          type={type}
+          defaultValue={value}
+          maxLength={300}
+          autoComplete="off"
+        />
+      )}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
@@ -836,6 +849,7 @@ export function ActForm({
             <Text
               name="testator.cpf"
               label="CPF"
+              cpf
               value={v("testator.cpf")}
               base={base}
             />

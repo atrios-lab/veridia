@@ -20,6 +20,8 @@ import {
   GUARANTEE_LABELS,
   KIND_OPTIONS,
 } from "@/core/cedulas/especies.ts";
+import { formatMoneyTyping, toMoneyText } from "@/core/money-input.ts";
+import { formatTaxId } from "@/core/tax-id.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { cn } from "../../../_ui/cn.ts";
@@ -187,12 +189,15 @@ function TextField({
   onChange,
   long,
   placeholder,
+  money,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   long?: boolean;
   placeholder?: string;
+  /** A value in reais: the dots and the comma go in by themselves. */
+  money?: boolean;
 }) {
   const id = useId();
   return (
@@ -209,9 +214,12 @@ function TextField({
       ) : (
         <Input
           id={id}
-          value={value}
+          value={money ? toMoneyText(value) : value}
           placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value)}
+          inputMode={money ? "numeric" : undefined}
+          onChange={(e) =>
+            onChange(money ? formatMoneyTyping(e.target.value) : e.target.value)
+          }
         />
       )}
     </div>
@@ -345,10 +353,11 @@ export function CedulaDataForm({
             onChange={(v) => set("issuePlace", v)}
           />
           <TextField
-            label="Valor do crédito"
+            label="Valor do crédito (R$)"
+            money
             value={data.amount}
             onChange={(v) => set("amount", v)}
-            placeholder="R$ 0,00"
+            placeholder="0,00"
           />
           <TextField
             label="Vencimento"
@@ -462,9 +471,10 @@ export function CedulaDataForm({
               <Input
                 aria-label="CPF ou CNPJ"
                 placeholder="CPF ou CNPJ"
-                value={p.taxId}
+                inputMode="numeric"
+                value={formatTaxId(p.taxId)}
                 onChange={(e) =>
-                  setItem("people", i, { taxId: e.target.value })
+                  setItem("people", i, { taxId: formatTaxId(e.target.value) })
                 }
               />
               <Button
@@ -707,17 +717,23 @@ export function CedulaDataForm({
                 <Input
                   aria-label="Valor antes"
                   placeholder="Valor antes"
-                  value={a.previousAmount}
+                  inputMode="numeric"
+                  value={toMoneyText(a.previousAmount)}
                   onChange={(e) =>
-                    setItem("addenda", i, { previousAmount: e.target.value })
+                    setItem("addenda", i, {
+                      previousAmount: formatMoneyTyping(e.target.value),
+                    })
                   }
                 />
                 <Input
                   aria-label="Valor depois"
                   placeholder="Valor depois"
-                  value={a.newAmount}
+                  inputMode="numeric"
+                  value={toMoneyText(a.newAmount)}
                   onChange={(e) =>
-                    setItem("addenda", i, { newAmount: e.target.value })
+                    setItem("addenda", i, {
+                      newAmount: formatMoneyTyping(e.target.value),
+                    })
                   }
                 />
               </div>
@@ -746,9 +762,12 @@ export function CedulaDataForm({
                 <Input
                   aria-label="Valor do dinheiro novo (crédito suplementar)"
                   placeholder="Valor do dinheiro novo, se houve"
-                  value={a.newMoneyAmount}
+                  inputMode="numeric"
+                  value={toMoneyText(a.newMoneyAmount)}
                   onChange={(e) =>
-                    setItem("addenda", i, { newMoneyAmount: e.target.value })
+                    setItem("addenda", i, {
+                      newMoneyAmount: formatMoneyTyping(e.target.value),
+                    })
                   }
                 />
               </div>

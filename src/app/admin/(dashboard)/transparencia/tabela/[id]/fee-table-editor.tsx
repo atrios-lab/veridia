@@ -15,6 +15,7 @@ import type {
   PrenotationItems,
   ReadFeeItem,
 } from "@/core/fees/prenotation.ts";
+import { MoneyInput } from "../../../../_components/money-input.tsx";
 import { Button, buttonVariants } from "../../../../_ui/button.tsx";
 import { Input } from "../../../../_ui/input.tsx";
 import {
@@ -276,14 +277,11 @@ export function FeeTableEditor({
                   className={labelClass}
                 >
                   Total (R$)
-                  <Input
+                  <MoneyInput
                     id={`prenotacao-${attribution}-total`}
                     name={`${attribution}.total`}
                     value={value.total}
-                    onChange={(event) =>
-                      update(attribution, "total", event.target.value)
-                    }
-                    inputMode="decimal"
+                    onValueChange={(next) => update(attribution, "total", next)}
                     placeholder="57,90"
                     aria-invalid={Boolean(error("total"))}
                     className="tabular-nums"

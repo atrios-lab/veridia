@@ -2,8 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { documentHref } from "../../../../_components/attachment-link.ts";
+import { MoneyInput } from "../../../../_components/money-input.tsx";
 import { Button } from "../../../../_ui/button.tsx";
-import { Input } from "../../../../_ui/input.tsx";
 import { type ActionState, setAmountAction } from "../actions.ts";
 import { CitizenSeen, type SeenLabels } from "./citizen-seen.tsx";
 
@@ -85,13 +85,10 @@ export function AmountSection({
       {editing && (
         <form action={action} className="mt-4 flex items-center gap-2">
           <input type="hidden" name="requestId" value={requestId} />
-          <Input
-            type="text"
+          <MoneyInput
             name="amount"
-            inputMode="decimal"
-            placeholder="0,00"
             aria-label="Valor do pedido"
-            className="w-32"
+            className="w-36"
           />
           <Button type="submit" disabled={pending}>
             {pending ? "Salvando…" : "Salvar"}

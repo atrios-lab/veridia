@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState, useTransition } from "react";
 import { competenceLabel, formatRate, issOn } from "@/core/iss/declaration.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { formatMoneyBRL, parseMoneyBRL } from "@/core/transparency/bulletin.ts";
+import { MoneyInput } from "../../../_components/money-input.tsx";
 import { Button } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
@@ -237,14 +238,13 @@ export function IssForm({
           <label htmlFor="iss-emolumentos" className={LABEL}>
             Emolumentos do mês (base de cálculo)
           </label>
-          <Input
+          <MoneyInput
             id="iss-emolumentos"
             name="emolumentos"
-            inputMode="decimal"
             required
             placeholder="0,00"
             value={emoluments}
-            onChange={(event) => setEmoluments(event.target.value)}
+            onValueChange={setEmoluments}
           />
           <p className="mt-1 text-xs text-muted-foreground">
             Só os emolumentos. Ficam de fora os repasses a terceiros (taxa de
@@ -275,12 +275,11 @@ export function IssForm({
           {byAct ? (
             <Label className="mt-0.5 flex items-center gap-1.5 text-2xl font-semibold text-foreground leading-normal">
               R$
-              <Input
+              <MoneyInput
                 name="iss"
-                inputMode="decimal"
                 aria-label="ISS apurado ato a ato"
                 value={reportIss}
-                onChange={(event) => setReportIss(event.target.value)}
+                onValueChange={setReportIss}
                 className="w-40 bg-card px-2 text-xl tabular-nums md:text-xl"
               />
             </Label>

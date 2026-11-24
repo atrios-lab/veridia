@@ -28,6 +28,7 @@ import {
   FUNDS_BY_STATE,
   type SupportedState,
 } from "@/core/transparency/rubrics.ts";
+import { MoneyInput } from "../../../_components/money-input.tsx";
 import { Button } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import {
@@ -88,12 +89,11 @@ function MoneyField({
           <span className="font-normal text-muted-foreground"> {hint}</span>
         )}
       </label>
-      <Input
+      <MoneyInput
         id={id}
         name={name}
-        inputMode="decimal"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onValueChange={onChange}
         aria-invalid={error ? true : undefined}
       />
       <FieldError message={error} />
