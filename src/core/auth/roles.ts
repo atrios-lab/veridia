@@ -8,6 +8,7 @@ export const ROLES = [
   "admin",
   "substituto-legal",
   "substituto",
+  "escrevente-autorizado",
   "staff",
   "auxiliar",
   "contador",
@@ -27,6 +28,11 @@ export const PANEL_ROLES = [
   "admin",
   "substituto-legal",
   "substituto",
+  // The Escrevente Autorizado (decision of 24/11/2026: "faltou Escrevente
+  // Autorizada"): the clerk the holder authorized to practise and sign
+  // acts (Lei nº 8.935/1994, art. 20). An id of its own, so every existing
+  // account keeps its place.
+  "escrevente-autorizado",
   "staff",
   "auxiliar",
   "contador",
@@ -394,6 +400,17 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     ),
   ],
   substituto: defaultsOf([
+    "admin.access",
+    "desk.access",
+    "content.edit",
+    "content.publish",
+    "requests.manage",
+    "channels.manage",
+    "chat.manage",
+  ]),
+  // Starts as the Escrevente's, plus publishing on the site; the
+  // Tabelião/Registrador widens it in Perfis e permissões.
+  "escrevente-autorizado": defaultsOf([
     "admin.access",
     "desk.access",
     "content.edit",

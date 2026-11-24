@@ -245,6 +245,7 @@ test("the messenger got its own line and every office position kept it", async (
     "admin",
     "substituto-legal",
     "substituto",
+    "escrevente-autorizado",
     "staff",
     "auxiliar",
     "contador",
@@ -269,6 +270,7 @@ test("os cargos do cartório: Tabelião/Registrador com tudo, os outros com o pa
   for (const role of [
     "substituto-legal",
     "substituto",
+    "escrevente-autorizado",
     "staff",
     "auxiliar",
     "contador",
@@ -282,6 +284,10 @@ test("os cargos do cartório: Tabelião/Registrador com tudo, os outros com o pa
   }
   assert.ok(can("substituto-legal", "billing.edit"));
   assert.equal(can("rh", "requests.manage"), false);
+  // The Escrevente Autorizado works the pedidos and publishes on the site.
+  assert.ok(can("escrevente-autorizado", "requests.manage"));
+  assert.ok(can("escrevente-autorizado", "content.publish"));
+  assert.equal(can("staff", "content.publish"), false);
 });
 
 test("o Tabelião/Registrador muda o que um cargo faz, mas nunca entrega o que é só dele", async () => {
