@@ -3192,3 +3192,50 @@ export const serviceRequestPickups = pgTable(
   },
   (t) => [index("service_request_pickups_request").on(t.requestId)],
 );
+
+/**
+ * The internal routing of a pedido (change direcionamento-interno-de-pedidos):
+ * each time it is sent to someone or to a sector's queue, taken ("Pegar para
+ * mim") or sent back. With whom it is now is the latest row not undone.
+ * Changing a row keeps the old values in `history`; undoing it marks
+ * `withdrawn_at`: nothing here is ever deleted. No foreign key to the pedido,
+ * like the pickups: the cleaning of the demonstration office keeps it.
+ */
+export const serviceRequestRoutings = pgTable(
+  "service_request_routings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    requestId: uuid("request_id").notNull(),
+    /** "route", "take" or "return". */
+    kind: text("kind").notNull(),
+    fromUserId: text("from_user_id"),
+    /** Null: the sector's queue, the first who receives keeps it. */
+    toUserId: text("to_user_id"),
+    sectorId: text("sector_id"),
+    /** The sector's name when it was sent, kept as the history reads it. */
+    sectorLabel: text("sector_label"),
+    /** "execute", "review" or "sign". */
+    purpose: text("purpose").notNull(),
+    /** The service, from the acts of the office's attributions. */
+    actId: text("act_id"),
+    /** "normal", "attention" or "urgent". */
+    priority: text("priority").notNull().default("normal"),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    note: text("note").notNull().default(""),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    receivedAt: timestamp("received_at", { withTimezone: true }),
+    receivedBy: text("received_by"),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    withdrawnBy: text("withdrawn_by"),
+    /** Each change: when, who, and the values it had before. */
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+  },
+  (t) => [
+    index("service_request_routings_request").on(t.requestId),
+    index("service_request_routings_to").on(t.tenantSlug, t.toUserId),
+  ],
+);

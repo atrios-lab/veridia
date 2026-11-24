@@ -87,6 +87,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
   },
   {
     group: "Operação",
+    // The pedidos a colleague sent me or my sector's queue (change
+    // direcionamento-interno-de-pedidos), apart from "Sua mesa".
+    label: "Direcionados a mim",
+    href: "/admin/direcionados",
+    icon: "shuffle",
+    permission: "requests.manage",
+  },
+  {
+    group: "Operação",
     label: "Email corporativo",
     // The office's institutional mailbox. One address for every serventia
     // while they all share it: a tenant field for a value that never varies

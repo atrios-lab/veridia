@@ -58,6 +58,7 @@ import {
   SignedFormCheckError,
   withdrawReturn,
 } from "@/core/request/signed-form-check.ts";
+import { concludes } from "@/core/routing/routing.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -82,6 +83,7 @@ import {
   reviewDocumentWith,
 } from "@/lib/qualificacao-revisao.ts";
 import { PickupError, registerPickupWith } from "@/lib/request-pickup.ts";
+import { assertMayConcludeWith, RoutingError } from "@/lib/routing.ts";
 import {
   AttachmentInUseError,
   answerSearch,
@@ -279,6 +281,21 @@ export async function changeStatus(
         status: "error",
         message: "O pedido já está neste andamento.",
       };
+    }
+    // Who may sign and conclude (decision of 24/11/2026): the office's
+    // choice in Configurações › Assinatura e conclusão.
+    if (concludes(request.status, status)) {
+      try {
+        await assertMayConcludeWith(db, tenant.slug, {
+          id: session.user.id,
+          role: session.user.role ?? "",
+        });
+      } catch (error) {
+        if (error instanceof RoutingError) {
+          return { status: "error", message: error.message };
+        }
+        throw error;
+      }
     }
 
     // Closing a request without delivering it, with no why, is what makes
@@ -677,6 +694,17 @@ export async function answerSearchAction(
         status: "error",
         message: "Só a busca de registro é respondida assim.",
       };
+    }
+    try {
+      await assertMayConcludeWith(db, tenant.slug, {
+        id: session.user.id,
+        role: session.user.role ?? "",
+      });
+    } catch (error) {
+      if (error instanceof RoutingError) {
+        return { status: "error", message: error.message };
+      }
+      throw error;
     }
     await answerSearch(
       tenant.slug,

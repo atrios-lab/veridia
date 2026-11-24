@@ -21,6 +21,9 @@ export const ALERT_CHANNELS = [
   // Added 11/11/2026: the internal messenger and the audit's notices.
   "mensagens",
   "auditoria",
+  // Added 24/11/2026: a pedido sent to me or my sector, taken from me, not
+  // received in two hours, or past its prazo.
+  "direcionamentos",
 ] as const;
 export type AlertChannel = (typeof ALERT_CHANNELS)[number];
 
@@ -33,6 +36,7 @@ export const ALERT_CHANNEL_LABELS: Record<AlertChannel, string> = {
   ouvidoria: "Ouvidoria",
   mensagens: "Mensagens internas",
   auditoria: "Auditoria (notificações e atos urgentes)",
+  direcionamentos: "Pedidos direcionados a mim ou ao meu setor",
 };
 
 const soundChoice = z.custom<SoundChoice>(
@@ -111,6 +115,13 @@ const DEFAULTS: Record<AlertChannel, ChannelAlert> = {
     popup: true,
     notify: true,
     sound: "alerta",
+    shake: false,
+  },
+  direcionamentos: {
+    enabled: true,
+    popup: true,
+    notify: true,
+    sound: "toque-duplo",
     shake: false,
   },
 };

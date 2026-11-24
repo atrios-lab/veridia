@@ -561,6 +561,13 @@
       "when": 1795232444574,
       "tag": "0079_analise_de_cedulas",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1795482234384,
+      "tag": "0080_direcionamento_interno",
+      "breakpoints": true
     }
   ]
 }

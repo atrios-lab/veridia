@@ -2093,6 +2093,25 @@ function ServiceRequestTrilho({
             <p className="text-[15.5px] leading-relaxed">
               <strong>{leadDate}</strong> {leadText}
             </p>
+            {/* Where the pedido is inside the office (change
+                direcionamento-interno-de-pedidos): the sector and the
+                phase, never a name; updated by itself at every move. */}
+            {result.routingLine && (
+              <p className="flex items-start gap-2 rounded-xl border border-brand-border bg-brand-tint px-3.5 py-2.5 text-left text-sm leading-snug text-brand-primary">
+                <span
+                  aria-hidden
+                  className="mt-1.5 h-2 w-2 flex-none rounded-full bg-brand-accent"
+                />
+                <span>
+                  <strong className="font-semibold">
+                    {result.routingLine}
+                  </strong>
+                  <span className="block text-brand-muted">
+                    Atualizado automaticamente. Não precisa fazer nada agora.
+                  </span>
+                </span>
+              </p>
+            )}
             <p className="text-sm leading-relaxed text-brand-muted">
               <strong className="text-brand-text">{prazoStrong}</strong>
               {prazoText}

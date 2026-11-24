@@ -127,6 +127,8 @@ import { LiveRequest } from "./_components/live-request.tsx";
 import { QualificationSection } from "./_components/qualification-section.tsx";
 import type { RequirementItem } from "./_components/requirements-section.tsx";
 import { RequirementsSection } from "./_components/requirements-section.tsx";
+import { RoutingCard } from "./_components/routing-card.tsx";
+import { routingCardData } from "./_components/routing-view.ts";
 import { SearchAnswerSection } from "./_components/search-answer-section.tsx";
 import { SignedFormReview } from "./_components/signed-form-review.tsx";
 import {
@@ -235,6 +237,20 @@ export default async function ServiceRequestDetailPage({
         ? guidesOfRequest(tenant.slug, request.id).catch(() => [])
         : Promise.resolve([]),
     ]);
+
+  // The internal routing (change direcionamento-interno-de-pedidos): with
+  // whom the pedido is, the window's choices and who may conclude.
+  const routing = await routingCardData({
+    tenant,
+    request: { id: request.id, status, details: request.details },
+    me: {
+      id: session.user.id,
+      role: session.user.role ?? "",
+      chatSector:
+        (session.user as { chatSector?: string | null }).chatSector ?? null,
+    },
+    history,
+  });
 
   // Read once, like the queue: every file measured against the same day.
   const todayIso = today();
@@ -738,6 +754,7 @@ export default async function ServiceRequestDetailPage({
                       )} · ${deadlineProgress(deadline, today(), officeHolidays(tenant))}`
               }
               deadlineDays={deadline.days}
+              concludeLockedFor={routing.lockedFor}
               happyPath={
                 act?.consultation
                   ? request.amountCents != null
@@ -1046,6 +1063,11 @@ export default async function ServiceRequestDetailPage({
           </div>
 
           <div className="flex flex-col gap-4">
+            <RoutingCard
+              requestId={request.id}
+              protocolNumber={request.protocolNumber}
+              {...routing.card}
+            />
             <KeySection
               requestId={request.id}
               protocolNumber={request.protocolNumber}
@@ -1137,6 +1159,12 @@ export default async function ServiceRequestDetailPage({
                         </strong>{" "}
                         {HISTORY_LABELS[entry.action] ??
                           lowerFirst(auditActionLabel(entry.action))}
+                        {routing.notHolder.has(index) && (
+                          <span className="text-xs text-warning-text">
+                            {" "}
+                            (não era o responsável)
+                          </span>
+                        )}
                         <br />
                         <span className="text-xs text-muted-foreground tabular-nums">
                           {formatOfficeDayMonthTime(entry.createdAt)}
