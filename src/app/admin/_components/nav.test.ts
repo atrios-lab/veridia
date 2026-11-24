@@ -13,7 +13,7 @@ test("every group heading appears once: items of a group stay adjacent", () => {
   assert.deepEqual(headings, [...new Set(headings)]);
 });
 
-test("Email corporativo sits right below the request queue, then Mensagens, inside Operação", () => {
+test("Direcionados a mim follows the request queue, then Email corporativo and Mensagens, inside Operação", () => {
   const operation = navGroups(ADMIN_NAV).find(
     (entry) => entry.group === "Operação",
   );
@@ -21,6 +21,7 @@ test("Email corporativo sits right below the request queue, then Mensagens, insi
   assert.deepEqual(labels, [
     "Visão geral",
     "Pedidos de serviço",
+    "Direcionados a mim",
     "Email corporativo",
     "Mensagens internas",
   ]);

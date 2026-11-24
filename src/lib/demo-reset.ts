@@ -67,6 +67,7 @@ import {
   serviceRequestPickups,
   serviceRequestRequirementMessages,
   serviceRequestRequirements,
+  serviceRequestRoutings,
   serviceRequests,
   signedDocumentSignatures,
   signedDocuments,
@@ -210,6 +211,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
     table: serviceRequestPickups,
     reason:
       "quem retirou o documento no balcão: prova da entrega, sem chave estrangeira",
+  },
+  {
+    table: serviceRequestRoutings,
+    reason:
+      "direcionamentos internos dos pedidos: histórico de quem pegou, sem chave estrangeira",
   },
   {
     table: cedulaAnalyses,

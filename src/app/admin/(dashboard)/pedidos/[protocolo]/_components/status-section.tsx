@@ -17,6 +17,7 @@ import {
   stepStates,
   transitionLabel,
 } from "@/core/request/kinds.ts";
+import { concludes } from "@/core/routing/routing.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../../_components/icon.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
@@ -417,6 +418,7 @@ export function StatusSection({
   deadlineSummary,
   deadlineDays,
   happyPath = HAPPY_PATH,
+  concludeLockedFor = null,
 }: {
   requestId: string;
   protocolNumber: string;
@@ -431,6 +433,11 @@ export function StatusSection({
   deadlineDays: number;
   /** A trilha desenhada no topo: a comum, ou a da consulta. */
   happyPath?: readonly ServiceRequestStatus[];
+  /**
+   * Who may sign and conclude, when the office restricted it and this
+   * person is not among them (decision of 24/11/2026); null otherwise.
+   */
+  concludeLockedFor?: string | null;
 }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(
     changeStatus,
@@ -494,7 +501,10 @@ export function StatusSection({
                     value={next}
                     size="lg"
                     variant={i === 0 ? "default" : "outline"}
-                    disabled={pending}
+                    disabled={
+                      pending ||
+                      Boolean(concludeLockedFor && concludes(status, next))
+                    }
                     className="px-4 max-sm:h-auto max-sm:min-h-10 max-sm:w-full max-sm:whitespace-normal"
                   >
                     {transitionLabel(status, next)}
@@ -503,6 +513,15 @@ export function StatusSection({
               </div>
             </div>
           )}
+
+          {concludeLockedFor &&
+            forward.some((next) => concludes(status, next)) && (
+              <p className="rounded-lg border border-warning/30 bg-warning-soft px-3 py-2 text-sm text-warning-text">
+                Só {concludeLockedFor} assina(m) e conclui(em) os pedidos nesta
+                serventia. Use <strong>Direcionar</strong>, na lateral, e
+                escolha <strong>Assinatura</strong>.
+              </p>
+            )}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t pt-4">
             {closing.length > 0 && (

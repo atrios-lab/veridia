@@ -51,6 +51,7 @@ import { formatCents } from "@/core/request/money.ts";
 import { parseProtocolNumber } from "@/core/request/protocol.ts";
 import { signatureCaveatFor } from "@/core/request/requerimento.ts";
 import { readSignedFormCheck } from "@/core/request/signed-form-check.ts";
+import { citizenRoutingLine, currentRouting } from "@/core/routing/routing.ts";
 import {
   AGENDA_NAMES,
   agendaIdOf,
@@ -94,6 +95,11 @@ import {
   isRateLimited,
   isRecoveryRateLimited,
 } from "@/lib/rate-limit.ts";
+import {
+  citizenLineEnabledWith,
+  requestCitizenLineOn,
+  routingsOfRequestWith,
+} from "@/lib/routing.ts";
 import {
   attachToRequest,
   findByProtocolWithKey,
@@ -277,6 +283,12 @@ export interface ServiceRequestDetail extends BaseDetail {
    * result is the registration or the note of what is missing. `termBasis`
    * is the statute of the term, when the law fixes one for the registry.
    */
+  /**
+   * The sector and the internal phase the pedido is in ("Com o setor de
+   * Registro Civil · aguardando assinatura"), when the office shows it
+   * (change direcionamento-interno-de-pedidos). Never a person's name.
+   */
+  routingLine?: string;
   analysis?: {
     termBasis?: string;
     /** The prenotação is paid (or was not charged): a payment asked now is
@@ -666,10 +678,18 @@ export async function lookupProtocolDetail(
     const openedAt = (id: string) =>
       ciencia.get(viewKey("document", id))?.downloadedAt?.toISOString();
 
+    const routingLine = await citizenLineOf(
+      tenant.slug,
+      record.id,
+      record.status,
+      record.details,
+    );
+
     return {
       ...base,
       kind: "service-request",
       requestStatus: record.status as ServiceRequestStatus,
+      ...(routingLine ? { routingLine } : {}),
       statusReason: record.statusReason ?? undefined,
       rejectionDocumentAttachmentId: servableId(rejectionDocument),
       actName: actVariantName(act, readActVariant(record.details)) ?? act.name,
@@ -1330,5 +1350,31 @@ export async function writeRequirementMessageAction(
     }
     console.error("protocolo.requirement-message", error);
     return { status: "error", message: GENERIC_ERROR };
+  }
+}
+
+/** The routing line the citizen reads, or null (off, or nothing routed). */
+async function citizenLineOf(
+  tenantSlug: string,
+  requestId: string,
+  status: string,
+  details: unknown,
+): Promise<string | null> {
+  try {
+    const enabled =
+      requestCitizenLineOn(details) &&
+      (await citizenLineEnabledWith(db, tenantSlug));
+    if (!enabled) return null;
+    return citizenRoutingLine({
+      status,
+      routing: currentRouting(
+        await routingsOfRequestWith(db, tenantSlug, requestId),
+      ),
+      enabled,
+    });
+  } catch (error) {
+    // The line is a courtesy: the consult works without it.
+    console.error("protocolo.routing-line", error);
+    return null;
   }
 }

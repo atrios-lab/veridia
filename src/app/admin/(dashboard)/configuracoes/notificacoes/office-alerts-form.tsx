@@ -29,6 +29,8 @@ const CHANNEL_HINTS: Record<AlertChannel, string> = {
     "Mensagem ou chamado de um colega. O som se repete até a pessoa abrir a conversa.",
   auditoria:
     "Notificação de auditoria para a pessoa responder e, para o Tabelião/Registrador, ato urgente a verificar.",
+  direcionamentos:
+    "Pedido mandado a você ou à fila do seu setor, pedido que um colega pegou de você, pedido que você mandou e ninguém recebeu em 2 horas e, para o Tabelião/Registrador, prazo de direcionamento vencido.",
 };
 
 type Permission = NotificationPermission | "unsupported";

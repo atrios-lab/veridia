@@ -2161,6 +2161,7 @@ export async function attachToRequest(
 
 export interface RequestHistoryEntry {
   action: string;
+  actorId: string | null;
   actorName: string | null;
   createdAt: Date;
 }
@@ -2183,6 +2184,7 @@ export async function listRequestHistory(
   return db
     .select({
       action: auditLog.action,
+      actorId: auditLog.actorId,
       actorName: user.name,
       createdAt: auditLog.createdAt,
     })
@@ -2220,6 +2222,7 @@ export async function listRecordHistory(
   return db
     .select({
       action: auditLog.action,
+      actorId: auditLog.actorId,
       actorName: user.name,
       createdAt: auditLog.createdAt,
     })

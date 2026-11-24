@@ -80,6 +80,39 @@ const ENTRIES: Record<string, ScreenHelp> = {
       ],
     },
   },
+  "/admin/direcionados": {
+    purpose:
+      "Os pedidos que um colega mandou para você ou para a fila do seu setor, para executar o ato, conferir ou assinar. Fica separado da 'Sua mesa', que continua só com o que o cidadão moveu.",
+    steps: [
+      "Clique em Recebi para ficar com o pedido: quem mandou vê a hora em que você recebeu.",
+      "Na fila do setor, o primeiro que clicar em Recebi fica com o pedido e ele some da fila dos outros.",
+      "No pedido, use Direcionar (na lateral) para mandar a outra pessoa ou setor, com a finalidade, a prioridade, o prazo e um recado; Devolver manda de volta a quem mandou.",
+      "Pegar para mim não precisa de liberação: quem estava com o pedido é avisado e o histórico registra.",
+      "Enquanto ninguém recebeu, quem mandou pode Alterar ou Desfazer; nada é apagado, fica no histórico.",
+      "Sem receber em 2 horas, quem mandou é avisado; passado o prazo, o Tabelião é avisado.",
+    ],
+    terms: [
+      {
+        term: "Fila do setor",
+        meaning:
+          "Direcionamento sem pessoa escolhida: todos do setor são avisados e o primeiro que receber fica com o pedido.",
+      },
+      {
+        term: "Assinatura e conclusão",
+        meaning:
+          "O Tabelião pode escolher que só algumas pessoas assinem e concluam os pedidos; as demais direcionam para assinatura.",
+      },
+    ],
+    configure: {
+      href: "/admin/configuracoes/setores",
+      label: "Setores e quem conclui",
+      permission: "routing.settings",
+      steps: [
+        "Em Configurações › Setores ficam os setores, quem está em cada um e a linha que o cidadão vê.",
+        "Em Configurações › Assinatura e conclusão o Tabelião escolhe quem pode assinar e concluir os pedidos.",
+      ],
+    },
+  },
   "/admin/mensagens": {
     purpose:
       "O chat interno da equipe: conversa entre as pessoas da serventia, com foto, áudio e status (disponível, almoço, ausente).",

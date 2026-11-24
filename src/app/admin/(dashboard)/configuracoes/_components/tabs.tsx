@@ -105,6 +105,23 @@ const GROUPS: { label: string; tabs: Tab[] }[] = [
       },
     ],
   },
+  {
+    // The internal routing of the pedidos (change
+    // direcionamento-interno-de-pedidos).
+    label: "Direcionamento",
+    tabs: [
+      {
+        label: "Setores",
+        href: "/admin/configuracoes/setores",
+        permission: "routing.settings",
+      },
+      {
+        label: "Assinatura e conclusão",
+        href: "/admin/configuracoes/assinatura-e-conclusao",
+        permission: "routing.settings",
+      },
+    ],
+  },
 ];
 
 export function ConfiguracoesTabs({

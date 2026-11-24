@@ -22,6 +22,7 @@ import {
   lingeringStatusesWith,
 } from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
+import { routedToMeWith, waitingOnMe } from "@/lib/routing.ts";
 import { pendingDutyCount } from "@/lib/security-paper.ts";
 import { sendSecurityPaperRemindersInBackground } from "@/lib/security-paper-reminders.ts";
 import { openCountByKind, openRequestCount } from "@/lib/service-request.ts";
@@ -46,6 +47,7 @@ import { GuideAlerts } from "../_components/guide-alerts.tsx";
 import { MessengerWatch } from "../_components/messenger-watch.tsx";
 import { OfficeAlertsOutlet } from "../_components/office-alerts-outlet.tsx";
 import { RecordAlerts } from "../_components/record-alerts.tsx";
+import { RoutingAlerts } from "../_components/routing-alerts.tsx";
 import { ShortcutListener } from "../_components/shortcut-listener.tsx";
 import { AdminSidebar } from "../_components/sidebar.tsx";
 import { AdminTopBar } from "../_components/top-bar.tsx";
@@ -152,6 +154,15 @@ export default async function DashboardLayout({
     ...(can(role, "requests.manage", granted)
       ? {
           "/admin/pedidos": await openRequestCount(tenant.slug),
+          // Sent to me (not received yet) and my sectors' queue.
+          "/admin/direcionados": waitingOnMe(
+            await routedToMeWith(db, tenant.slug, tenant.attributions, {
+              id: session.user.id,
+              chatSector:
+                (session.user as { chatSector?: string | null }).chatSector ??
+                null,
+            }).catch(() => []),
+          ),
           // The guias de transmissão de bens the site asked for, still open.
           "/admin/utilitarios/guias": await openGuideRequestCount(tenant.slug),
         }
@@ -309,6 +320,9 @@ export default async function DashboardLayout({
                   )}
                   {can(role, "requests.manage", granted) && (
                     <GuideAlerts setting={alerts.guias} />
+                  )}
+                  {can(role, "requests.manage", granted) && (
+                    <RoutingAlerts setting={alerts.direcionamentos} />
                   )}
                   {(can(role, "requests.manage", granted) ||
                     can(role, "channels.manage", granted)) && (

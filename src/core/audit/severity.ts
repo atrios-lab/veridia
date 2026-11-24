@@ -81,6 +81,13 @@ const EXACT: Record<string, AuditLevel> = {
   "service-request.prenotation-pix-sent": "rotina",
   "office-settings.prenotation-charge-on": "atencao",
   "office-settings.prenotation-charge-off": "atencao",
+  // Who may conclude the pedidos, and the sectors: the office's controls.
+  "office-settings.conclusion-policy": "atencao",
+  "office-settings.routing-sectors": "analise",
+  "office-settings.routing-citizen-line": "analise",
+  // Taking a colleague's pedido or undoing a routing: a note to look at.
+  "service-request.routing-take": "analise",
+  "service-request.routing-withdraw": "analise",
   // Money: whether the party paid the tax, and the proof of it.
   "tax-guide.status": "atencao",
   "tax-guide.status-withdrawn": "atencao",

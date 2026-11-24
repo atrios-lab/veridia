@@ -52,6 +52,19 @@ const EXACT: Record<string, string> = {
     "Ligou a cobrança da prenotação antes da análise",
   "office-settings.prenotation-charge-off":
     "Desligou a cobrança da prenotação antes da análise",
+  "service-request.routing": "Direcionou um pedido a um colega ou a um setor",
+  "service-request.routing-take": "Pegou para si um pedido",
+  "service-request.routing-return": "Devolveu um pedido a quem o mandou",
+  "service-request.routing-receive": "Recebeu um pedido direcionado",
+  "service-request.routing-edit": "Alterou um direcionamento de pedido",
+  "service-request.routing-withdraw": "Desfez um direcionamento de pedido",
+  "service-request.routing-citizen-line":
+    "Ligou ou desligou, no pedido, a linha do setor para o cidadão",
+  "office-settings.routing-sectors": "Alterou os setores da serventia",
+  "office-settings.conclusion-policy":
+    "Alterou quem pode assinar e concluir os pedidos",
+  "office-settings.routing-citizen-line":
+    "Ligou ou desligou a linha do setor na consulta do cidadão",
   "compliance-intake.done": "Marcou a Adequação ao Provimento como cumprida",
   "compliance-intake.done-edited":
     "Alterou a data ou o Justiça Aberta da Adequação cumprida",

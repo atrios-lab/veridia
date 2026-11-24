@@ -143,6 +143,11 @@ export const OFFICE_PERMISSIONS = [
   // goes to the client (decision of 15/11/2026: "o tabelião valida para
   // postar ou enviar"). Derived from nothing: the Tabelião grants it.
   "qualificacao.validate",
+  // The internal routing of the pedidos (change
+  // direcionamento-interno-de-pedidos): the sectors, who works in each, who
+  // may sign and conclude, and the line the citizen reads. Derived from
+  // nothing: the Tabelião/Registrador grants it.
+  "routing.settings",
 ] as const;
 
 /**
@@ -191,6 +196,7 @@ export const GRANTABLE_PERMISSIONS = [
   "dpo.assist",
   "lgpd.decide",
   "qualificacao.validate",
+  "routing.settings",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -317,6 +323,9 @@ export const DEMO_CLOSED_PERMISSIONS = [
   "knowledge.manage",
   "dpo.assist",
   "qualificacao.validate",
+  // Who may conclude is the office's to decide: one participant restricting
+  // it would lock the others out.
+  "routing.settings",
 ] as const satisfies readonly OfficePermission[];
 
 /**
@@ -582,4 +591,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Requerimento LGPD: decisão final sobre a resposta ao titular (aprovar e enviar)",
   "qualificacao.validate":
     "Qualificação: validar a nota com exigência do Assistente Virtual antes de ir ao cliente",
+  "routing.settings":
+    "Direcionamento: setores, quem pode assinar e concluir os pedidos e a linha do setor para o cidadão",
 };
