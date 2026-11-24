@@ -773,6 +773,52 @@ export const appointmentNotes = pgTable(
 );
 
 /**
+ * What the office and the citizen say to each other about an appointment
+ * (decision of 24/11/2026), shown on the panel's detail and on the
+ * citizen's consult:
+ *
+ * - `requirement`: an exigência, what the office needs before the visit
+ *   (usually a document, sent through the consult's upload). Open until
+ *   `resolved_at`.
+ * - `message`: a question or an answer, from either side, while the office
+ *   keeps the questions open.
+ * - `open` / `close`: the office opening and closing the questions; the
+ *   latest one says whether the citizen may write.
+ *
+ * Nothing is deleted: an edit keeps the old text in `history`, and
+ * "apagar" sets `hidden_at`.
+ */
+export const appointmentMessages = pgTable(
+  "appointment_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    // "requirement" | "message" | "open" | "close"
+    kind: text("kind").notNull(),
+    // "office" | "citizen"
+    authorType: text("author_type").notNull(),
+    authorId: text("author_id"),
+    /** The author's name as it was when they wrote it. */
+    authorName: text("author_name").notNull(),
+    body: text("body").notNull().default(""),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolvedBy: text("resolved_by"),
+    /** Earlier texts: [{ body, at, by }]. */
+    history: jsonb("history").notNull().default([]),
+    editedAt: timestamp("edited_at", { withTimezone: true }),
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
+    hiddenBy: text("hidden_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("appointment_messages_appointment").on(t.appointmentId)],
+);
+
+/**
  * The monthly revenue bulletin. What was paid into each fund of the office's
  * state, keyed by fund (never by rubric: the rubric is read from the map in
  * core/transparency/rubrics when shown, so a reclassification needs no

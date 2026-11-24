@@ -351,6 +351,16 @@ const EXACT: Record<string, string> = {
   "appointment.key-reissue": "Gerou nova chave de um agendamento",
   "appointment.no-show": "Marcou falta em um agendamento",
   "appointment.note": "Anotou em um agendamento",
+  "appointment.requirement": "Abriu exigência em um agendamento",
+  "appointment.requirement-met":
+    "Marcou como cumprida a exigência de um agendamento",
+  "appointment.requirement-reopen": "Reabriu a exigência de um agendamento",
+  "appointment.message": "Escreveu ao cliente de um agendamento",
+  "appointment.message-edit": "Alterou o que escreveu em um agendamento",
+  "appointment.message-hide": "Apagou o que escreveu em um agendamento",
+  "appointment.questions-open": "Abriu as perguntas de um agendamento",
+  "appointment.questions-close": "Fechou as perguntas de um agendamento",
+  "appointment.citizen-message": "O cliente escreveu em um agendamento",
   "appointment.office-attach": "Anexou documento da serventia a um agendamento",
   "appointment.remove": "Retirou um agendamento",
   "appointment.revert": "Desfez o atendimento de um agendamento",
@@ -872,6 +882,24 @@ const EXPLANATIONS: Record<string, string> = {
   "appointment.remove": "Um agendamento foi excluído.",
   "appointment.correct": "Os dados de um agendamento foram corrigidos.",
   "appointment.note": "Foi feita uma anotação num agendamento.",
+  "appointment.requirement":
+    "A serventia pediu ao cliente de um agendamento um documento ou uma providência (exigência). O cliente foi avisado por e-mail.",
+  "appointment.requirement-met":
+    "A exigência de um agendamento foi dada como cumprida.",
+  "appointment.requirement-reopen":
+    "A exigência de um agendamento voltou a ficar aberta.",
+  "appointment.message":
+    "A serventia escreveu ao cliente de um agendamento, nas perguntas e respostas. O cliente foi avisado por e-mail.",
+  "appointment.message-edit":
+    "O texto de uma exigência ou mensagem de um agendamento foi alterado. O texto anterior fica guardado.",
+  "appointment.message-hide":
+    "Uma exigência ou mensagem de um agendamento foi apagada: some para o cliente, mas o registro fica guardado.",
+  "appointment.questions-open":
+    "As perguntas e respostas de um agendamento foram abertas: o cliente pode escrever pela consulta do protocolo.",
+  "appointment.questions-close":
+    "As perguntas e respostas de um agendamento foram fechadas: o cliente não pode mais escrever.",
+  "appointment.citizen-message":
+    "O cliente de um agendamento escreveu nas perguntas e respostas, pela consulta do protocolo.",
   "publication.create": "Uma publicação (edital, aviso, notícia) foi criada.",
   "publication.update": "Uma publicação foi alterada.",
   "publication.archive": "Uma publicação saiu do site e foi arquivada.",

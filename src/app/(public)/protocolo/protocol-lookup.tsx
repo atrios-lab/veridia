@@ -36,6 +36,7 @@ import {
 } from "../_lib/attachments.tsx";
 import {
   type AppointmentDetail,
+  type AppointmentMessageState,
   type AttachDocumentState,
   attachAppointmentDocument,
   attachExtraDocument,
@@ -50,6 +51,7 @@ import {
   recoverAccessKeyAction,
   reportPayment,
   type ServiceRequestDetail,
+  writeAppointmentMessageAction,
   writeRequirementMessageAction,
 } from "./actions.ts";
 
@@ -1896,6 +1898,10 @@ export function AppointmentCard({
         </div>
       )}
 
+      {result.requirements.length > 0 && (
+        <AppointmentRequirements requirements={result.requirements} />
+      )}
+
       <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
         <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
           Documentos enviados por você
@@ -1984,6 +1990,10 @@ export function AppointmentCard({
           </p>
         )}
       </div>
+
+      {(result.messages.length > 0 || result.mayWrite) && (
+        <AppointmentQuestions result={result} />
+      )}
 
       {onNewConsult ? (
         <button
@@ -2466,6 +2476,167 @@ function DataRightsFiles({ result }: { result: DataRightsDetail }) {
             </output>
           )}
         </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What the office asked the citizen to send before the visit (decision of
+ * 24/11/2026): the documents go through "Documentos enviados por você",
+ * right below.
+ */
+function AppointmentRequirements({
+  requirements,
+}: {
+  requirements: AppointmentDetail["requirements"];
+}) {
+  const pending = requirements.some((item) => !item.met);
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${
+        pending
+          ? "border-brand-alert/40 bg-brand-accent-soft"
+          : "border-brand-border bg-brand-card"
+      }`}
+    >
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+        {pending ? "O cartório pediu" : "Exigência cumprida"}
+      </span>
+      <ul className="mt-2.5 flex flex-col gap-2.5">
+        {requirements.map((item) => (
+          <li key={item.id} className="text-[13px] text-brand-text">
+            <p className="whitespace-pre-line [overflow-wrap:anywhere]">
+              {item.body}
+            </p>
+            <span className="text-[11px] text-brand-faint">
+              {formatDateTime(item.at)} ·{" "}
+              {item.met ? "cumprida" : "aguardando você"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {pending && (
+        <p className="mt-2.5 text-[12px] leading-relaxed text-brand-muted">
+          Envie o que foi pedido em "Documentos enviados por você", logo abaixo.
+          O cartório confere e dá a exigência como cumprida.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The questions the office opens and closes (decision of 24/11/2026): the
+ * citizen answers while they are open; closed, the conversation stays to
+ * read.
+ */
+function AppointmentQuestions({ result }: { result: AppointmentDetail }) {
+  const [state, action, pending] = useActionState<
+    AppointmentMessageState,
+    FormData
+  >(writeAppointmentMessageAction, { status: "idle" });
+  const [sent, setSent] = useState<AppointmentDetail["messages"]>([]);
+  const [draft, setDraft] = useState("");
+  const [lastDraft, setLastDraft] = useState("");
+  useEffect(() => {
+    if (state.status !== "success" || !lastDraft) return;
+    setSent((list) => [
+      ...list,
+      {
+        id: `novo-${list.length}`,
+        fromOffice: false,
+        authorName: "Você",
+        body: lastDraft,
+        at: new Date().toISOString(),
+      },
+    ]);
+    setDraft("");
+    setLastDraft("");
+  }, [state, lastDraft]);
+  const messages = [...result.messages, ...sent];
+  return (
+    <div className="rounded-2xl border border-brand-border bg-brand-card p-4">
+      <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-brand-accent-ink">
+        Perguntas do cartório
+      </span>
+      <ul className="mt-2.5 flex flex-col gap-2">
+        {messages.map((message) => (
+          <li
+            key={message.id}
+            className={`max-w-[92%] rounded-xl px-3 py-2 text-[13px] ${
+              message.fromOffice
+                ? "self-start bg-brand-surface text-brand-text"
+                : "self-end bg-brand-accent-soft text-brand-text"
+            }`}
+          >
+            <span className="block text-[11px] font-semibold text-brand-primary">
+              {message.fromOffice ? "Cartório" : "Você"}
+            </span>
+            <span className="block whitespace-pre-line [overflow-wrap:anywhere]">
+              {message.body}
+            </span>
+            <span className="block text-[10.5px] text-brand-faint">
+              {formatDateTime(message.at)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {result.mayWrite ? (
+        <form
+          action={(formData) => {
+            setLastDraft(String(formData.get("body") ?? "").trim());
+            action(formData);
+          }}
+          className="mt-3"
+        >
+          <input
+            type="hidden"
+            name="protocolNumber"
+            value={result.protocolNumber}
+          />
+          <input type="hidden" name="accessKey" value={result.accessKey} />
+          {/* Invisible to a person, irresistible to a script. */}
+          <input
+            type="text"
+            name="website"
+            tabIndex={-1}
+            autoComplete="off"
+            className="sr-only"
+            aria-hidden="true"
+          />
+          <label htmlFor="resposta-agendamento" className="sr-only">
+            Sua resposta
+          </label>
+          <textarea
+            id="resposta-agendamento"
+            name="body"
+            rows={3}
+            maxLength={2000}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            disabled={pending}
+            placeholder="Escreva a sua resposta ao cartório..."
+            className="w-full rounded-xl border border-brand-border bg-brand-card px-3 py-2.5 text-[13px] text-brand-text placeholder:text-brand-faint"
+          />
+          <button
+            type="submit"
+            disabled={pending || draft.trim().length < 2}
+            className="mt-2 rounded-xl bg-brand-primary px-4 py-2 text-[13px] font-semibold text-white disabled:opacity-60"
+          >
+            {pending ? "Enviando..." : "Enviar resposta"}
+          </button>
+          {state.status === "error" && (
+            <output className="mt-1.5 block text-[11.5px] font-semibold text-brand-alert">
+              {state.message}
+            </output>
+          )}
+        </form>
+      ) : (
+        <p className="mt-2.5 text-[12px] text-brand-muted">
+          O cartório encerrou as perguntas. Se precisar, ligue ou procure o
+          balcão.
+        </p>
       )}
     </div>
   );

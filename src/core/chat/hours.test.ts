@@ -247,3 +247,21 @@ test("a law day the office switched off leaves the counter open", () => {
   const now = new Date("2026-06-24T13:00:00Z");
   assert.equal(counterStatus(office, now).open, true);
 });
+
+test("a holiday between now and the reopening is named, so the skipped day makes sense", () => {
+  // Tuesday 2026-06-23 at 18:00 in Natal; Wednesday is São João.
+  const now = new Date("2026-06-23T21:00:00Z");
+  const status = counterStatus(cartorioMarinho, now);
+  assert.equal(
+    counterStatusLabel(status, now),
+    "Fechado agora · amanhã é feriado de São João · abre quinta às 8h",
+  );
+});
+
+test("a plain evening before a working day mentions no holiday", () => {
+  const now = new Date("2026-06-22T21:00:00Z");
+  assert.equal(
+    counterStatusLabel(counterStatus(cartorioMarinho, now), now),
+    "Fechado agora · abre terça às 8h",
+  );
+});

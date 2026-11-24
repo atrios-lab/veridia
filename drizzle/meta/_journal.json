@@ -582,6 +582,13 @@
       "when": 1795556579414,
       "tag": "0082_contas_excluir",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1795561720493,
+      "tag": "0083_agendamento_conversa",
+      "breakpoints": true
     }
   ]
 }
