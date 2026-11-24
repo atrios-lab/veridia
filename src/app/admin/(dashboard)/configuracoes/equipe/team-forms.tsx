@@ -16,6 +16,7 @@ import {
   ZOOM_MAX,
   ZOOM_MIN,
 } from "@/core/team/team.ts";
+import { ConfirmAction } from "../../../_components/confirm-action.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import {
@@ -23,6 +24,7 @@ import {
   NativeSelectOption,
 } from "../../../_ui/native-select.tsx";
 import {
+  deletePersonAction,
   importSignersAction,
   removeFileAction,
   saveLevelsAction,
@@ -684,5 +686,44 @@ export function ImportSigners({ count }: { count: number }) {
         </Button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Excludes a person (decision of 24/11/2026), after the confirmation and
+ * the justification. Leaves the site and "Quem assina"; the row stays and
+ * "Desfazer exclusão" brings it back.
+ */
+export function DeletePerson({
+  id,
+  name,
+  onSite,
+  signs,
+}: {
+  id: string;
+  name: string;
+  onSite: boolean;
+  signs: boolean;
+}) {
+  const [state, action, pending] = useActionState(deletePersonAction, IDLE);
+  useToast(state);
+  const leaves = [
+    "da equipe",
+    onSite ? "do site" : null,
+    signs ? "de Quem assina" : null,
+  ].filter(Boolean);
+  return (
+    <ConfirmAction
+      action={action}
+      pending={pending}
+      error={state.status === "error" ? state.message : null}
+      trigger="Excluir"
+      question={`Excluir ${name}?`}
+      consequence={`Sai ${leaves.join(", ").replace(/, ([^,]*)$/, " e $1")}. Os documentos já emitidos não mudam. O registro fica guardado e dá para desfazer em Excluídos.`}
+      confirmLabel="Excluir"
+      pendingLabel="Excluindo…"
+    >
+      <input type="hidden" name="id" value={id} />
+    </ConfirmAction>
   );
 }

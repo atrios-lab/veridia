@@ -568,6 +568,13 @@
       "when": 1795482234384,
       "tag": "0080_direcionamento_interno",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1795555523765,
+      "tag": "0081_equipe_excluir",
+      "breakpoints": true
     }
   ]
 }

@@ -3088,6 +3088,12 @@ export const officeStaff = pgTable(
     wordUpdatedAt: timestamp("word_updated_at", { withTimezone: true }),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
     archivedBy: text("archived_by"),
+    /**
+     * Excluded (decision of 24/11/2026): out of the team, the archive, the
+     * site and "Quem assina". The row stays, with the audit; it can be undone.
+     */
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()

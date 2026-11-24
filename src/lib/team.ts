@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, isNull } from "drizzle-orm";
 import {
   checkLevels,
   frameFrom,
@@ -137,15 +137,22 @@ export async function saveLevelsWith(
 export async function listStaffRowsWith(
   database: Database,
   tenantSlug: string,
-  options: { archived?: boolean } = {},
+  options: { archived?: boolean; deleted?: boolean } = {},
 ): Promise<StaffRow[]> {
+  // The excluded only when asked, and then only them (the panel's list
+  // "Excluídos"); everywhere else they are gone.
   return database
     .select()
     .from(officeStaff)
     .where(
       and(
         eq(officeStaff.tenantSlug, tenantSlug),
-        options.archived ? undefined : isNull(officeStaff.archivedAt),
+        options.deleted
+          ? isNotNull(officeStaff.deletedAt)
+          : isNull(officeStaff.deletedAt),
+        options.archived || options.deleted
+          ? undefined
+          : isNull(officeStaff.archivedAt),
       ),
     )
     .orderBy(asc(officeStaff.position), asc(officeStaff.name));
@@ -199,6 +206,7 @@ async function nextPosition(
         eq(officeStaff.tenantSlug, tenantSlug),
         eq(officeStaff.levelId, levelId),
         isNull(officeStaff.archivedAt),
+        isNull(officeStaff.deletedAt),
       ),
     )
     .orderBy(desc(officeStaff.position))
@@ -489,6 +497,79 @@ export async function restoreStaffWith(
   });
 }
 
+/**
+ * Excludes a person (decision of 24/11/2026): out of the team, the archive,
+ * the site and "Quem assina". Nothing leaves the database: the row stays
+ * with who excluded it and when, the audit keeps the justification, and
+ * "Desfazer exclusão" brings it back.
+ */
+export async function deleteStaffWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<void> {
+  const row = await ownRow(database, tenantSlug, id);
+  if (row.deletedAt) return;
+  const now = new Date();
+  await database
+    .update(officeStaff)
+    .set({
+      deletedAt: now,
+      deletedBy: actorId,
+      updatedBy: actorId,
+      updatedAt: now,
+    })
+    .where(eq(officeStaff.id, row.id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "team.delete",
+    targetType: "team",
+    targetId: row.name,
+  });
+}
+
+/**
+ * Undoes an exclusion: the person goes back to where they were (the team,
+ * at the end of the level, or the archive). A level removed meanwhile gives
+ * way to the first one.
+ */
+export async function undeleteStaffWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actorId: string,
+): Promise<void> {
+  const row = await ownRow(database, tenantSlug, id);
+  if (!row.deletedAt) return;
+  const levels = await getLevelsWith(database, tenantSlug);
+  const levelId = levels.some((level) => level.id === row.levelId)
+    ? row.levelId
+    : (levels[0]?.id ?? row.levelId);
+  const now = new Date();
+  await database
+    .update(officeStaff)
+    .set({
+      deletedAt: null,
+      deletedBy: null,
+      levelId,
+      position: row.archivedAt
+        ? row.position
+        : await nextPosition(database, tenantSlug, levelId),
+      updatedBy: actorId,
+      updatedAt: now,
+    })
+    .where(eq(officeStaff.id, row.id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId,
+    action: "team.undelete",
+    targetType: "team",
+    targetId: row.name,
+  });
+}
+
 /** Moves a person one place up or down inside their level. */
 export async function moveStaffWith(
   database: Database,
@@ -506,6 +587,7 @@ export async function moveStaffWith(
         eq(officeStaff.tenantSlug, tenantSlug),
         eq(officeStaff.levelId, row.levelId),
         isNull(officeStaff.archivedAt),
+        isNull(officeStaff.deletedAt),
       ),
     )
     .orderBy(asc(officeStaff.position), asc(officeStaff.name));
@@ -586,7 +668,7 @@ export async function staffFileWith(
     .limit(1);
   if (!row) return null;
   if (options.publicOnly) {
-    if (!row.showOnSite || row.archivedAt) return null;
+    if (!row.showOnSite || row.archivedAt || row.deletedAt) return null;
     if (kind === "word") return null;
     if (kind === "photo" && !row.imageConsent) return null;
   }

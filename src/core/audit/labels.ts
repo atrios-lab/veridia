@@ -317,6 +317,8 @@ const EXACT: Record<string, string> = {
     "Retirou a foto, a portaria ou o Word de uma pessoa da equipe",
   "team.archive": "Arquivou uma pessoa da equipe do cartório",
   "team.restore": "Voltou uma pessoa arquivada para a equipe",
+  "team.delete": "Excluiu uma pessoa da equipe do cartório",
+  "team.undelete": "Desfez a exclusão de uma pessoa da equipe",
   "team.move": "Mudou a ordem de uma pessoa da equipe",
   "team.levels": "Alterou os níveis da equipe do cartório",
   "team.import-signers": "Trouxe quem assina para a equipe do cartório",
@@ -841,6 +843,10 @@ const EXPLANATIONS: Record<string, string> = {
   "team.archive":
     "Uma pessoa saiu da equipe (arquivada): deixa de aparecer no painel e no site. O registro fica guardado.",
   "team.restore": "Uma pessoa arquivada voltou para a equipe.",
+  "team.delete":
+    "Uma pessoa foi excluída da equipe: sai do painel, dos arquivados, do site e de Quem assina. O registro fica guardado e a exclusão pode ser desfeita.",
+  "team.undelete":
+    "A exclusão de uma pessoa da equipe foi desfeita: ela voltou para onde estava.",
   "team.move": "A ordem de uma pessoa dentro do nível foi mudada.",
   "team.levels":
     "Os níveis da equipe (nomes e ordem) foram alterados. Isso muda a ordem do mosaico no site.",
