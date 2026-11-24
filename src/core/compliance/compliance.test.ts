@@ -4,6 +4,7 @@ import type { PrefillSource } from "./answers.ts";
 import {
   changedAfterSubmit,
   effectiveAnswers,
+  missingDetails,
   parseAnswer,
   prefillAnswers,
   progress,
@@ -14,7 +15,7 @@ import {
 import { classBoundary, classificationOf, classify } from "./classification.ts";
 import { toGeneratorJson } from "./export.ts";
 import { detectPendencies, unknownAnswers } from "./pendencies.ts";
-import { type Answers, findSection, SECTIONS } from "./sections.ts";
+import { type Answers, findSection, list, SECTIONS } from "./sections.ts";
 
 const PREFILL_SOURCE: PrefillSource = {
   officialName: "Ofício Único de Bom Jesus",
@@ -122,6 +123,37 @@ test("a list is incomplete while an item misses a required field", () => {
   assert.equal(sectionStatus(equipe, answers, true), "in-progress");
   answers.equipe.team = [{ name: "Ana", role: "clerk", gender: "feminine" }];
   assert.equal(sectionStatus(equipe, answers, true), "complete");
+});
+
+test("a block left blank by Incluir pessoa does not hold the section back", () => {
+  const equipe = section("equipe");
+  const answers: Answers = {
+    equipe: {
+      team: [{ name: "Ana Exemplo", role: "clerk", gender: "feminine" }, {}],
+      personalDevices: "no",
+    },
+  };
+  assert.equal(sectionStatus(equipe, answers, true), "complete");
+  assert.deepEqual(list(answers, "equipe", "team").length, 1);
+  // A list of only blank blocks is no answer at all.
+  answers.equipe.team = [{ name: "", role: "", gender: "" }];
+  assert.equal(sectionStatus(equipe, answers, true), "in-progress");
+});
+
+test("the review says what is missing, item by item", () => {
+  const equipe = section("equipe");
+  const answers: Answers = {
+    equipe: {
+      team: [
+        { name: "Ana Exemplo", role: "clerk", gender: "feminine" },
+        { name: "Bruno Ficticio", role: "clerk", gender: "" },
+      ],
+    },
+  };
+  assert.deepEqual(missingDetails(equipe, answers), [
+    "Pessoas da serventia: pessoa 2 (Bruno Ficticio) sem Gênero para os documentos",
+    "Alguém usa computador ou celular pessoal para o trabalho do cartório?: sem resposta",
+  ]);
 });
 
 test("progress counts complete sections and resumes at the latest open one", () => {

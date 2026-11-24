@@ -4,6 +4,7 @@ import { can } from "@/core/auth/roles.ts";
 import {
   displayValue,
   isEmpty,
+  missingDetails,
   progress,
   visibleFields,
 } from "@/core/compliance/answers.ts";
@@ -63,17 +64,58 @@ export default async function ReviewPage() {
             </span>
           </p>
         ) : (
-          <p className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text">
+          <div className="flex items-start gap-2.5 rounded-lg border border-warning/30 bg-warning-soft p-4 text-sm text-warning-text">
             <AdminIcon name="alert" className="mt-0.5 h-4 w-4 flex-none" />
-            <span>
+            <div className="min-w-0 flex-1">
               <strong className="block font-medium">
-                Faltam {missing.length}{" "}
+                {missing.length === 1 ? "Falta" : "Faltam"} {missing.length}{" "}
                 {missing.length === 1 ? "seção" : "seções"} para enviar.
               </strong>
-              {missing.map((s) => `${s.number} · ${s.title}`).join(", ")}. Você
-              já pode conferir o que respondeu.
-            </span>
-          </p>
+              {/* What exactly is missing, not only which section: a team
+                  member without the gender, a question left blank. Without
+                  it the office reopens the section and finds it "done". */}
+              <ul className="mt-2 flex flex-col gap-2.5">
+                {missing.map((s) => {
+                  const opened = state.statuses[s.id] !== "not-started";
+                  const gaps = opened ? missingDetails(s, answers) : [];
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-start justify-between gap-2"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium">
+                          {s.number} · {s.title}
+                        </span>
+                        {gaps.length > 0 ? (
+                          gaps.map((gap) => (
+                            <span key={gap} className="block">
+                              {gap}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="block">
+                            {opened
+                              ? "Abra a seção, confira e clique em avançar para confirmar."
+                              : "Ainda não aberta: abra, confira o que já veio preenchido e avance."}
+                          </span>
+                        )}
+                      </span>
+                      <Link
+                        href={`/admin/adequacao/${s.id}`}
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                        })}
+                      >
+                        Completar
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
         )}
 
         {pendencies.length > 0 && (

@@ -6,6 +6,7 @@ import {
   type Answers,
   type FieldContext,
   type FieldDef,
+  isBlankItem,
   isVisible,
   type ListItem,
   optionsOf,
@@ -94,7 +95,13 @@ export function prefillAnswers(source: PrefillSource): Answers {
 export function isEmpty(value: Value | undefined): boolean {
   if (value === undefined) return true;
   if (typeof value === "string") return value.trim() === "";
-  return value.length === 0;
+  // A list holding only blank blocks ("Incluir pessoa" and nothing typed)
+  // is as empty as no list.
+  return value.every((v) =>
+    typeof v === "object" && !Array.isArray(v)
+      ? isBlankItem(v as ListItem)
+      : String(v).trim() === "",
+  );
 }
 
 /**
@@ -140,19 +147,65 @@ export function missingFields(
       continue;
     }
     if (field.type === "list" && Array.isArray(value)) {
-      const items = value as ListItem[];
-      const incomplete = items.some((item) =>
-        (field.items ?? []).some(
-          (sub) =>
-            sub.required &&
-            isVisible(sub, { answers, item }) &&
-            isEmpty(item[sub.name]),
-        ),
-      );
-      if (incomplete) missing.push(field);
+      if (itemGaps(field, value as ListItem[], answers).length > 0) {
+        missing.push(field);
+      }
     }
   }
   return missing;
+}
+
+/** What each filled item of a list still lacks; blank items are skipped. */
+export function itemGaps(
+  field: FieldDef,
+  items: readonly ListItem[],
+  answers: Answers,
+): { index: number; name: string; lacks: string[] }[] {
+  const gaps: { index: number; name: string; lacks: string[] }[] = [];
+  items.forEach((item, index) => {
+    if (isBlankItem(item)) return;
+    const lacks = (field.items ?? [])
+      .filter(
+        (sub) =>
+          sub.required &&
+          isVisible(sub, { answers, item }) &&
+          isEmpty(item[sub.name]),
+      )
+      .map((sub) => sub.label);
+    if (lacks.length > 0) {
+      const name = typeof item.name === "string" ? item.name.trim() : "";
+      gaps.push({ index, name, lacks });
+    }
+  });
+  return gaps;
+}
+
+/**
+ * What still keeps a section from being complete, in the office's words:
+ * "Pessoas da serventia: pessoa 2 (Ana) sem Gênero para os documentos".
+ * The review screen lists these, so nobody has to hunt for the gap.
+ */
+export function missingDetails(
+  section: SectionDef,
+  answers: Answers,
+): string[] {
+  const lines: string[] = [];
+  for (const field of visibleFields(section, answers)) {
+    const value = answers[section.id]?.[field.name];
+    if (field.required && isEmpty(value)) {
+      lines.push(`${field.label}: sem resposta`);
+      continue;
+    }
+    if (field.type === "list" && Array.isArray(value)) {
+      const label = field.itemLabel ?? "item";
+      for (const gap of itemGaps(field, value as ListItem[], answers)) {
+        lines.push(
+          `${field.label}: ${label} ${gap.index + 1}${gap.name ? ` (${gap.name})` : ""} sem ${gap.lacks.join(", ")}`,
+        );
+      }
+    }
+  }
+  return lines;
 }
 
 export type SectionStatus = "not-started" | "in-progress" | "complete";
@@ -260,7 +313,7 @@ export function displayValue(
       .map((v) => options.find((o) => o.value === v)?.label ?? v)
       .join(", ");
   }
-  const items = value as ListItem[];
+  const items = (value as ListItem[]).filter((item) => !isBlankItem(item));
   const label = field.itemLabel ?? "item";
   return `${items.length} ${items.length === 1 ? label : `${label}s`}`;
 }

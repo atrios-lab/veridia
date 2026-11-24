@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { useId, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { type RevenueOrigin, unknownLabel } from "@/core/compliance/answers.ts";
+import {
+  itemGaps,
+  type RevenueOrigin,
+  unknownLabel,
+} from "@/core/compliance/answers.ts";
 import {
   type ClassBoundary,
   classBoundary,
@@ -613,6 +617,11 @@ function ListEditor({
   function add() {
     setDraft([...draft, {}]);
   }
+  // What each filled block still lacks, shown on the block itself: a
+  // required field left empty keeps the section from being sent.
+  const gaps = new Map(
+    itemGaps(field, draft, ctx.answers).map((gap) => [gap.index, gap.lacks]),
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -625,7 +634,7 @@ function ListEditor({
         <fieldset
           // biome-ignore lint/suspicious/noArrayIndexKey: items have no id; order is the identity the office sees.
           key={index}
-          className="flex flex-col gap-3 rounded-lg bg-muted/50 p-4"
+          className={`flex flex-col gap-3 rounded-lg bg-muted/50 p-4 ${gaps.has(index) ? "ring-2 ring-warning" : ""}`}
         >
           <legend className="sr-only">
             {label} {index + 1}
@@ -643,6 +652,13 @@ function ListEditor({
               Remover
             </Button>
           </div>
+          {gaps.has(index) && (
+            <p className="flex items-start gap-1.5 text-xs font-medium text-warning-text">
+              <AdminIcon name="alert" className="mt-px h-3.5 w-3.5 flex-none" />
+              Falta preencher: {gaps.get(index)?.join(", ")}. Sem isso a seção
+              não fica completa.
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {(field.items ?? [])
               .filter((sub) => isVisible(sub, { ...ctx, item }))
