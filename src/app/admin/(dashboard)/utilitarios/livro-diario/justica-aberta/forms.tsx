@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
+import { MoneyInput } from "../../../../_components/money-input.tsx";
 import { Button } from "../../../../_ui/button.tsx";
 import { Input } from "../../../../_ui/input.tsx";
 import { Label } from "../../../../_ui/label.tsx";
@@ -152,11 +153,10 @@ export function FcrcpnForm({
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor={`fc-rec-${key}`}>Valor líquido recebido (R$)</Label>
-          <Input
+          <MoneyInput
             id={`fc-rec-${key}`}
             name="recebido"
             required
-            inputMode="decimal"
             placeholder="0,00"
             defaultValue={initial.received}
           />
@@ -165,10 +165,9 @@ export function FcrcpnForm({
           <Label htmlFor={`fc-ret-${key}`}>
             Imposto retido na fonte (R$, se houver)
           </Label>
-          <Input
+          <MoneyInput
             id={`fc-ret-${key}`}
             name="retido"
-            inputMode="decimal"
             placeholder="0,00"
             defaultValue={initial.withheld}
           />

@@ -27,6 +27,8 @@ import {
 import type { Attribution, Tenant } from "@/core/tenant/schema.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { AdminIcon } from "../../../_components/icon.tsx";
+import { MoneyInput } from "../../../_components/money-input.tsx";
+import { TaxIdInput } from "../../../_components/tax-id-input.tsx";
 import { Badge } from "../../../_ui/badge.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Checkbox } from "../../../_ui/checkbox.tsx";
@@ -568,11 +570,11 @@ export function ManualEntryForm({
             </Label>
             {/* Remounted on the toggle: a number left behind in the disabled
                 field would read as if it were being filed. */}
-            <Input
+            <TaxIdInput
+              kind="cpf"
               key={noCpf ? "no-cpf" : "cpf"}
               id="cpf"
               name="cpf"
-              placeholder="000.000.000-00"
               disabled={noCpf}
               className="disabled:bg-muted"
             />
@@ -604,10 +606,9 @@ export function ManualEntryForm({
             <Label className="mb-2" htmlFor="amount">
               Valor (se já souber)
             </Label>
-            <Input
+            <MoneyInput
               id="amount"
               name="amount"
-              inputMode="decimal"
               placeholder="Pode informar depois"
             />
           </div>

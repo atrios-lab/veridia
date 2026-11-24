@@ -12,6 +12,7 @@ import {
   type ExcessPeriod,
 } from "@/core/daily-book/excess-calc.ts";
 import { ConfirmAction } from "../../../../_components/confirm-action.tsx";
+import { MoneyInput } from "../../../../_components/money-input.tsx";
 import { Button } from "../../../../_ui/button.tsx";
 import { Input } from "../../../../_ui/input.tsx";
 import { Label } from "../../../../_ui/label.tsx";
@@ -240,14 +241,13 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
             <Label htmlFor="ex-subsidy" className="mb-1.5">
               Subsídio mensal de ministro do STF (R$)
             </Label>
-            <Input
+            <MoneyInput
               id="ex-subsidy"
               name="subsidio"
               required
-              inputMode="decimal"
               placeholder="Ex.: 40.000,00"
               value={v.subsidy}
-              onChange={set("subsidy")}
+              onValueChange={(value) => set("subsidy")({ target: { value } })}
             />
             <span className={HINT}>
               Digite o valor cheio; a calculadora aplica os 90,25%.
@@ -276,14 +276,13 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
             <Label htmlFor="ex-revenue" className="mb-1.5">
               Receitas (R$)
             </Label>
-            <Input
+            <MoneyInput
               id="ex-revenue"
               name="receitas"
               required
-              inputMode="decimal"
               placeholder="0,00"
               value={v.revenue}
-              onChange={set("revenue")}
+              onValueChange={(value) => set("revenue")({ target: { value } })}
             />
             <span className={HINT}>Emolumentos do período.</span>
           </div>
@@ -291,14 +290,13 @@ export function ExcessForm({ initial }: { initial: ExcessInitial }) {
             <Label htmlFor="ex-expenses" className="mb-1.5">
               Despesas (R$)
             </Label>
-            <Input
+            <MoneyInput
               id="ex-expenses"
               name="despesas"
               required
-              inputMode="decimal"
               placeholder="0,00"
               value={v.expenses}
-              onChange={set("expenses")}
+              onValueChange={(value) => set("expenses")({ target: { value } })}
             />
             <span className={HINT}>
               Despesas da serventia (art. 194, IV), sem a remuneração do próprio

@@ -14,6 +14,7 @@ import {
   RECEIPTS_RULE,
 } from "@/core/daily-book/checks.ts";
 import { ConfirmAction } from "../../../_components/confirm-action.tsx";
+import { MoneyInput } from "../../../_components/money-input.tsx";
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
@@ -614,14 +615,13 @@ export function EntryForm({
           <label htmlFor="en-amount" className={LABEL}>
             Valor (R$)
           </label>
-          <Input
+          <MoneyInput
             id="en-amount"
             name="valor"
             required
-            inputMode="decimal"
             placeholder="0,00"
             value={v.amount}
-            onChange={set("amount")}
+            onValueChange={(value) => set("amount")({ target: { value } })}
           />
         </div>
         {kind === "despesa" ? (
@@ -1178,10 +1178,9 @@ export function SettingsForm({
             <label htmlFor="cf-teto" className={LABEL}>
               90,25% do subsídio mensal de ministro do STF (R$)
             </label>
-            <Input
+            <MoneyInput
               id="cf-teto"
               name="teto"
-              inputMode="decimal"
               placeholder="0,00"
               defaultValue={
                 initial.ceilingCents ? money(initial.ceilingCents) : ""

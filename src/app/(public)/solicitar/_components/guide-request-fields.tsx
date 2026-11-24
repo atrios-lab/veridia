@@ -18,6 +18,9 @@ import {
   MARRIAGE_REGIMES,
   OFFERED_GUIDE_KINDS,
 } from "@/core/guides/schema.ts";
+import { formatMoneyTyping, toMoneyText } from "@/core/money-input.ts";
+import { formatCpf } from "@/core/request/form.ts";
+import { formatTaxId } from "@/core/tax-id.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import {
   ATTACHMENT_ACCEPT,
@@ -521,8 +524,11 @@ export function GuideRequestFields({
                   <input
                     className={input}
                     inputMode="numeric"
-                    value={party.taxId}
-                    onChange={(e) => setParty(index, { taxId: e.target.value })}
+                    placeholder="Só os números"
+                    value={formatTaxId(party.taxId)}
+                    onChange={(e) =>
+                      setParty(index, { taxId: formatTaxId(e.target.value) })
+                    }
                   />
                   <FieldError message={err(`parties.${index}.taxId`)} />
                 </label>
@@ -598,9 +604,12 @@ export function GuideRequestFields({
                       <input
                         className={input}
                         inputMode="numeric"
-                        value={party.spouseTaxId ?? ""}
+                        placeholder="000.000.000-00"
+                        value={formatCpf(party.spouseTaxId ?? "")}
                         onChange={(e) =>
-                          setParty(index, { spouseTaxId: e.target.value })
+                          setParty(index, {
+                            spouseTaxId: formatCpf(e.target.value),
+                          })
                         }
                       />
                       <FieldError
@@ -767,9 +776,9 @@ export function GuideRequestFields({
             <span className={label}>Valor declarado do negócio (R$)</span>
             <input
               className={input}
-              inputMode="decimal"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              inputMode="numeric"
+              value={toMoneyText(value)}
+              onChange={(e) => setValue(formatMoneyTyping(e.target.value))}
               placeholder="27.000,00"
             />
             <FieldError

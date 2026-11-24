@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { LOOKUP_PURPOSES } from "@/core/rcpn/public-lookup.ts";
+import { formatCpf } from "@/core/request/form.ts";
 import { Icon } from "../_components/icon.tsx";
 import { type LookupState, lookupRegistroAction } from "./actions.ts";
 
@@ -27,6 +28,7 @@ const REQUEST_LINKS = {
 };
 
 export function LookupForm() {
+  const [cpf, setCpf] = useState("");
   const [state, action, pending] = useActionState(lookupRegistroAction, {
     status: "idle",
   } as LookupState);
@@ -113,6 +115,8 @@ export function LookupForm() {
                 required
                 inputMode="numeric"
                 placeholder="000.000.000-00"
+                value={cpf}
+                onChange={(e) => setCpf(formatCpf(e.target.value))}
                 className={inputClass}
               />
               <FieldError state={state} name="askerCpf" />
