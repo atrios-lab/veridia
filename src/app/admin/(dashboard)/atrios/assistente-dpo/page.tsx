@@ -22,6 +22,7 @@ const ROLE_NAMES: Record<string, string> = {
   admin: "Tabelião/Registrador",
   "substituto-legal": "Substituto legal",
   substituto: "Substituto",
+  "escrevente-autorizado": "Escrevente autorizado(a)",
   staff: "Escrevente",
   auxiliar: "Auxiliar",
   contador: "Contador",

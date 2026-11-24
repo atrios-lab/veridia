@@ -9,6 +9,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Tabelião/Registrador",
   "substituto-legal": "Substituto Legal",
   substituto: "Substituto",
+  "escrevente-autorizado": "Escrevente Autorizado(a)",
   staff: "Escrevente",
   auxiliar: "Auxiliar de Cartório",
   contador: "Contador",
