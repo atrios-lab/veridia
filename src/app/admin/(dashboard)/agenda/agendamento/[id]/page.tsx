@@ -13,10 +13,16 @@ import {
 import { appointmentStatusLabel } from "@/core/scheduling/appointment.ts";
 import { formatFullDate } from "@/core/scheduling/calendar.ts";
 import {
+  awaitingOffice,
+  questionsOpen,
+  shownRows,
+} from "@/core/scheduling/conversation.ts";
+import {
   getCounterService,
   servicesOfAgenda,
 } from "@/core/scheduling/services.ts";
 import { db } from "@/db/index.ts";
+import { listAppointmentMessages } from "@/lib/appointment-messages.ts";
 import {
   findAppointmentById,
   getAgendaConfig,
@@ -25,8 +31,9 @@ import {
 } from "@/lib/appointments.ts";
 import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import { getSession } from "@/lib/session.ts";
-import { getTenant, OFFICE_TIME_ZONE } from "@/lib/tenant.ts";
+import { getTenant, OFFICE_TIME_ZONE, today } from "@/lib/tenant.ts";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
+import { ConversationCard } from "./conversation-card.tsx";
 import { CorrectionForm, NoteForm, OfficeFilesForm } from "./detail-forms.tsx";
 
 export const metadata = { title: "Detalhes do agendamento" };
@@ -65,7 +72,7 @@ export default async function AppointmentDetailPage({
   // "Como fazer" for the services that carry one (the e-Notariado's), with
   // the reminder about the fee table when the act is charged by it.
   const guide = getCounterService(appointment.serviceId);
-  const [config, files, notes, feeTable] = await Promise.all([
+  const [config, files, notes, feeTable, messages] = await Promise.all([
     getAgendaConfig(tenant.slug),
     listAppointmentAttachments(tenant.slug, [appointment.id]).catch(() => []),
     listAppointmentNotes(
@@ -76,7 +83,9 @@ export default async function AppointmentDetailPage({
     guide?.chargedByFeeTable
       ? feeTableReferenceWith(db, tenant.slug).catch(() => null)
       : Promise.resolve(null),
+    listAppointmentMessages(tenant.slug, appointment.id).catch(() => []),
   ]);
+  const shown = shownRows(messages);
   const citizenFiles = files.filter((file) => !file.uploadedBy);
   const officeFiles = files.filter((file) => file.uploadedBy);
   const services = servicesOfAgenda(config, agenda).map(
@@ -189,6 +198,29 @@ export default async function AppointmentDetailPage({
             </ul>
           )}
         </section>
+
+        <ConversationCard
+          appointmentId={appointment.id}
+          questionsOpen={questionsOpen(messages)}
+          awaiting={awaitingOffice(messages)}
+          appointmentOpen={
+            appointment.status === "booked" && appointment.date >= today()
+          }
+          entries={shown
+            .filter(
+              (row) => row.kind === "requirement" || row.kind === "message",
+            )
+            .map((row) => ({
+              id: row.id,
+              kind: row.kind as "requirement" | "message",
+              authorType: row.authorType === "citizen" ? "citizen" : "office",
+              authorName: row.authorName,
+              body: row.body,
+              atLabel: DATE_TIME.format(row.createdAt),
+              edited: Boolean(row.editedAt),
+              resolved: Boolean(row.resolvedAt),
+            }))}
+        />
 
         <section className="rounded-xl border bg-card px-5 py-4">
           <h3 className="text-sm font-semibold text-foreground">

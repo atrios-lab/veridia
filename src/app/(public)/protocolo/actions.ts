@@ -63,6 +63,7 @@ import {
   officeHolidays,
   toIsoDate,
 } from "@/core/scheduling/calendar.ts";
+import { citizenMayWrite, shownRows } from "@/core/scheduling/conversation.ts";
 import {
   attendanceNotice,
   checklistFileHref,
@@ -71,6 +72,11 @@ import {
 } from "@/core/scheduling/services.ts";
 import { isSectionEnabled } from "@/core/tenant/gating.ts";
 import { db } from "@/db/index.ts";
+import {
+  addCitizenMessageWith,
+  ConversationError,
+  listAppointmentMessages,
+} from "@/lib/appointment-messages.ts";
 import {
   addAppointmentAttachments,
   findAppointmentByProtocolWithKey,
@@ -351,6 +357,18 @@ export interface AppointmentDetail extends BaseDetail {
   documents: CitizenDocumentView[];
   /** Still ahead and booked: documents can be sent. */
   open: boolean;
+  /** What the office asked the citizen to send (decision of 24/11/2026). */
+  requirements: { id: string; body: string; at: string; met: boolean }[];
+  /** The questions and answers, in order. */
+  messages: {
+    id: string;
+    fromOffice: boolean;
+    authorName: string;
+    body: string;
+    at: string;
+  }[];
+  /** The office keeps the questions open and the appointment is ahead. */
+  mayWrite: boolean;
 }
 
 export type ProtocolDetail =
@@ -411,13 +429,17 @@ async function appointmentDetail(
     accessKey,
   );
   if (!appointment?.protocolNumber) return undefined;
-  const [config, documents] = await Promise.all([
+  const [config, documents, conversation] = await Promise.all([
     getAgendaConfig(tenant.slug),
     // The citizen's own files only: the office's attachments stay internal.
     listAppointmentAttachments(tenant.slug, [appointment.id], {
       citizenOnly: true,
     }),
+    listAppointmentMessages(tenant.slug, appointment.id).catch(() => []),
   ]);
+  const shown = shownRows(conversation);
+  const appointmentOpen =
+    appointment.status === "booked" && appointment.date >= today();
   const service = resolveService(config, appointment.serviceId);
   return {
     status: "success",
@@ -446,7 +468,27 @@ async function appointmentDetail(
       createdAt: document.createdAt.toISOString(),
       displayName: document.displayName,
     })),
-    open: appointment.status === "booked" && appointment.date >= today(),
+    open: appointmentOpen,
+    requirements: shown
+      .filter((row) => row.kind === "requirement")
+      .map((row) => ({
+        id: row.id,
+        body: row.body,
+        at: row.createdAt.toISOString(),
+        met: Boolean(row.resolvedAt),
+      })),
+    messages: shown
+      .filter((row) => row.kind === "message")
+      .map((row) => ({
+        id: row.id,
+        fromOffice: row.authorType !== "citizen",
+        // The office speaks as the serventia: a clerk's name is not the
+        // citizen's business.
+        authorName: row.authorType === "citizen" ? row.authorName : "Cartório",
+        body: row.body,
+        at: row.createdAt.toISOString(),
+      })),
+    mayWrite: citizenMayWrite(conversation, appointmentOpen),
   };
 }
 
@@ -1377,4 +1419,59 @@ async function citizenLineOf(
     console.error("protocolo.routing-line", error);
     return null;
   }
+}
+
+export type AppointmentMessageState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | { status: "success"; message: string };
+
+/**
+ * The citizen answering the office's questions about an appointment, from
+ * the consult (decision of 24/11/2026): only while the office keeps them
+ * open, under the protocol and its key, with the honeypot and the rate
+ * limit of the other public writes.
+ */
+export async function writeAppointmentMessageAction(
+  _previous: AppointmentMessageState,
+  formData: FormData,
+): Promise<AppointmentMessageState> {
+  if (looksLikeBot(formData.get("website"))) {
+    return { status: "success", message: "Mensagem enviada." };
+  }
+  const tenant = await getTenant();
+  const appointment = await findAppointmentByProtocolWithKey(
+    tenant.slug,
+    String(formData.get("protocolNumber") ?? ""),
+    String(formData.get("accessKey") ?? ""),
+  );
+  if (!appointment) return { status: "error", message: NOT_FOUND };
+  if (await isRateLimited(await headers())) {
+    return {
+      status: "error",
+      message: "Muitos envios seguidos. Aguarde um minuto e tente de novo.",
+    };
+  }
+  try {
+    await addCitizenMessageWith(
+      db,
+      tenant.slug,
+      appointment,
+      appointment.status === "booked" && appointment.date >= today(),
+      String(formData.get("body") ?? ""),
+    );
+  } catch (error) {
+    if (error instanceof ConversationError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("protocolo.appointment-message", error);
+    return {
+      status: "error",
+      message: "Não foi possível enviar agora. Tente novamente em instantes.",
+    };
+  }
+  return {
+    status: "success",
+    message: "Mensagem enviada. O cartório responde por aqui.",
+  };
 }

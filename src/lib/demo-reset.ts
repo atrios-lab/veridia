@@ -8,6 +8,7 @@ import { user } from "@/db/auth-schema.ts";
 import type { Database } from "@/db/index.ts";
 import {
   appointmentAttachments,
+  appointmentMessages,
   appointmentNotes,
   appointments,
   attributionFiles,
@@ -111,6 +112,7 @@ export const DEMO_RESET_TABLES: readonly PgTable[] = [
   taxGuides,
   serviceRequests,
   appointmentAttachments,
+  appointmentMessages,
   appointmentNotes,
   appointments,
   officePublications,

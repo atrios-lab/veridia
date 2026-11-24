@@ -11,6 +11,15 @@ import {
 } from "@/core/scheduling/agenda.ts";
 import { servicesOfAgenda } from "@/core/scheduling/services.ts";
 import { LONG_TEXT_MAX, LONG_TEXT_TOO_LONG } from "@/core/text-limits.ts";
+import { db } from "@/db/index.ts";
+import {
+  addOfficeEntryWith,
+  ConversationError,
+  editOfficeEntryWith,
+  hideEntryWith,
+  resolveRequirementWith,
+  setQuestionsWith,
+} from "@/lib/appointment-messages.ts";
 import {
   addAppointmentNote,
   addOfficeAppointmentAttachments,
@@ -18,6 +27,8 @@ import {
   findAppointmentById,
   getAgendaConfig,
 } from "@/lib/appointments.ts";
+import { justify } from "@/lib/audit-reason.ts";
+import { sendAppointmentMessageEmail } from "@/lib/email/appointment.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AttachmentError, storeAttachments } from "@/lib/uploads.ts";
@@ -225,4 +236,104 @@ export async function correctAppointmentAction(
   }
   revalidate(id);
   return { status: "success", message: "Dados corrigidos." };
+}
+
+/**
+ * The exigência and the questions of the appointment (decision of
+ * 24/11/2026), one action for every step, by `op`:
+ * - `requirement` / `message`: write to the citizen (who gets an e-mail);
+ * - `open` / `close`: open or close the questions;
+ * - `met` / `reopen`: an exigência met, or open again;
+ * - `edit`: change a text, keeping the old one;
+ * - `hide`: "apagar", with the justification, for both sides.
+ */
+export async function conversationAction(
+  _previous: DetailState,
+  formData: FormData,
+): Promise<DetailState> {
+  const session = await authorize();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const id = String(formData.get("id") ?? "");
+  const op = String(formData.get("op") ?? "");
+  const entryId = String(formData.get("entryId") ?? "");
+  const body = String(formData.get("body") ?? "");
+  const actor = {
+    id: session.user.id,
+    name: session.user.name || session.user.email,
+  };
+  const tenant = await getTenant();
+  try {
+    switch (op) {
+      case "requirement":
+      case "message": {
+        const { appointment, body: text } = await addOfficeEntryWith(
+          db,
+          tenant.slug,
+          id,
+          op,
+          body,
+          actor,
+        );
+        await sendAppointmentMessageEmail(tenant, appointment, op, text);
+        revalidate(id);
+        return {
+          status: "success",
+          message:
+            op === "requirement"
+              ? "Exigência aberta. O cliente foi avisado por e-mail."
+              : "Mensagem enviada. O cliente foi avisado por e-mail e pode responder pela consulta.",
+        };
+      }
+      case "open":
+      case "close":
+        await setQuestionsWith(db, tenant.slug, id, op === "open", actor);
+        revalidate(id);
+        return {
+          status: "success",
+          message:
+            op === "open"
+              ? "Perguntas abertas: o cliente pode escrever pela consulta."
+              : "Perguntas fechadas: o cliente não pode mais escrever.",
+        };
+      case "met":
+      case "reopen":
+        await resolveRequirementWith(
+          db,
+          tenant.slug,
+          entryId,
+          op === "met",
+          actor,
+        );
+        revalidate(id);
+        return {
+          status: "success",
+          message: op === "met" ? "Exigência cumprida." : "Exigência reaberta.",
+        };
+      case "edit":
+        await editOfficeEntryWith(db, tenant.slug, entryId, body, actor);
+        revalidate(id);
+        return {
+          status: "success",
+          message: "Alterado. O texto anterior fica guardado.",
+        };
+      case "hide": {
+        const missing = justify(formData);
+        if (missing) return { status: "error", message: missing };
+        await hideEntryWith(db, tenant.slug, entryId, actor);
+        revalidate(id);
+        return {
+          status: "success",
+          message: "Apagado para o cliente. O registro fica guardado.",
+        };
+      }
+      default:
+        return { status: "error", message: GENERIC };
+    }
+  } catch (error) {
+    if (error instanceof ConversationError) {
+      return { status: "error", message: error.message };
+    }
+    console.error("agenda.conversation", error);
+    return { status: "error", message: GENERIC };
+  }
 }

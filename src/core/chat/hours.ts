@@ -92,6 +92,10 @@ export type CounterStatus =
       // Set when today is a weekday the office keeps closed for a holiday,
       // so the line can say why instead of only "fechado".
       holiday?: string;
+      // A weekday between now and the reopening that the office keeps
+      // closed for a holiday (decision of 24/11/2026): "abre quinta" alone
+      // reads as if Wednesday were forgotten.
+      holidayAhead?: { day: IsoDate; name: string };
     };
 
 export function counterStatus(
@@ -124,11 +128,20 @@ export function counterStatus(
 
   const [nextDay] = nextBusinessDays(addDays(today, 1), 1, tenant);
   const holiday = isWeekend(today) ? undefined : holidayName(today, tenant);
+  let holidayAhead: { day: IsoDate; name: string } | undefined;
+  for (let day = addDays(today, 1); day < nextDay; day = addDays(day, 1)) {
+    const name = isWeekend(day) ? undefined : holidayName(day, tenant);
+    if (name) {
+      holidayAhead = { day, name };
+      break;
+    }
+  }
   return {
     open: false,
     opensAt: { day: nextDay, ...toClock(spans[0][0]) },
     onBreak: false,
     ...(holiday ? { holiday } : {}),
+    ...(!holiday && holidayAhead ? { holidayAhead } : {}),
   };
 }
 
@@ -156,7 +169,14 @@ export function counterStatusLabel(
   const reason = status.holiday
     ? `Fechado hoje, feriado de ${status.holiday}`
     : "Fechado agora";
-  return `${reason} · abre ${day} às ${formatClock(status.opensAt)}`;
+  const ahead = status.holidayAhead
+    ? ` · ${
+        status.holidayAhead.day === addDays(toIsoDate(now, timeZone), 1)
+          ? "amanhã"
+          : longWeekday(status.holidayAhead.day)
+      } é feriado de ${status.holidayAhead.name}`
+    : "";
+  return `${reason}${ahead} · abre ${day} às ${formatClock(status.opensAt)}`;
 }
 
 /**

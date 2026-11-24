@@ -8,6 +8,7 @@ import {
   buildAgendaDayClosedEmail,
   buildAppointmentBookedEmail,
   buildAppointmentCancelledEmail,
+  buildAppointmentMessageEmail,
   buildAppointmentSelfCancelledEmail,
 } from "@/core/scheduling/emails.ts";
 import { buildCalendarEvent } from "@/core/scheduling/ics.ts";
@@ -365,5 +366,41 @@ export async function sendOfficeNewAppointmentEmail(
     });
   } catch (error) {
     console.error("appointment.email.office-new", appointment.id, error);
+  }
+}
+
+/**
+ * An exigência or a question from the office, sent to the citizen with the
+ * consult as the button. Best effort, like every letter of the agenda.
+ */
+export async function sendAppointmentMessageEmail(
+  tenant: Tenant,
+  appointment: Appointment,
+  kind: "requirement" | "message",
+  body: string,
+): Promise<void> {
+  const text = buildAppointmentMessageEmail({
+    ...facts(tenant, appointment),
+    kind,
+    body,
+    protocolNumber: appointment.protocolNumber ?? undefined,
+  });
+  const consultUrl = `${baseUrl(tenant)}/protocolo`;
+  try {
+    await sendEmail({
+      tenant,
+      kind: "office",
+      related: appointment.protocolNumber
+        ? { kind: "appointment", protocol: appointment.protocolNumber }
+        : undefined,
+      to: appointment.email,
+      fromName: tenant.name,
+      fromAddress: tenant.emailFrom,
+      subject: text.subject,
+      html: renderEmailCardHtml(text, identity(tenant), consultUrl),
+      text: renderEmailCardText(text, consultUrl),
+    });
+  } catch (error) {
+    console.error("appointment.email.message", appointment.id, error);
   }
 }

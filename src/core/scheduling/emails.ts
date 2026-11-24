@@ -164,3 +164,34 @@ export function buildAgendaDayClosedEmail(
     footnote: `${facts.officeName} · Se precisar resolver com urgência, procure a serventia pelo telefone.`,
   };
 }
+
+/**
+ * The office writing to the citizen about an appointment (decision of
+ * 24/11/2026): an exigência, or a question while it keeps them open. The
+ * text goes whole, like the rest of the appointment's letters; the button
+ * leads to the consult, where the citizen answers or sends the document
+ * with the protocol and the key of the confirmation.
+ */
+export function buildAppointmentMessageEmail(
+  facts: AppointmentEmailFacts & {
+    kind: "requirement" | "message";
+    body: string;
+    protocolNumber?: string;
+  },
+): EmailText {
+  const requirement = facts.kind === "requirement";
+  return {
+    subject: requirement
+      ? `O cartório pediu um documento · agendamento de ${formatLongDate(facts.date)}`
+      : `O cartório escreveu sobre o seu agendamento de ${formatLongDate(facts.date)}`,
+    paragraphs: [
+      `${firstName(facts.citizenName)}, sobre o seu atendimento de ${when(facts.date, facts.slotTime)}, para ${facts.serviceLabel}:`,
+      `"${facts.body}"`,
+      requirement
+        ? `Envie o que foi pedido pela consulta do protocolo${facts.protocolNumber ? ` ${facts.protocolNumber}` : ""}, com a chave de acesso do e-mail de confirmação, em "Documentos enviados por você".`
+        : `Você pode responder pela consulta do protocolo${facts.protocolNumber ? ` ${facts.protocolNumber}` : ""}, com a chave de acesso do e-mail de confirmação, enquanto o cartório deixar as perguntas abertas.`,
+    ],
+    buttonLabel: "Abrir a consulta do protocolo",
+    footnote: `${facts.officeName} · Se precisar resolver com urgência, procure a serventia pelo telefone.`,
+  };
+}
