@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  type ReactNode,
   useActionState,
   useCallback,
   useEffect,
@@ -13,7 +12,7 @@ import {
 import { toast } from "sonner";
 import { ConfirmAction } from "../../_components/confirm-action.tsx";
 import { AdminDialog, DIALOG_FOOTER } from "../../_components/dialog.tsx";
-import { Button } from "../../_ui/button.tsx";
+import { Button, buttonVariants } from "../../_ui/button.tsx";
 import { Input } from "../../_ui/input.tsx";
 import {
   type AccountActionState,
@@ -23,6 +22,7 @@ import {
   reactivateAccount,
   resendInvite,
   triggerPasswordReset,
+  undeleteAccount,
 } from "./actions.ts";
 import {
   type AccountSummary,
@@ -174,8 +174,8 @@ function DeactivateAction({ userId }: { userId: string }) {
       action={formAction}
       pending={pending}
       error={state.status === "error" ? state.message : null}
-      className="w-full"
-      trigger="Desativar acesso"
+      trigger="Desativar"
+      triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
       question="Desativar o acesso desta conta?"
       consequence="A pessoa deixa de conseguir entrar no painel agora, mas a conta continua na lista e pode ser reativada depois."
       confirmLabel="Desativar acesso"
@@ -208,92 +208,23 @@ function ReactivateAction({ userId }: { userId: string }) {
 }
 
 /**
- * The row's overflow, holding the actions that take something away.
- *
- * A disclosure, not `role="menu"`: a menu role promises arrow-key
- * navigation, roving tabindex and typeahead, and announcing a menu that
- * implements none of them is worse for a screen reader than a plain
- * expandable group of buttons, which Tab already handles. Two buttons do
- * not need a menu.
- */
-function RowMenu({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const box = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      // A confirmation opened from in here is a modal in the top layer and
-      // owns Escape: closing this first would unmount the dialog in the
-      // middle of its own question.
-      if (event.key !== "Escape" || document.querySelector("dialog[open]")) {
-        return;
-      }
-      setOpen(false);
-      trigger.current?.focus();
-    };
-
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Element | null;
-      if (target?.closest("dialog")) return; // same reason as above
-      if (box.current?.contains(target as Node)) return;
-      if (trigger.current?.contains(target as Node)) return;
-      setOpen(false);
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [open]);
-
-  return (
-    <div className="relative">
-      <Button
-        ref={trigger}
-        type="button"
-        variant="outline"
-        size="sm"
-        aria-expanded={open}
-        aria-label="Mais ações desta conta"
-        onClick={() => setOpen((was) => !was)}
-      >
-        ⋯
-      </Button>
-      {open && (
-        <div
-          ref={box}
-          className="absolute top-full right-0 z-10 mt-1.5 flex min-w-52 flex-col items-stretch gap-1.5 rounded-lg border bg-popover p-1.5 text-popover-foreground shadow-md"
-        >
-          {children}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * "Excluir conta": offered only for an account that never entered the
- * panel, so there is no act of theirs left without an author. The server
- * refuses the rest; this is the courtesy of not offering it.
+ * "Excluir" (decision of 24/11/2026): takes the account out of the list and
+ * turns its access off. The row stays in the database, so every act keeps
+ * its author, and "Desfazer exclusão" brings it back.
  */
 function DeleteAction({ name, userId }: { name: string; userId: string }) {
   // O aviso sai daqui, e não de um efeito sobre `state`: dar certo significa
   // que a linha some da lista, e o efeito morre com o componente antes de
-  // rodar. Excluir ficava sem confirmação nenhuma na tela. `toast` publica
-  // num Toaster que vive acima desta árvore, então a mensagem sobrevive ao
-  // desmonte; as outras ações desta linha não precisam disso porque a conta
-  // continua listada depois delas.
+  // rodar. `toast` publica num Toaster que vive acima desta árvore, então a
+  // mensagem sobrevive ao desmonte.
   const [state, formAction, pending] = useActionState<
     AccountActionState,
     FormData
   >(async (previous, formData) => {
     const result = await deleteAccount(previous, formData);
-    if (result.status === "sent") toast.success("Conta excluída.");
+    if (result.status === "sent") {
+      toast.success("Conta excluída. Dá para desfazer em Contas excluídas.");
+    }
     return result;
   }, IDLE_ACCOUNT_ACTION_STATE);
 
@@ -302,15 +233,40 @@ function DeleteAction({ name, userId }: { name: string; userId: string }) {
       action={formAction}
       pending={pending}
       error={state.status === "error" ? state.message : null}
-      trigger="Excluir conta"
+      trigger="Excluir"
       question={`Excluir a conta de ${name}?`}
-      consequence="Ela nunca foi acessada, então nada que a serventia registrou depende dela. A conta sai da lista e o e-mail volta a ficar livre para um novo convite. Não dá para desfazer."
+      consequence="A conta sai da lista e perde o acesso ao painel agora. Nada é apagado: os atos continuam com o nome da pessoa, e dá para desfazer em Contas excluídas."
       confirmLabel="Excluir conta"
       pendingLabel="Excluindo…"
-      className="w-full"
     >
       <input type="hidden" name="userId" value={userId} />
     </ConfirmAction>
+  );
+}
+
+/** "Desfazer exclusão": back to the list, still without access. */
+export function UndeleteAction({ userId }: { userId: string }) {
+  const [, formAction, pending] = useActionState<AccountActionState, FormData>(
+    async (previous, formData) => {
+      const result = await undeleteAccount(previous, formData);
+      if (result.status === "sent") {
+        toast.success(
+          "A conta voltou para a lista, sem acesso. Use Reativar acesso para ela entrar de novo.",
+        );
+      }
+      if (result.status === "error") toast.error(result.message);
+      return result;
+    },
+    IDLE_ACCOUNT_ACTION_STATE,
+  );
+
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="userId" value={userId} />
+      <Button type="submit" variant="outline" size="sm" disabled={pending}>
+        {pending ? "Desfazendo…" : "Desfazer exclusão"}
+      </Button>
+    </form>
   );
 }
 
@@ -325,25 +281,30 @@ export function AccountRowActions({
   disabled: boolean;
   isSelf: boolean;
 }) {
-  if (disabled) return <ReactivateAction userId={account.id} />;
+  if (disabled) {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ReactivateAction userId={account.id} />
+        {!isSelf && <DeleteAction name={account.name} userId={account.id} />}
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {/* Offered on every row, the session's own included: correcting your
           own name is legitimate, and the one edit that could lock the office
           out, demoting the last Registrador, is refused by the server. */}
       <UpdateAccountAction account={account} />
       <KeyAction userId={account.id} active={active} />
-      {/* Own row never offers either of these: see design.md, the server
-          refuses them too, this is only the courtesy of not showing a
-          button that would just come back as an error. */}
+      {/* Own row never offers either of these: the server refuses them too,
+          this is only the courtesy of not showing a button that would just
+          come back as an error. */}
       {!isSelf && (
-        <RowMenu>
+        <>
           <DeactivateAction userId={account.id} />
-          {/* An account that has already worked here keeps Desativar and
-              nothing more: deleting it would reattribute its acts. */}
-          {!active && <DeleteAction name={account.name} userId={account.id} />}
-        </RowMenu>
+          <DeleteAction name={account.name} userId={account.id} />
+        </>
       )}
     </div>
   );

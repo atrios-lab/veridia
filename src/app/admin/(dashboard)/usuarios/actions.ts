@@ -23,7 +23,6 @@ import {
   buildConfirmEmailUrl,
   buildResetPasswordUrl,
   deleteEmailChangesWith,
-  deleteResetTokensWith,
   issueEmailChangeTokenWith,
   issueResetTokenWith,
   resolveOrigin,
@@ -101,6 +100,21 @@ export async function createUser(
   // still crash on the database's own unique index instead of failing here.
   const existing = await ctx.internalAdapter.findUserByEmail(parsed.data.email);
   if (existing) {
+    const [own] = await db
+      .select({ deletedAt: userTable.deletedAt })
+      .from(userTable)
+      .where(
+        and(
+          eq(userTable.id, existing.user.id),
+          eq(userTable.tenantSlug, tenant.slug),
+        ),
+      );
+    if (own?.deletedAt) {
+      return fail("Confira os campos destacados.", values, {
+        email:
+          "Esse e-mail é de uma conta excluída. Em Contas excluídas, clique em Desfazer exclusão.",
+      });
+    }
     // Same top-level phrasing as a schema failure below: the specific
     // reason already lives next to the e-mail field, so the banner does not
     // repeat it verbatim and render it twice on screen.
@@ -161,6 +175,8 @@ async function findOwnAccount(userId: string, tenantSlug: string) {
       email: userTable.email,
       role: userTable.role,
       credentialId: accountTable.id,
+      disabledAt: userTable.disabledAt,
+      deletedAt: userTable.deletedAt,
     })
     .from(userTable)
     .leftJoin(
@@ -639,22 +655,13 @@ export async function createPasswordResetLink(
 }
 
 /**
- * Removes an account that never entered the panel, and with it the e-mail
- * it was holding: `user.email` is unique platform-wide, so an address
- * invited into the wrong office stays burned until the row goes.
- *
- * Only an account with no credential. One that has already worked here
- * keeps "Desativar acesso" instead: `audit_log.actorId` carries no foreign
- * key and every `authorUserId` is `on delete set null`, so deleting would
- * not break the database, it would quietly reattribute that person's acts
- * to "Sistema" and their messages to "Serventia". Attribution is the one
- * thing the trail exists to hold.
- *
- * No last-Registrador guard here, and none is missing: this only reaches an
- * account with no credential, one that has never signed in, while whoever
- * is clicking is signed in and therefore has one. The target is never the
- * caller, and an office losing a Registrador who never entered still has
- * the Registrador doing the deleting.
+ * "Excluir" (decision of 24/11/2026): takes an account out of the panel's
+ * list. Never a DELETE: `audit_log.actorId` and every `authorUserId` point
+ * at this row, and removing it would quietly reattribute that person's acts
+ * to "Sistema". The row stays with who excluded it and when; access is
+ * turned off (as "Desativar" does) and the open sessions end. "Desfazer
+ * exclusão" brings it back to the list, still without access, so giving
+ * access again is its own, visible step.
  */
 export async function deleteAccount(
   _previous: AccountActionState,
@@ -671,35 +678,77 @@ export async function deleteAccount(
   )
     notFound();
 
-  const tenant = await getTenant();
-  const target = await findOwnAccount(userId, tenant.slug);
-  if (!target) notFound();
-
-  // Read now, not when the screen was painted: the invited person may have
-  // created their password while this dialog sat open.
-  if (target.credentialId !== null) {
+  if (userId === session.user.id) {
     return {
       status: "error",
-      message:
-        "Esta conta já acessou o painel. Use “Desativar acesso” para tirar o acesso sem apagar o histórico.",
+      message: "Você não pode excluir a própria conta.",
     };
   }
 
-  // Tokens first: `verification` has no foreign key to `user`, so this is
-  // the one row the cascade will not take. Failing here leaves an account
-  // with no invite open, which "Reenviar convite" fixes; failing the other
-  // way around would leave the orphan token this exists to avoid.
-  const ctx = await auth.$context;
-  await deleteResetTokensWith(ctx, target.id);
-  await deleteEmailChangesWith(ctx, target.id);
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+  if (target.deletedAt) return { status: "sent" };
 
-  // `session` and `account` follow by cascade (see auth-schema.ts).
-  await db.delete(userTable).where(eq(userTable.id, target.id));
+  const otherActiveAdmins = await countOtherActiveAdmins(
+    tenant.slug,
+    target.id,
+  );
+  if (!target.disabledAt && isLastActiveAdmin(target.role, otherActiveAdmins)) {
+    return { status: "error", message: LAST_ADMIN_MESSAGE };
+  }
+
+  const now = new Date();
+  await db
+    .update(userTable)
+    .set({
+      deletedAt: now,
+      deletedBy: session.user.id,
+      disabledAt: target.disabledAt ?? now,
+    })
+    .where(eq(userTable.id, target.id));
+  // Same as Desativar: the sessions it had open end now.
+  await db.delete(sessionTable).where(eq(sessionTable.userId, target.id));
 
   await recordAudit({
     tenantSlug: tenant.slug,
     actorId: session.user.id,
     action: "user.delete",
+    targetType: "user",
+    targetId: target.id,
+  });
+
+  revalidatePath(USERS_PATH);
+  return { status: "sent" };
+}
+
+/** Brings an excluded account back to the list, still without access. */
+export async function undeleteAccount(
+  _previous: AccountActionState,
+  formData: FormData,
+): Promise<AccountActionState> {
+  const userId = String(formData.get("userId") ?? "");
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "user.manage", session.user.permissions)
+  )
+    notFound();
+
+  const tenant = await getTenant();
+  const target = await findOwnAccount(userId, tenant.slug);
+  if (!target) notFound();
+  if (!target.deletedAt) return { status: "sent" };
+
+  await db
+    .update(userTable)
+    .set({ deletedAt: null, deletedBy: null })
+    .where(eq(userTable.id, target.id));
+
+  await recordAudit({
+    tenantSlug: tenant.slug,
+    actorId: session.user.id,
+    action: "user.undelete",
     targetType: "user",
     targetId: target.id,
   });

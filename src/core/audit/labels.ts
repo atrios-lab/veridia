@@ -399,6 +399,7 @@ const EXACT: Record<string, string> = {
   "transparency.document.current":
     "Marcou uma tabela de emolumentos como vigente (publicada e no topo da lista)",
   "user.delete": "Excluiu uma conta",
+  "user.undelete": "Desfez a exclusão de uma conta",
   "user.invite": "Convidou uma pessoa (nova conta)",
   "user.invite-resend": "Reenviou um convite",
   "user.email-change-requested": "Pediu troca de e-mail",
@@ -494,7 +495,10 @@ const EXPLANATIONS: Record<string, string> = {
   "user.deactivate":
     "Uma conta foi desativada: a pessoa não consegue mais entrar no painel.",
   "user.reactivate": "Uma conta desativada voltou a poder entrar no painel.",
-  "user.delete": "Uma conta foi excluída do painel.",
+  "user.delete":
+    "Uma conta saiu da lista do painel (excluída) e perdeu o acesso. O registro fica guardado, os atos continuam com o nome da pessoa e a exclusão pode ser desfeita.",
+  "user.undelete":
+    "Uma conta excluída voltou para a lista do painel, ainda sem acesso. Para ela entrar de novo, é preciso reativar.",
   "user.email-changed": "O e-mail de uma conta foi trocado.",
   "user.password-reset-link-issued":
     "Foi gerado um link para a pessoa criar uma senha nova.",
