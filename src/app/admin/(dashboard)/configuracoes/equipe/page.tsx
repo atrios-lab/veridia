@@ -20,8 +20,10 @@ import {
   archivePersonAction,
   movePersonAction,
   restorePersonAction,
+  undeletePersonAction,
 } from "./actions.ts";
 import {
+  DeletePerson,
   ImportSigners,
   LevelsEditor,
   PersonForm,
@@ -87,6 +89,7 @@ export default async function TeamPage({
     editar?: string;
     novo?: string;
     arquivados?: string;
+    excluidos?: string;
   }>;
 }) {
   const session = await getSession();
@@ -99,9 +102,11 @@ export default async function TeamPage({
   const query = await searchParams;
   const tenant = await getTenant();
   const showArchived = query.arquivados === "1";
-  const [levels, all] = await Promise.all([
+  const showDeleted = query.excluidos === "1";
+  const [levels, all, deleted] = await Promise.all([
     getLevelsWith(db, tenant.slug),
     listStaffRowsWith(db, tenant.slug, { archived: true }),
+    listStaffRowsWith(db, tenant.slug, { deleted: true }),
   ]);
   const active = all.filter((row) => !row.archivedAt);
   const archived = all.filter((row) => row.archivedAt);
@@ -240,7 +245,7 @@ export default async function TeamPage({
                         <Badge className="bg-muted text-foreground">Word</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                       <form action={movePersonAction}>
                         <input type="hidden" name="id" value={row.id} />
                         <input type="hidden" name="direction" value="up" />
@@ -282,6 +287,12 @@ export default async function TeamPage({
                           Arquivar
                         </Button>
                       </form>
+                      <DeletePerson
+                        id={row.id}
+                        name={row.name}
+                        onSite={row.showOnSite}
+                        signs={row.canSign}
+                      />
                     </div>
                   </li>
                 ))}
@@ -320,9 +331,58 @@ export default async function TeamPage({
                         Voltar para a equipe
                       </Button>
                     </form>
+                    <DeletePerson
+                      id={row.id}
+                      name={row.name}
+                      onSite={false}
+                      signs={false}
+                    />
                   </li>
                 ))}
               </ul>
+            )}
+          </section>
+        )}
+
+        {deleted.length > 0 && (
+          <section className="rounded-xl border bg-card px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-foreground">
+                Excluídos ({deleted.length})
+              </h2>
+              <Link
+                href={showDeleted ? PATH : `${PATH}?excluidos=1`}
+                className="text-sm font-medium text-primary underline underline-offset-4"
+              >
+                {showDeleted ? "Esconder" : "Mostrar"}
+              </Link>
+            </div>
+            {showDeleted && (
+              <>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Não aparecem no painel, no site nem em Quem assina. O registro
+                  fica guardado, com quem excluiu e o motivo na auditoria.
+                </p>
+                <ul className="mt-2 flex flex-col divide-y">
+                  {deleted.map((row) => (
+                    <li
+                      key={row.id}
+                      className="flex flex-wrap items-center gap-3 py-2.5"
+                    >
+                      <Avatar row={row} />
+                      <span className="min-w-48 flex-1 text-sm text-muted-foreground line-through">
+                        {row.name}
+                      </span>
+                      <form action={undeletePersonAction}>
+                        <input type="hidden" name="id" value={row.id} />
+                        <Button type="submit" variant="outline" size="sm">
+                          Desfazer exclusão
+                        </Button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         )}

@@ -7,6 +7,7 @@ import {
   archiveStaffWith,
   clearFileWith,
   createStaffWith,
+  deleteStaffWith,
   getLevelsWith,
   importSignersWith,
   listStaffRowsWith,
@@ -19,6 +20,7 @@ import {
   TeamError,
   teamSignersWith,
   toRecord,
+  undeleteStaffWith,
   updateStaffWith,
 } from "./team.ts";
 
@@ -377,4 +379,51 @@ test("o enquadramento da foto é guardado e chega ao site", async () => {
   );
   const [row] = await listStaffRowsWith(db, office);
   assert.deepEqual(toRecord(row as NonNullable<typeof row>).frame, frame);
+});
+
+test("excluir tira da equipe, dos arquivados, do site e de Quem assina, sem apagar a linha, e dá para desfazer", async () => {
+  const office = "cartorio-excluir";
+  const id = await createStaffWith(
+    db,
+    office,
+    input({ name: "Otávio Exemplo Lima", canSign: true }),
+    ACTOR,
+  );
+  await createStaffWith(db, office, input({ name: "Rita Exemplo Sá" }), ACTOR);
+  assert.equal((await teamSignersWith(db, office)).length, 1);
+
+  await deleteStaffWith(db, office, id, ACTOR);
+  const names = (rows: { name: string }[]) => rows.map((r) => r.name);
+  assert.deepEqual(names(await listStaffRowsWith(db, office)), [
+    "Rita Exemplo Sá",
+  ]);
+  assert.deepEqual(
+    names(await listStaffRowsWith(db, office, { archived: true })),
+    ["Rita Exemplo Sá"],
+  );
+  assert.equal((await publicTeamWith(db, office)).groups[0]?.people.length, 1);
+  assert.deepEqual(await teamSignersWith(db, office), []);
+  assert.equal(
+    await staffFileWith(db, office, id, "photo", { publicOnly: true }),
+    null,
+  );
+  // The row stays, in the list of the excluded.
+  const gone = await listStaffRowsWith(db, office, { deleted: true });
+  assert.deepEqual(names(gone), ["Otávio Exemplo Lima"]);
+  assert.equal(gone[0]?.deletedBy, ACTOR);
+
+  await undeleteStaffWith(db, office, id, ACTOR);
+  assert.equal((await listStaffRowsWith(db, office)).length, 2);
+  assert.equal((await teamSignersWith(db, office)).length, 1);
+  assert.deepEqual(await listStaffRowsWith(db, office, { deleted: true }), []);
+
+  // An archived person excluded comes back to the archive.
+  await archiveStaffWith(db, office, id, ACTOR);
+  await deleteStaffWith(db, office, id, ACTOR);
+  await undeleteStaffWith(db, office, id, ACTOR);
+  assert.equal((await listStaffRowsWith(db, office)).length, 1);
+  assert.equal(
+    (await listStaffRowsWith(db, office, { archived: true })).length,
+    2,
+  );
 });

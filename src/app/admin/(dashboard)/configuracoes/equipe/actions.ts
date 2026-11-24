@@ -14,18 +14,21 @@ import {
   uniqueLevelId,
 } from "@/core/team/team.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import { getLegacySigners } from "@/lib/tax-guides.ts";
 import {
   archiveStaffWith,
   clearFileWith,
   createStaffWith,
+  deleteStaffWith,
   importSignersWith,
   moveStaffWith,
   restoreStaffWith,
   saveLevelsWith,
   setFileWith,
   TeamError,
+  undeleteStaffWith,
   updateStaffWith,
 } from "@/lib/team.ts";
 import { removeTeamFile, storeTeamFile } from "@/lib/team-files.ts";
@@ -232,6 +235,53 @@ export async function restorePersonAction(formData: FormData): Promise<void> {
     refresh();
   } catch (error) {
     console.error("equipe.restore", error);
+  }
+}
+
+/**
+ * Excludes a person, with the justification that goes to the audit
+ * (decision of 24/11/2026). The row stays: "Desfazer exclusão" brings it back.
+ */
+export async function deletePersonAction(
+  _previous: TeamState,
+  formData: FormData,
+): Promise<TeamState> {
+  const session = await editor();
+  if (!session) return { status: "error", message: NO_PERMISSION };
+  const missing = justify(formData);
+  if (missing) return { status: "error", message: missing };
+  try {
+    const tenant = await getTenant();
+    await deleteStaffWith(
+      db,
+      tenant.slug,
+      String(formData.get("id") ?? ""),
+      session.user.id,
+    );
+    refresh();
+    return {
+      status: "saved",
+      message: "Pessoa excluída. Dá para desfazer em Excluídos.",
+    };
+  } catch (error) {
+    return failure(error, "equipe.delete");
+  }
+}
+
+export async function undeletePersonAction(formData: FormData): Promise<void> {
+  const session = await editor();
+  if (!session) return;
+  try {
+    const tenant = await getTenant();
+    await undeleteStaffWith(
+      db,
+      tenant.slug,
+      String(formData.get("id") ?? ""),
+      session.user.id,
+    );
+    refresh();
+  } catch (error) {
+    console.error("equipe.undelete", error);
   }
 }
 
