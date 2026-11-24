@@ -186,6 +186,17 @@ export function text(
   return typeof value === "string" ? value : "";
 }
 
+/**
+ * An item with nothing typed in it: what "Incluir pessoa" leaves behind
+ * when nobody fills the new block. It is not an answer, so it neither
+ * blocks the sending nor reaches a document.
+ */
+export function isBlankItem(item: ListItem): boolean {
+  return Object.values(item).every((v) =>
+    Array.isArray(v) ? v.length === 0 : String(v ?? "").trim() === "",
+  );
+}
+
 export function list(
   answers: Answers,
   sectionId: string,
@@ -193,7 +204,7 @@ export function list(
 ): ListItem[] {
   const value = answer(answers, sectionId, name);
   return Array.isArray(value) && value.every((v) => typeof v === "object")
-    ? (value as ListItem[])
+    ? (value as ListItem[]).filter((item) => !isBlankItem(item))
     : [];
 }
 
