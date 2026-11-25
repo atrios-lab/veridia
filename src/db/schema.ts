@@ -3302,6 +3302,16 @@ export const serviceRequestRoutings = pgTable(
 export const riSettings = pgTable("ri_settings", {
   tenantSlug: text("tenant_slug").primaryKey(),
   ibgeCity: text("ibge_city").notNull().default(""),
+  /** Who signs the RI's documents: the place in "Quem assina" (0 = first). */
+  signerIndex: integer("signer_index").notNull().default(0),
+  /**
+   * The signer's handwritten signature as a black-on-transparent PNG,
+   * base64, drawn over the name when the document goes out "com a minha
+   * assinatura" (decision of 25/11/2026). Empty: none.
+   */
+  signatureImage: text("signature_image").notNull().default(""),
+  signatureUpdatedBy: text("signature_updated_by"),
+  signatureUpdatedAt: timestamp("signature_updated_at", { withTimezone: true }),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -3353,6 +3363,10 @@ export const riProperties = pgTable(
     /** { nome, bloco, conjunto, torre, apto, vaga }. */
     condo: jsonb("condo").notNull().default(sql`'{}'::jsonb`),
     area: text("area").notNull().default(""),
+    /** Livro 3: what is registered (Lei nº 6.015/1973, art. 178). */
+    auxKind: text("aux_kind").notNull().default(""),
+    /** Livro 3: the matrículas the registro refers to, as written. */
+    linkedNumbers: text("linked_numbers").notNull().default(""),
     /** Lançamentos the ficha had before the system: R/AV go on from here. */
     priorActs: integer("prior_acts").notNull().default(0),
     description: text("description").notNull().default(""),
@@ -3496,4 +3510,37 @@ export const riExports = pgTable(
     withdrawnBy: text("withdrawn_by"),
   },
   (t) => [index("ri_exports_kind").on(t.tenantSlug, t.kind)],
+);
+
+/**
+ * The files of the Registro de Imóveis (change registro-de-imoveis-acervo):
+ * the ficha's images, the títulos and any document attached to a matrícula
+ * or to one of its atos. "Apagar" marks `deleted_at`; the file stays.
+ */
+export const riFiles = pgTable(
+  "ri_files",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    propertyId: uuid("property_id").references(() => riProperties.id),
+    actId: uuid("act_id").references(() => riActs.id),
+    /** "ficha", "titulo" or "documento". */
+    kind: text("kind").notNull().default("documento"),
+    name: text("name").notNull(),
+    mime: text("mime").notNull().default("application/octet-stream"),
+    size: integer("size").notNull().default(0),
+    path: text("path").notNull(),
+    /** What the assistente virtual read from it, when it read. */
+    reading: jsonb("reading"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [
+    index("ri_files_property").on(t.propertyId),
+    index("ri_files_tenant").on(t.tenantSlug),
+  ],
 );

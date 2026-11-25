@@ -63,6 +63,7 @@ import {
   riActParties,
   riActs,
   riExports,
+  riFiles,
   riPeople,
   riProperties,
   riSettings,
@@ -194,6 +195,10 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   // (CLAUDE.md).
   {
     table: riSettings,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riFiles,
     reason: "Registro de Imóveis: limpeza ainda não revisada",
   },
   {

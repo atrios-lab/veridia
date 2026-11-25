@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
@@ -69,6 +69,14 @@ export default async function RiLayout({
         <span className="ml-auto hidden truncate text-xs text-muted-foreground lg:ml-0 lg:block">
           {session.user.name}
         </span>
+        <Link
+          href="/admin"
+          className="ml-auto inline-flex h-9 flex-none items-center gap-1.5 rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs hover:bg-muted md:ml-0"
+        >
+          <ArrowLeft aria-hidden className="size-4" />
+          <span className="hidden sm:inline">Voltar ao painel</span>
+          <span className="sm:hidden">Painel</span>
+        </Link>
       </header>
       <div className="flex flex-1">
         <RiSideNav />

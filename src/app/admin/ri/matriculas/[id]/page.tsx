@@ -32,9 +32,14 @@ import { statusLabel } from "@/core/ri/sheet.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
 import { propertyDetailWith } from "@/lib/ri.ts";
+import { riSignerFor } from "@/lib/ri-docs.ts";
+import { listFilesWith, riFolder } from "@/lib/ri-files.ts";
+import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
+import { FilesPanel } from "../../_components/files-panel.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
+import { PrintPanel } from "../../_components/print-panel.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
   setActDeletedAction,
@@ -93,6 +98,10 @@ export default async function PropertyPage({
   const detail = await propertyDetailWith(db, tenant.slug, id);
   if (!detail) notFound();
   const { property: p, acts, deletedActs } = detail;
+  const [files, signing] = await Promise.all([
+    listFilesWith(db, tenant.slug, id),
+    riSignerFor(tenant),
+  ]);
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
   const situation = situationOf(acts);
   const canEdit = riCan(session, "ri.edit") && !p.deletedAt;
@@ -107,7 +116,11 @@ export default async function PropertyPage({
     <RiPage
       wide
       title={title}
-      back={{ href: "/admin/ri/matriculas", label: "Matrículas" }}
+      back={
+        p.book === 3
+          ? { href: "/admin/ri/livro-3", label: "Registro Auxiliar" }
+          : { href: "/admin/ri/matriculas", label: "Matrículas" }
+      }
       description={
         <>
           <span
@@ -378,6 +391,14 @@ export default async function PropertyPage({
             )}
           </Panel>
 
+          <FilesPanel
+            propertyId={p.id}
+            files={files}
+            canEdit={canEdit}
+            direct={blobUploadEnabled()}
+            folder={riFolder(tenant.slug)}
+          />
+
           {p.description && (
             <Panel title="Descrição do imóvel">
               <p className="text-sm whitespace-pre-line">{p.description}</p>
@@ -386,6 +407,14 @@ export default async function PropertyPage({
         </div>
 
         <div className="flex flex-col gap-5">
+          {!p.deletedAt && (
+            <PrintPanel
+              propertyId={p.id}
+              title={title}
+              signer={signing.signer}
+              hasImage={Boolean(signing.settings.signatureImage)}
+            />
+          )}
           <Panel title="Identificação">
             <dl className="grid gap-3">
               <Field label="Tipo" value={RECORD_KINDS.get(p.recordKind)} />
@@ -399,6 +428,15 @@ export default async function PropertyPage({
               <Field label="Ficha" value={p.ficha} />
               <Field label="Origem" value={p.origin} />
               <Field label="Área" value={p.area} />
+              {p.book === 3 && (
+                <>
+                  <Field label="Natureza (Livro 3)" value={p.auxKind} />
+                  <Field
+                    label="Matrícula(s) a que se refere"
+                    value={p.linkedNumbers}
+                  />
+                </>
+              )}
             </dl>
           </Panel>
           <Panel title="Localização (Livro 4)">

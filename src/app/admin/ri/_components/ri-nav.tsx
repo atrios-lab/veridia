@@ -5,6 +5,7 @@ import {
   BookMarked,
   BookOpen,
   ClipboardList,
+  Files,
   LayoutDashboard,
   Library,
   ListChecks,
@@ -40,7 +41,16 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
   {
     title: "Acervo",
     entries: [
-      { label: "Matrículas", href: "/admin/ri/matriculas", icon: BookOpen },
+      {
+        label: "Matrículas (Livro 2)",
+        href: "/admin/ri/matriculas",
+        icon: BookOpen,
+      },
+      {
+        label: "Registro Auxiliar (Livro 3)",
+        href: "/admin/ri/livro-3",
+        icon: Files,
+      },
       { label: "Pessoas", href: "/admin/ri/pessoas", icon: Users },
     ],
   },

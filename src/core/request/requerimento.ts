@@ -161,6 +161,13 @@ export interface RequerimentoDocument {
    */
   signatures?: { name: string; role: string; fingerprint?: boolean }[];
   signee?: string;
+  /**
+   * The signer's handwritten signature (PNG), drawn over the rule when the
+   * office chose to send the document "com a minha assinatura" (decision
+   * of 25/11/2026). Never on the digital version: there the note says it
+   * is signed with the certificate.
+   */
+  signatureImage?: Uint8Array;
   signature: string[];
   footer: string;
   credentials?: RequerimentoCredentials;

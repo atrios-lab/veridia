@@ -20,6 +20,9 @@ importers:
       '@base-ui/react':
         specifier: 1.9.0
         version: 1.9.0(@types/react@19.2.18)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@fontsource/tinos':
+        specifier: 5.2.5
+        version: 5.2.5
       '@hookform/resolvers':
         specifier: ^5.7.1
         version: 5.7.1(@standard-schema/spec@1.1.0)(react-hook-form@7.84.0(react@19.2.4))(zod@4.4.3)
@@ -65,6 +68,9 @@ importers:
       fast-xml-parser:
         specifier: 5.12.0
         version: 5.12.0
+      fontkit:
+        specifier: 2.0.4
+        version: 2.0.4
       jszip:
         specifier: 3.10.2
         version: 3.10.2
@@ -107,6 +113,9 @@ importers:
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
+      sharp:
+        specifier: 0.34.5
+        version: 0.34.5
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -865,6 +874,9 @@ packages:
 
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
+
+  '@fontsource/tinos@5.2.5':
+    resolution: {integrity: sha512-xMQJ+hCBacyXxiDqYgw06yx+BBAfbRcHDocFqiPclo+2bJuVzkqBeSqD4/Dgydh3SkR5MNnRTisZ/L6SQokzFg==}
 
   '@hookform/resolvers@5.7.1':
     resolution: {integrity: sha512-8wS/P4UDr5sQDe4nFaV51TVyfDPrWgNIXweqG0Bs9Z5LSuzKLb+RQNPvkN2oHM5SRrJyWrVH/F+LOUcFjUyvwQ==}
@@ -2891,6 +2903,8 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@fontsource/tinos@5.2.5': {}
+
   '@hookform/resolvers@5.7.1(@standard-schema/spec@1.1.0)(react-hook-form@7.84.0(react@19.2.4))(zod@4.4.3)':
     dependencies:
       '@standard-schema/utils': 0.3.0
@@ -2899,8 +2913,7 @@ snapshots:
       '@standard-schema/spec': 1.1.0
       zod: 4.4.3
 
-  '@img/colour@1.1.0':
-    optional: true
+  '@img/colour@1.1.0': {}
 
   '@img/sharp-darwin-arm64@0.34.5':
     optionalDependencies:
@@ -3987,8 +4000,7 @@ snapshots:
 
   scheduler@0.27.0: {}
 
-  semver@7.8.5:
-    optional: true
+  semver@7.8.5: {}
 
   server-only@0.0.1: {}
 
@@ -4043,7 +4055,6 @@ snapshots:
       '@img/sharp-win32-arm64': 0.34.5
       '@img/sharp-win32-ia32': 0.34.5
       '@img/sharp-win32-x64': 0.34.5
-    optional: true
 
   shebang-command@2.0.0:
     dependencies:

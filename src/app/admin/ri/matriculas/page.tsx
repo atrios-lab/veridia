@@ -31,6 +31,7 @@ export default async function MatriculasPage({
   const apagadas = params.apagadas === "1";
   const acervo = await loadAcervo(tenant.slug, { deleted: apagadas });
   const rows = acervo.properties
+    .filter((p) => p.book !== 3)
     .filter((p) => (apagadas ? Boolean(p.deletedAt) : !p.deletedAt))
     .map((p) => ({ p, s: situationOf(acervo.acts.get(p.id) ?? []) }));
   const words = fold(q).split(/\s+/).filter(Boolean);
@@ -75,8 +76,8 @@ export default async function MatriculasPage({
   return (
     <RiPage
       wide
-      title="Matrículas"
-      description="O acervo do Livro 2 (e do Livro 3 e das transcrições) no sistema, com a situação atual de cada uma: proprietários e ônus em vigor."
+      title="Matrículas (Livro 2)"
+      description="O acervo do Livro 2 e as transcrições no sistema, com a situação atual de cada uma: proprietários e ônus em vigor. O Livro 3 tem a sua própria tela."
       actions={
         riCan(session, "ri.edit") && (
           <Link

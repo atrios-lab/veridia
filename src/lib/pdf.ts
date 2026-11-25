@@ -642,6 +642,19 @@ function drawDocumentBody(
 
     const ruleWidth = 280;
     const ruleLeft = MARGIN + (contentWidth(pdf) - ruleWidth) / 2;
+    if (document.signatureImage) {
+      // Over the rule, inside the room left to sign.
+      pdf.image(
+        Buffer.from(document.signatureImage),
+        ruleLeft + 30,
+        pdf.y - 58,
+        {
+          fit: [ruleWidth - 60, 54],
+          align: "center",
+          valign: "bottom",
+        },
+      );
+    }
     pdf.rect(ruleLeft, pdf.y, ruleWidth, 0.8).fill(NEUTRALS.text);
     pdf
       .font("Times-Roman")

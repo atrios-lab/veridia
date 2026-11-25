@@ -13,16 +13,19 @@ export function RiPage({
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
-  back?: { href: string; label: string };
+  /** Absent: back to the Mesa do RI. `null`: none (the Mesa itself). */
+  back?: { href: string; label: string } | null;
   children: ReactNode;
   /** Tables use the whole width; forms stay readable. */
   wide?: boolean;
 }) {
+  const way =
+    back === undefined ? { href: "/admin/ri", label: "Mesa do RI" } : back;
   return (
     <main
       className={`mx-auto flex w-full flex-col gap-5 px-4 py-6 md:px-8 ${wide ? "max-w-7xl" : "max-w-5xl"}`}
     >
-      {back && <BackLink href={back.href} label={back.label} />}
+      {way && <BackLink href={way.href} label={way.label} />}
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-foreground">{title}</h1>

@@ -194,6 +194,8 @@ const base = (
   rural: { ...EMPTY_RURAL },
   condo: { ...EMPTY_CONDO },
   area: "",
+  auxKind: "",
+  linkedNumbers: "",
   priorActs: 0,
   description: "",
   notes: "",

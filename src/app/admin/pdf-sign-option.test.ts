@@ -29,6 +29,9 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "(dashboard)/utilitarios/qualificacao/notas/[id]/arquivo",
   "(dashboard)/lgpd/[protocolo]/resposta",
   "(dashboard)/dpo/documento/[id]",
+  // The ficha of a matrícula (Registro de Imóveis): print, with the
+  // signer's image, or digital.
+  "ri/matriculas/[id]/ficha",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);

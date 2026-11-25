@@ -439,6 +439,15 @@ const EXACT: Record<string, string> = {
   "ri.export-imported": "Marcou um arquivo da ONR como importado",
   "ri.export-not-imported": "Desmarcou um arquivo da ONR como importado",
   "ri.export-delete": "Retirou da lista um arquivo gerado para a ONR",
+  "ri.file-add": "Anexou um documento a uma matrícula",
+  "ri.file-delete": "Apagou um documento anexado a uma matrícula",
+  "ri.file-restore": "Restaurou um documento anexado a uma matrícula",
+  "ri.reading-apply":
+    "Aplicou à matrícula os dados lidos de um documento (com conferência)",
+  "ri.signature-image":
+    "Cadastrou a imagem da assinatura do Registro de Imóveis",
+  "ri.signature-image-remove":
+    "Retirou a imagem da assinatura do Registro de Imóveis",
   "cohort.join": "Entrou por link de turma",
   "cohort.delete": "Excluiu uma turma sem participantes",
   "demo.reset": "Limpou o cartório de demonstração",
@@ -811,6 +820,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Um arquivo gerado foi marcado como já importado na ONR. No lote de CNM, as matrículas dele passaram a contar como cadastradas no PGV-CNM.",
   "ri.export-delete":
     "Um arquivo gerado para a ONR saiu da lista, com justificativa. O conteúdo continua guardado para a auditoria.",
+  "ri.reading-apply":
+    "Os dados que o Assistente Virtual (ou a leitura do texto) tirou de um documento foram conferidos e aplicados à matrícula: só campos vazios e lançamentos que ainda não existiam.",
+  "ri.signature-image":
+    "A imagem da assinatura de quem assina pelo Registro de Imóveis foi cadastrada. Ela só aparece nos documentos que a serventia escolher emitir com ela.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":
