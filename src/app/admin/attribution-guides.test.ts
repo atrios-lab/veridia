@@ -30,6 +30,11 @@ test("cada atribuição está no grupo Atribuições da barra lateral", () => {
       assert.ok(items.some((i) => i.href === "/admin/rcpn"));
       continue;
     }
+    // The Registro de Imóveis opens its own system; the guide is in its menu.
+    if (guide.slug === "registro-de-imoveis") {
+      assert.ok(items.some((i) => i.href === "/admin/ri"));
+      continue;
+    }
     assert.ok(
       items.some((i) => i.href === `/admin/atribuicoes/${guide.slug}`),
       `${guide.name} fora da barra lateral`,

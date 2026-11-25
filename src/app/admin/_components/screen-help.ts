@@ -775,6 +775,17 @@ const RCPN_TERMS: { term: string; meaning: string }[] = [
   },
 ];
 
+ENTRIES["/admin/ri"] = {
+  purpose:
+    "O sistema de Registro de Imóveis da serventia, em aba própria: matrículas e atos, pessoas, Indicador Real e Pessoal, pendências da migração para fichas e os arquivos que a ONR pede (lote de CNM e indicadores).",
+  steps: [
+    "Comece pela planilha do índice, em Pendências e importação: o sistema confere e mostra o que leu antes de importar.",
+    "Resolva as pendências na ordem da tela: números repetidos, duplicidades, saltos, CNM e dados do Indicador Real. Cada uma tem o passo a passo e a regra.",
+    "Lance os atos (R e AV) na matrícula: proprietários e ônus em vigor são calculados dos atos.",
+    "Em Arquivos para a ONR, gere o lote de CNM e os indicadores e importe com o certificado do oficial. Depois marque como importado.",
+  ],
+};
+
 ENTRIES["/admin/rcpn"] = {
   purpose:
     "Achar um registro de nascimento, casamento ou óbito desta serventia (natimortos dentro de óbitos), abrir a ficha completa e emitir a certidão, sem procurar nos livros. Cada tipo tem a sua aba, como cada um tem o seu livro.",

@@ -6,8 +6,15 @@ import { OFFICE_PERMISSIONS } from "@/core/auth/roles.ts";
 import { SCREEN_HELP, screenHelpFor } from "./screen-help.ts";
 
 const DASHBOARD = join(process.cwd(), "src/app/admin/(dashboard)");
-const pageOf = (href: string) =>
-  join(DASHBOARD, href.replace(/^\/admin/, ""), "page.tsx");
+const ADMIN = join(process.cwd(), "src/app/admin");
+// A screen of the panel, or of a module with a layout of its own (the
+// Registro de Imóveis, under /admin/ri).
+const pageOf = (href: string) => {
+  const inPanel = join(DASHBOARD, href.replace(/^\/admin/, ""), "page.tsx");
+  return existsSync(inPanel)
+    ? inPanel
+    : join(ADMIN, href.replace(/^\/admin/, ""), "page.tsx");
+};
 
 test("every screen with help and every 'Configurar' link points to a real screen", () => {
   for (const [route, help] of Object.entries(SCREEN_HELP)) {

@@ -3291,3 +3291,209 @@ export const serviceRequestRoutings = pgTable(
     index("service_request_routings_to").on(t.tenantSlug, t.toUserId),
   ],
 );
+
+// ------------------------------------------------- Registro de Imóveis
+
+/**
+ * The Registro de Imóveis of the office (change registro-de-imoveis-acervo):
+ * what the module needs beyond the tenant config, one row per office. The
+ * IBGE code of the município goes in the Indicador Real of the ONR.
+ */
+export const riSettings = pgTable("ri_settings", {
+  tenantSlug: text("tenant_slug").primaryKey(),
+  ibgeCity: text("ibge_city").notNull().default(""),
+  updatedBy: text("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/**
+ * A matrícula (Livro 2), registro auxiliar (Livro 3) or transcrição of the
+ * acervo (core/ri/property). Not unique by number on purpose: while the
+ * acervo migrates to fichas the same number can show up twice, and that is
+ * a pendência to resolve (CNN art. 338), not a row to refuse. "Apagar"
+ * marks `deleted_at`; every change keeps the values it had in `history`.
+ */
+export const riProperties = pgTable(
+  "ri_properties",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** 2 Registro Geral, 3 Registro Auxiliar. */
+    book: integer("book").notNull().default(2),
+    number: integer("number").notNull(),
+    /** ONR "registro tipo": 1 matrícula, 2 matrícula-mãe, 4 transcrição. */
+    recordKind: integer("record_kind").notNull().default(1),
+    /** PGV-CNM situação: 0 ativa … 4 inexistente (core/ri/codes). */
+    status: integer("status").notNull().default(0),
+    cnm: text("cnm").notNull().default(""),
+    /** The CNM is already in the PGV-CNM: out of the next lote. */
+    cnmInPgv: boolean("cnm_in_pgv").notNull().default(false),
+    openedOn: date("opened_on"),
+    origin: text("origin").notNull().default(""),
+    ficha: text("ficha").notNull().default(""),
+    /** 0 urbano, 1 rural. */
+    location: integer("location").notNull().default(0),
+    propertyKind: integer("property_kind"),
+    streetKind: integer("street_kind"),
+    street: text("street").notNull().default(""),
+    streetNumber: text("street_number").notNull().default(""),
+    district: text("district").notNull().default(""),
+    cep: text("cep").notNull().default(""),
+    complement: text("complement").notNull().default(""),
+    quadra: text("quadra").notNull().default(""),
+    setor: text("setor").notNull().default(""),
+    conjunto: text("conjunto").notNull().default(""),
+    lote: text("lote").notNull().default(""),
+    loteamento: text("loteamento").notNull().default(""),
+    contributors: jsonb("contributors").notNull().default(sql`'[]'::jsonb`),
+    /** { car, nirf, ccir, incra, sigef, denominacao, acidente }. */
+    rural: jsonb("rural").notNull().default(sql`'{}'::jsonb`),
+    /** { nome, bloco, conjunto, torre, apto, vaga }. */
+    condo: jsonb("condo").notNull().default(sql`'{}'::jsonb`),
+    area: text("area").notNull().default(""),
+    /** Lançamentos the ficha had before the system: R/AV go on from here. */
+    priorActs: integer("prior_acts").notNull().default(0),
+    description: text("description").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    /** Where it came from: "manual" or "planilha". */
+    source: text("source").notNull().default("manual"),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_properties_number").on(t.tenantSlug, t.book, t.number)],
+);
+
+/**
+ * The people of the Registro de Imóveis (the Indicador Pessoal, Livro 5):
+ * one row per person, linked to the atos where they appear.
+ */
+export const riPeople = pgTable(
+  "ri_people",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    name: text("name").notNull(),
+    /** CPF or CNPJ, digits only; empty when unknown. */
+    document: text("document").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_people_document").on(t.tenantSlug, t.document)],
+);
+
+/**
+ * A lançamento of a matrícula (core/ri/acts): R or AV with its order
+ * number (Lei nº 6.015/1973, art. 232), or "M", the situação the
+ * matrícula had when it came into the system.
+ */
+export const riActs = pgTable(
+  "ri_acts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => riProperties.id),
+    kind: text("kind").notNull(),
+    seq: integer("seq").notNull(),
+    effect: text("effect").notNull(),
+    nature: text("nature").notNull().default(""),
+    registeredOn: date("registered_on"),
+    summary: text("summary").notNull().default(""),
+    cancelsActId: uuid("cancels_act_id"),
+    protocol: text("protocol").notNull().default(""),
+    /** The selo, typed by hand (decision of 25/11/2026). */
+    seal: text("seal").notNull().default(""),
+    valueCents: bigint("value_cents", { mode: "number" }),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_acts_property").on(t.propertyId)],
+);
+
+/**
+ * Who is in a lançamento and how (adquirente, transmitente, credor…). A
+ * party taken off an ato is marked `removed_at`, never deleted.
+ */
+export const riActParties = pgTable(
+  "ri_act_parties",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    actId: uuid("act_id")
+      .notNull()
+      .references(() => riActs.id),
+    personId: uuid("person_id")
+      .notNull()
+      .references(() => riPeople.id),
+    role: text("role").notNull(),
+    share: text("share").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+  },
+  (t) => [
+    index("ri_act_parties_act").on(t.actId),
+    index("ri_act_parties_person").on(t.personId),
+  ],
+);
+
+/**
+ * Every file generated for the ONR (lote CNM, Indicador Real, Indicador
+ * Pessoal): the content as it was, who generated it and when. "Apagar"
+ * withdraws it from the list; the row stays for the audit.
+ */
+export const riExports = pgTable(
+  "ri_exports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "cnm", "indicador-real" or "indicador-pessoal". */
+    kind: text("kind").notNull(),
+    mode: text("mode").notNull().default(""),
+    fileName: text("file_name").notNull(),
+    content: text("content").notNull(),
+    recordCount: integer("record_count").notNull().default(0),
+    skipped: jsonb("skipped").notNull().default(sql`'[]'::jsonb`),
+    sha256: text("sha256").notNull(),
+    note: text("note").notNull().default(""),
+    importedAt: timestamp("imported_at", { withTimezone: true }),
+    importedBy: text("imported_by"),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    withdrawnAt: timestamp("withdrawn_at", { withTimezone: true }),
+    withdrawnBy: text("withdrawn_by"),
+  },
+  (t) => [index("ri_exports_kind").on(t.tenantSlug, t.kind)],
+);

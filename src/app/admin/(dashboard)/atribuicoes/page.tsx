@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ATTRIBUTION_GUIDES, offersGuide } from "@/core/attributions/guides.ts";
+import { can } from "@/core/auth/roles.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { AdminIcon } from "../../_components/icon.tsx";
 import { AdminPageHeader } from "../../_components/page-header.tsx";
@@ -8,8 +9,14 @@ import { GUIDE_ICONS, requireGuides } from "./_lib.ts";
 export const metadata = { title: "Atribuições" };
 
 export default async function AttributionsPage() {
-  await requireGuides();
+  const session = await requireGuides();
   const tenant = await getTenant();
+  // The Registro de Imóveis opens as a system of its own, in its own tab.
+  const riSystem = can(
+    session.user.role ?? "",
+    "ri.view",
+    session.user.permissions,
+  );
   const guides = ATTRIBUTION_GUIDES.filter((g) => offersGuide(g, tenant));
   return (
     <>
@@ -22,7 +29,16 @@ export default async function AttributionsPage() {
         {guides.map((guide) => (
           <Link
             key={guide.slug}
-            href={`/admin/atribuicoes/${guide.slug}`}
+            href={
+              guide.slug === "registro-de-imoveis" && riSystem
+                ? "/admin/ri"
+                : `/admin/atribuicoes/${guide.slug}`
+            }
+            target={
+              guide.slug === "registro-de-imoveis" && riSystem
+                ? "registro-de-imoveis"
+                : undefined
+            }
             className="flex flex-col gap-2 rounded-xl border bg-card p-5 shadow-xs transition-colors hover:border-primary/40"
           >
             <span className="flex items-center gap-2">
@@ -39,6 +55,11 @@ export default async function AttributionsPage() {
             <span className="text-sm text-muted-foreground text-justify hyphens-auto">
               {guide.summary}
             </span>
+            {guide.slug === "registro-de-imoveis" && riSystem && (
+              <span className="text-xs font-medium text-primary">
+                Abre o sistema de Registro de Imóveis em outra aba
+              </span>
+            )}
             <span className="mt-auto pt-2 text-xs text-muted-foreground">
               {guide.books.length + guide.indexes.length > 0
                 ? `${guide.books.length + guide.indexes.length} livros e índices da lei`
