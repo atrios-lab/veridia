@@ -194,7 +194,7 @@ export function partiesIn(text: string, effect: ActEffect): ReadParty[] {
 
 /** "R-3-1.234", "R.3/1234", "AV-02", "Av.5" at the start of a line. */
 const MARK =
-  /(^|\n)\s*(R|AV|Av)\s*[-.]?\s*0*(\d{1,4})\b(?:\s*[-/.]\s*[\d.]+)?\s*[-–:.]?\s*/g;
+  /(^|\n)\s*(R|AV|Av)\s*[-.]?\s*0*(\d{1,4})\b(?:\s*[-/.]\s*[\d.]+)?\s*[-\u2013:.]?\s*/g;
 
 /** Reads the text of a whole matrícula: the opening and the lançamentos. */
 export function readMatriculaText(text: string): MatriculaReading {

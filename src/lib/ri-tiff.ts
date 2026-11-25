@@ -43,7 +43,7 @@ function loadFonts() {
 /** Characters the latin subset lacks become their closest plain form. */
 const plain = (text: string) =>
   text
-    .replace(/[–—]/g, "-")
+    .replace(/[\u2013\u2014]/g, "-")
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[^\n\x20-\xFF·•ºª°§]/g, "");
