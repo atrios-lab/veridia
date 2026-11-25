@@ -417,6 +417,28 @@ const EXACT: Record<string, string> = {
   "user.password-reset-link-issued": "Gerou link para nova senha",
   "user.password-reset-request": "Pediu nova senha para uma conta",
   "user.password-reset-self-request": "Pediu nova senha (a própria)",
+  "ri.settings": "Alterou as configurações do Registro de Imóveis",
+  "ri.property-create": "Cadastrou uma matrícula no Registro de Imóveis",
+  "ri.property-edit": "Alterou os dados de uma matrícula",
+  "ri.property-delete":
+    "Apagou uma matrícula do sistema do Registro de Imóveis",
+  "ri.property-restore": "Restaurou uma matrícula apagada",
+  "ri.cnm-in-pgv": "Marcou o CNM de matrículas como já cadastrado no PGV-CNM",
+  "ri.cnm-not-in-pgv":
+    "Desmarcou o CNM de matrículas como cadastrado no PGV-CNM",
+  "ri.act-create": "Lançou um ato (R ou AV) numa matrícula",
+  "ri.act-edit": "Alterou um ato lançado numa matrícula",
+  "ri.act-delete": "Apagou um ato lançado numa matrícula",
+  "ri.act-restore": "Restaurou um ato apagado de uma matrícula",
+  "ri.person-create": "Cadastrou uma pessoa no Registro de Imóveis",
+  "ri.person-edit": "Alterou os dados de uma pessoa do Registro de Imóveis",
+  "ri.person-delete": "Apagou uma pessoa do Registro de Imóveis",
+  "ri.person-restore": "Restaurou uma pessoa apagada do Registro de Imóveis",
+  "ri.import": "Importou a planilha do índice de matrículas",
+  "ri.export": "Gerou um arquivo para a ONR (CNM ou indicadores)",
+  "ri.export-imported": "Marcou um arquivo da ONR como importado",
+  "ri.export-not-imported": "Desmarcou um arquivo da ONR como importado",
+  "ri.export-delete": "Retirou da lista um arquivo gerado para a ONR",
   "cohort.join": "Entrou por link de turma",
   "cohort.delete": "Excluiu uma turma sem participantes",
   "demo.reset": "Limpou o cartório de demonstração",
@@ -441,6 +463,7 @@ const AREAS: Record<string, string> = {
   "security-paper": "Papel de segurança",
   "paper-supplier": "Solicitação de papéis de segurança",
   "daily-book": "Livro Diário Auxiliar",
+  ri: "Registro de Imóveis",
   "paper-order": "Solicitação de papéis de segurança",
   publication: "Publicações",
   publicacoes: "Publicações",
@@ -766,6 +789,28 @@ const EXPLANATIONS: Record<string, string> = {
     "Um processo de habilitação para o casamento foi cancelado, com justificativa. Ele continua guardado e pode ser estornado.",
   "rcpn.habilitacao.restore":
     "O cancelamento de um processo de habilitação foi desfeito (estorno), com justificativa.",
+  "ri.property-create":
+    "Uma matrícula (ou transcrição) foi cadastrada no sistema do Registro de Imóveis, à mão ou pela planilha do índice.",
+  "ri.property-edit":
+    "Os dados de uma matrícula foram alterados. A matrícula guarda no histórico o que era antes e o que ficou.",
+  "ri.property-delete":
+    "Uma matrícula foi apagada do sistema, com justificativa. Ela continua guardada e pode ser restaurada; a ficha física não muda.",
+  "ri.property-restore":
+    "Uma matrícula apagada do sistema foi restaurada, com justificativa.",
+  "ri.act-create":
+    "Um registro (R) ou averbação (AV) foi lançado numa matrícula, com a numeração do art. 232 da Lei nº 6.015/1973.",
+  "ri.act-edit":
+    "Um ato lançado numa matrícula foi alterado. O ato guarda no histórico o que era antes e o que ficou.",
+  "ri.act-delete":
+    "Um ato lançado numa matrícula foi apagado, com justificativa. Ele continua guardado e o número dele não é usado de novo.",
+  "ri.import":
+    "A planilha do índice de matrículas foi conferida e importada. As matrículas que já estavam no sistema ficaram de fora.",
+  "ri.export":
+    "Um arquivo para a ONR (lote de CNM, Indicador Real ou Indicador Pessoal) foi gerado e guardado. O envio à ONR é feito pela serventia, com o certificado do oficial.",
+  "ri.export-imported":
+    "Um arquivo gerado foi marcado como já importado na ONR. No lote de CNM, as matrículas dele passaram a contar como cadastradas no PGV-CNM.",
+  "ri.export-delete":
+    "Um arquivo gerado para a ONR saiu da lista, com justificativa. O conteúdo continua guardado para a auditoria.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":
@@ -979,6 +1024,7 @@ const AREA_EXPLANATIONS: Record<string, string> = {
   "daily-book":
     "Ato feito no Livro Diário Auxiliar da Receita e da Despesa (receitas, despesas e páginas geradas).",
   "paper-order": "Ato feito num pedido de papéis de segurança a uma empresa.",
+  ri: "Ato feito no sistema do Registro de Imóveis (matrículas, atos, pessoas e arquivos da ONR).",
   user: "Ato feito numa conta de acesso ao painel.",
   session: "Entrada ou saída do painel.",
   course: "Ato feito no treinamento.",

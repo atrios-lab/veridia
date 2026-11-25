@@ -1,0 +1,79 @@
+import { Search } from "lucide-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { can } from "@/core/auth/roles.ts";
+import { cnsDigits } from "@/core/ri/cnm.ts";
+import { getSession } from "@/lib/session.ts";
+import { getTenant } from "@/lib/tenant.ts";
+import { RiMobileNav, RiSideNav } from "./_components/ri-nav.tsx";
+
+export const metadata = { title: "Registro de Imóveis" };
+
+/**
+ * The Registro de Imóveis as a system of its own (decision of 25/11/2026):
+ * it opens in its own tab, with its own bar and menu, the panel's colours
+ * and components. Whoever is not signed in, or is outside the panel's
+ * hours, goes through the panel's own door (/admin), which knows what to
+ * show them.
+ */
+export default async function RiLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const session = await getSession();
+  if (
+    !session ||
+    !can(session.user.role ?? "", "admin.access", session.user.permissions)
+  ) {
+    redirect("/admin");
+  }
+  const tenant = await getTenant();
+  if (
+    !tenant.attributions.includes("RI") ||
+    !can(session.user.role ?? "", "ri.view", session.user.permissions)
+  ) {
+    redirect("/admin/atribuicoes");
+  }
+  const cns = cnsDigits(tenant.cns) ?? tenant.cns;
+  return (
+    <div className="flex min-h-screen flex-col bg-muted/40">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-3 md:px-5">
+        <RiMobileNav />
+        <Link href="/admin/ri" className="flex min-w-0 items-center gap-2.5">
+          {/* biome-ignore lint/performance/noImgElement: the office's seal, any size */}
+          <img
+            src={tenant.logos.seal.light}
+            alt=""
+            className="size-8 flex-none object-contain"
+          />
+          <span className="flex min-w-0 flex-col leading-tight">
+            <span className="truncate text-sm font-semibold text-foreground">
+              Registro de Imóveis
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
+              {tenant.name} · CNS {cns}
+            </span>
+          </span>
+        </Link>
+        <form
+          action="/admin/ri/matriculas"
+          className="ml-auto hidden w-full max-w-md items-center gap-2 rounded-md border bg-background px-2.5 md:flex"
+        >
+          <Search aria-hidden className="size-4 text-muted-foreground" />
+          <input
+            name="q"
+            aria-label="Buscar no Registro de Imóveis"
+            placeholder="Matrícula, CNM, nome, CPF, CCIR, denominação…"
+            className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+        </form>
+        <span className="ml-auto hidden truncate text-xs text-muted-foreground lg:ml-0 lg:block">
+          {session.user.name}
+        </span>
+      </header>
+      <div className="flex flex-1">
+        <RiSideNav />
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}

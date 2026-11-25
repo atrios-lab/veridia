@@ -138,7 +138,7 @@ export function AdminSidebarNav({
                           // A named tab, not `_blank`: the mailbox is opened
                           // many times a day, and a fresh tab per click buries
                           // the panel by lunchtime.
-                          target={item.external ? "zoho" : undefined}
+                          target={item.external ? "zoho" : item.tab}
                           rel={item.external ? "noreferrer" : undefined}
                           onClick={() => {
                             if (isMobile) setOpenMobile(false);
@@ -368,6 +368,7 @@ function NavBranch({
             <Link
               href={node.href}
               aria-current={active === node.href ? "page" : undefined}
+              target={node.tab}
               onClick={() => {
                 if (isMobile) setOpenMobile(false);
               }}
@@ -377,6 +378,12 @@ function NavBranch({
           <span className="min-w-0 flex-1 whitespace-normal!">
             {node.label}
           </span>
+          {node.tab && (
+            <>
+              <ExternalLink aria-hidden className="size-3! flex-none" />
+              <span className="sr-only">(abre em outra aba)</span>
+            </>
+          )}
           {Boolean(count) && <SubBadge count={count} />}
         </SidebarMenuSubButton>
         {hint && (

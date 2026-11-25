@@ -126,6 +126,14 @@ export const OFFICE_PERMISSIONS = [
   // The habilitação para o casamento (change habilitacao-de-casamento):
   // open the processo, correct it, publish the edital, cancel, restore.
   "rcpn.habilitacao",
+  // The Registro de Imóveis (change registro-de-imoveis-acervo): reading
+  // the acervo, changing it, loading the office's index and generating the
+  // files the office imports in the ONR. Four lines: who answers a búsca
+  // is not always who lança atos or sends the cargas.
+  "ri.view",
+  "ri.edit",
+  "ri.import",
+  "ri.export",
   // The guides of the attributions (decision of 14/11/2026): books,
   // indexes and deadlines of each specialty, as the law sets them.
   "attributions.view",
@@ -197,6 +205,10 @@ export const GRANTABLE_PERMISSIONS = [
   "rcpn.certidao",
   "rcpn.edit",
   "rcpn.habilitacao",
+  "ri.view",
+  "ri.edit",
+  "ri.import",
+  "ri.export",
   "attributions.view",
   "attributions.import",
   "dpo.assist",
@@ -250,6 +262,13 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "attributions.view": "desk.access",
   // Whoever loads the Registro Civil's base loads the others' files.
   "attributions.import": "rcpn.import",
+  // Whoever reads the guides reads the acervo of the Registro de Imóveis.
+  // Changing it derives from nothing: the Tabelião/Registrador grants it.
+  "ri.view": "attributions.view",
+  // Listed after its parent: `withDerived` adds it in the same pass.
+  "ri.import": "attributions.import",
+  // Whoever lança atos generates the cargas of what they lançaram.
+  "ri.export": "ri.edit",
   // Whoever loads the attributions' files loads the legal base.
   "knowledge.manage": "attributions.import",
   // Whoever answers the pedidos at the counter qualifies the títulos.
@@ -325,6 +344,7 @@ export const DEMO_CLOSED_PERMISSIONS = [
   "team.edit",
   "news.edit",
   "rcpn.import",
+  "ri.import",
   "attributions.import",
   "knowledge.manage",
   "dpo.assist",
@@ -363,6 +383,9 @@ export const DEMO_OPEN_PERMISSIONS = [
   "rcpn.certidao",
   "rcpn.edit",
   "rcpn.habilitacao",
+  "ri.view",
+  "ri.edit",
+  "ri.export",
   "attributions.view",
   "lgpd.decide",
 ] as const satisfies readonly OfficePermission[];
@@ -598,6 +621,14 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Registro Civil: alterar, cancelar e estornar registros do índice (com justificativa)",
   "rcpn.habilitacao":
     "Registro Civil: habilitação de casamento (abrir, alterar, publicar o edital, cancelar e estornar)",
+  "ri.view":
+    "Registro de Imóveis: consultar matrículas, pessoas, indicadores e pendências",
+  "ri.edit":
+    "Registro de Imóveis: cadastrar, alterar e apagar matrículas, atos e pessoas (com justificativa)",
+  "ri.import":
+    "Registro de Imóveis: importar a planilha do índice de matrículas",
+  "ri.export":
+    "Registro de Imóveis: gerar os arquivos para a ONR (lote de CNM, Indicador Real e Indicador Pessoal)",
   "attributions.view":
     "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
   "attributions.import":

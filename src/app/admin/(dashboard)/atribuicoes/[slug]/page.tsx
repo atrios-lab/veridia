@@ -186,6 +186,20 @@ export default async function AttributionGuidePage({
         maxWidth={1100}
         title={guide.title}
         description={guide.summary}
+        actions={
+          // The Registro de Imóveis is a system of its own (change
+          // registro-de-imoveis-acervo), opened in its own tab.
+          guide.slug === "registro-de-imoveis" &&
+          can(session.user.role ?? "", "ri.view", session.user.permissions) ? (
+            <a
+              href="/admin/ri"
+              target="registro-de-imoveis"
+              className={buttonVariants({ size: "sm" })}
+            >
+              Abrir o sistema de Registro de Imóveis
+            </a>
+          ) : undefined
+        }
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
         <BackLink href="/admin/atribuicoes" label="Todas as atribuições" />

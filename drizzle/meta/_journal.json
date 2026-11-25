@@ -589,6 +589,13 @@
       "when": 1795561720493,
       "tag": "0083_agendamento_conversa",
       "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1795645352360,
+      "tag": "0084_registro_de_imoveis",
+      "breakpoints": true
     }
   ]
 }

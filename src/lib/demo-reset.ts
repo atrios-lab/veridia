@@ -60,6 +60,12 @@ import {
   rcpnPeople,
   rcpnRecordChanges,
   rcpnRecords,
+  riActParties,
+  riActs,
+  riExports,
+  riPeople,
+  riProperties,
+  riSettings,
   securityPaperLots,
   securityPaperMovements,
   securityPaperReports,
@@ -183,6 +189,30 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   },
   { table: knowledgePassages, reason: "base jurídica" },
   { table: knowledgeRequests, reason: "base jurídica" },
+  // The Registro de Imóveis (change registro-de-imoveis-acervo): kept until
+  // someone reviews cleaning it; a new deletion goes through human review
+  // (CLAUDE.md).
+  {
+    table: riSettings,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riProperties,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riPeople,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  { table: riActs, reason: "Registro de Imóveis: limpeza ainda não revisada" },
+  {
+    table: riActParties,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riExports,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
   {
     table: attributionFiles,
     reason: "arquivos das atribuições, fechados aos participantes",

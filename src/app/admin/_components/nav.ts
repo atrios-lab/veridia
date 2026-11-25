@@ -31,6 +31,12 @@ export interface AdminNavItem {
    */
   external?: true;
   /**
+   * A module that works as a system of its own (the Registro de Imóveis,
+   * decision of 25/11/2026): it opens in a tab with this name, so clicking
+   * it again brings that tab back instead of opening another.
+   */
+  tab?: string;
+  /**
    * An entry point the office should not miss: the sidebar draws it in the
    * solid, pulsing "click here" treatment (see attention.ts) until the person
    * is on that screen. Kept for what the office is being asked to go and
@@ -199,12 +205,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     ],
   },
   {
+    // The Registro de Imóveis is a system of its own (change
+    // registro-de-imoveis-acervo): it opens in its own tab, with its own
+    // menu; its guide is one of the entries of that menu.
     group: "Atribuições",
     label: "Registro de Imóveis",
     attribution: "RI",
-    href: "/admin/atribuicoes/registro-de-imoveis",
+    href: "/admin/ri",
     icon: "house",
-    permission: "attributions.view",
+    permission: "ri.view",
+    tab: "registro-de-imoveis",
   },
   {
     group: "Atribuições",
@@ -612,6 +622,8 @@ export const FOLDED_GROUPS: Readonly<Record<string, AdminIconName>> = {
 export interface AdminNavNode {
   label: string;
   href: string;
+  /** Opens in its own named tab (see AdminNavItem.tab). */
+  tab?: string;
   children?: readonly AdminNavNode[];
 }
 
