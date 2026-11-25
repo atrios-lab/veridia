@@ -339,6 +339,8 @@ export function readSheet(rows: string[][]): SheetReading {
         },
         condo: { ...EMPTY_CONDO },
         area: get("area"),
+        auxKind: "",
+        linkedNumbers: "",
         priorActs: prior,
         description: "",
         notes,

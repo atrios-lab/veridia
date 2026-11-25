@@ -59,11 +59,40 @@ export interface PropertyInput {
   rural: RuralData;
   condo: CondoData;
   area: string;
+  /** Livro 3: what is registered (AUX_KINDS, or the office's words). */
+  auxKind: string;
+  /** Livro 3: the matrículas it refers to, as written ("1.234; 1.235"). */
+  linkedNumbers: string;
   /** Lançamentos already on the ficha before the system (R/AV numbering). */
   priorActs: number;
   description: string;
   notes: string;
 }
+
+/**
+ * What the Livro 3 (Registro Auxiliar) receives: Lei nº 6.015/1973, art.
+ * 178, I to VII. The registro of a cédula's hipoteca or of a penhor that
+ * guarantees the debêntures still goes on the matrícula (art. 178, I and
+ * II): the Livro 3 holds the title itself.
+ */
+export const AUX_KINDS: readonly { name: string; source: string }[] = [
+  { name: "Emissão de debêntures", source: "art. 178, I" },
+  { name: "Cédula de crédito industrial", source: "art. 178, II" },
+  {
+    name: "Convenção de condomínio (edilício, geral voluntário ou multipropriedade)",
+    source: "art. 178, III",
+  },
+  {
+    name: "Penhor de máquinas e aparelhos da indústria",
+    source: "art. 178, IV",
+  },
+  { name: "Convenção antenupcial (pacto antenupcial)", source: "art. 178, V" },
+  { name: "Contrato de penhor rural", source: "art. 178, VI" },
+  {
+    name: "Título registrado no inteiro teor, a pedido do interessado",
+    source: "art. 178, VII",
+  },
+];
 
 export const EMPTY_RURAL: RuralData = {
   car: "",
@@ -216,6 +245,8 @@ export function readProperty(raw: Record<string, unknown>): PropertyInput {
     rural,
     condo,
     area: clean(raw.area, 120),
+    auxKind: book === 3 ? clean(raw.auxKind, 200) : "",
+    linkedNumbers: book === 3 ? clean(raw.linkedNumbers, 300) : "",
     priorActs: Math.min(
       9999,
       Math.max(

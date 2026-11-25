@@ -259,7 +259,8 @@ export function pendenciesOf(
   }
 
   for (const p of properties) {
-    if (p.status !== ACTIVE) continue;
+    // The Livro 3 has no imóvel of its own nor owners (art. 177).
+    if (p.status !== ACTIVE || p.book === 3) continue;
     const gaps = indicatorGaps(p);
     if (gaps.length > 0) {
       out.push({

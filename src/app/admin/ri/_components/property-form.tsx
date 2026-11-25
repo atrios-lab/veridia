@@ -10,6 +10,7 @@ import {
   STREET_KINDS,
 } from "@/core/ri/codes.ts";
 import {
+  AUX_KINDS,
   CONDO_LABELS,
   type CondoData,
   type PropertyInput,
@@ -116,14 +117,16 @@ export function PropertyForm({
   cns,
   property,
   id,
+  defaultBook = 2,
 }: {
   cns: string;
   property?: PropertyInput;
   id?: string;
+  defaultBook?: 2 | 3;
 }) {
   const [state, action, pending] = useActionState(savePropertyAction, IDLE);
   const [number, setNumber] = useState(String(property?.number ?? ""));
-  const [book, setBook] = useState(String(property?.book ?? 2));
+  const [book, setBook] = useState(String(property?.book ?? defaultBook));
   const [rural, setRural] = useState(String(property?.location ?? 1) === "1");
   const n = Number(number.replace(/\D/g, ""));
   let computed = "";
@@ -223,6 +226,40 @@ export function PropertyForm({
           </label>
         </div>
       </Group>
+
+      {book === "3" && (
+        <Group title="Registro Auxiliar (Lei nº 6.015/1973, arts. 177 e 178)">
+          <div className="flex flex-col gap-1.5 sm:col-span-2">
+            <Label htmlFor="f-auxKind">O que se registra</Label>
+            <Input
+              id="f-auxKind"
+              name="auxKind"
+              list="ri-aux-kinds"
+              defaultValue={p?.auxKind ?? ""}
+              className="bg-background"
+            />
+            <datalist id="ri-aux-kinds">
+              {AUX_KINDS.map((k) => (
+                <option key={k.name} value={k.name}>
+                  {k.source}
+                </option>
+              ))}
+            </datalist>
+            <p className="text-xs text-muted-foreground">
+              O que não diz respeito diretamente a imóvel matriculado (art.
+              177): debêntures, cédula de crédito industrial, convenção de
+              condomínio, penhor industrial ou rural, pacto antenupcial, título
+              no inteiro teor (art. 178).
+            </p>
+          </div>
+          <Text
+            name="linkedNumbers"
+            label="Matrícula(s) a que se refere"
+            placeholder="Ex.: 1.234; 1.235"
+            defaultValue={p?.linkedNumbers}
+          />
+        </Group>
+      )}
 
       <Group title="Localização (Indicador Real, Livro 4)">
         <Select

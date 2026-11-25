@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
-import { PropertyError, readProperty } from "@/core/ri/property.ts";
+import {
+  matriculaNumber,
+  PropertyError,
+  readProperty,
+} from "@/core/ri/property.ts";
 import { readSheet } from "@/core/ri/sheet.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
@@ -28,9 +32,24 @@ import {
   updatePropertyWith,
   withdrawExportWith,
 } from "@/lib/ri.ts";
+import {
+  addFileWith,
+  applyReadingWith,
+  fileWith,
+  linkFileWith,
+  type ReadingResult,
+  RI_FILE_MAX_BYTES,
+  readMatriculaFilesWith,
+  riFolder,
+  saveReadingWith,
+  saveSignatureImageWith,
+  saveSignerWith,
+  setFileDeletedWith,
+} from "@/lib/ri-files.ts";
 import { SheetFileError, sheetRows } from "@/lib/ri-sheet.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { readStoredFile, storeRegistryFile } from "@/lib/uploads.ts";
 
 export type RiState =
   | { status: "idle" }
@@ -509,4 +528,253 @@ export async function saveRiSettingsAction(
   }
   revalidatePath("/admin/ri", "layout");
   return { status: "success", message: "Configurações salvas." };
+}
+
+// ------------------------------------------------------------ anexos
+
+/** A file the browser sent straight to the store: only this office's folder. */
+function ownUpload(url: string, tenantSlug: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.hostname.endsWith(".blob.vercel-storage.com") &&
+      parsed.pathname.startsWith(`/${riFolder(tenantSlug)}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+const KINDS = ["ficha", "titulo", "documento"] as const;
+
+/**
+ * Attaches a file (and, when asked, reads it and opens the conferência).
+ * In the deploy the browser already sent it to the store and this gets its
+ * address; in development the form carries the file.
+ */
+export async function uploadFileAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const propertyId = text(formData, "propertyId") || null;
+  const kindRaw = text(formData, "kind");
+  const kind = KINDS.find((k) => k === kindRaw) ?? "documento";
+  const read =
+    text(formData, "ler") === "1" || text(formData, "lerAgora") === "1";
+  let fileId: string;
+  try {
+    let bytes: Uint8Array;
+    let path: string;
+    let name: string;
+    let mime: string;
+    const url = text(formData, "url");
+    if (url) {
+      if (!ownUpload(url, ok.tenant.slug)) {
+        return { status: "error", message: "Arquivo não reconhecido." };
+      }
+      path = url;
+      name = text(formData, "nome") || "arquivo";
+      mime = text(formData, "tipo") || "application/octet-stream";
+      bytes = read
+        ? new Uint8Array(await readStoredFile(url))
+        : new Uint8Array();
+    } else {
+      const file = formData.get("arquivo");
+      if (!(file instanceof File) || file.size === 0) {
+        return { status: "error", message: "Escolha o arquivo." };
+      }
+      if (file.size > RI_FILE_MAX_BYTES) {
+        return { status: "error", message: "O arquivo passa de 40 MB." };
+      }
+      bytes = new Uint8Array(await file.arrayBuffer());
+      name = file.name || "arquivo";
+      mime = file.type || "application/octet-stream";
+      path = await storeRegistryFile(
+        ok.tenant.slug,
+        Buffer.from(bytes),
+        name,
+        mime,
+      );
+    }
+    const size = url
+      ? Number(text(formData, "tamanho")) || 0
+      : bytes.byteLength;
+    fileId = await addFileWith(
+      db,
+      ok.tenant.slug,
+      { propertyId, kind, name, mime, size, path },
+      ok.actor,
+    );
+    if (read) {
+      const result = await readMatriculaFilesWith(db, ok.tenant.slug, [
+        { name, mime, bytes },
+      ]);
+      await saveReadingWith(db, ok.tenant.slug, fileId, result);
+    }
+  } catch (error) {
+    return failure(error, "ri.file.upload");
+  }
+  revalidatePath("/admin/ri", "layout");
+  if (read) redirect(`/admin/ri/leitura/${fileId}`);
+  return { status: "success", message: "Documento anexado." };
+}
+
+export async function setFileDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setFileDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      deleted,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.file.delete");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: deleted
+      ? "Documento apagado da lista. O arquivo fica guardado."
+      : "Documento restaurado.",
+  };
+}
+
+/** Reads (again) a file already attached, and opens the conferência. */
+export async function readFileAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  try {
+    const file = await fileWith(db, ok.tenant.slug, id);
+    if (!file || file.deletedAt) {
+      return { status: "error", message: "Arquivo não encontrado." };
+    }
+    const bytes = new Uint8Array(await readStoredFile(file.path));
+    const result = await readMatriculaFilesWith(db, ok.tenant.slug, [
+      { name: file.name, mime: file.mime, bytes },
+    ]);
+    await saveReadingWith(db, ok.tenant.slug, id, result);
+  } catch (error) {
+    return failure(error, "ri.file.read");
+  }
+  redirect(`/admin/ri/leitura/${id}`);
+}
+
+/** Saves what the clerk confirmed from a reading. */
+export async function applyReadingAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const fileId = text(formData, "fileId");
+  let target: string;
+  try {
+    const file = await fileWith(db, ok.tenant.slug, fileId);
+    const stored = file?.reading as ReadingResult | null | undefined;
+    if (!file || !stored?.reading) {
+      return { status: "error", message: "Leia o arquivo antes de aplicar." };
+    }
+    const reading = { ...stored.reading };
+    const typed = matriculaNumber(text(formData, "number"));
+    if (typed) reading.number = typed;
+    if (text(formData, "book") === "3") reading.book = 3;
+    const seqs = formData.getAll("seqs").map((s) => Number(s));
+    const result = await applyReadingWith(
+      db,
+      ok.tenant.slug,
+      reading,
+      { propertyId: file.propertyId, seqs },
+      ok.actor,
+    );
+    if (!file.propertyId) {
+      await linkFileWith(db, ok.tenant.slug, fileId, result.propertyId);
+    }
+    target = result.propertyId;
+  } catch (error) {
+    return failure(error, "ri.reading.apply");
+  }
+  revalidatePath("/admin/ri", "layout");
+  redirect(`/admin/ri/matriculas/${target}`);
+}
+
+// ----------------------------------------------- quem assina e assinatura
+
+export async function saveSignerAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  try {
+    await saveSignerWith(
+      db,
+      ok.tenant.slug,
+      Number(text(formData, "signer")),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.signer");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return { status: "success", message: "Quem assina foi salvo." };
+}
+
+/**
+ * The image of the handwritten signature: only who manages the office's
+ * certificates (the Tabelião/Registrador, unless he granted it).
+ */
+export async function saveSignatureImageAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("certificates.manage");
+  if (!ok) {
+    return {
+      status: "error",
+      message:
+        "Só quem cuida dos certificados digitais da serventia cadastra a imagem da assinatura.",
+    };
+  }
+  try {
+    if (text(formData, "op") === "remove") {
+      await saveSignatureImageWith(db, ok.tenant.slug, null, ok.actor);
+    } else {
+      const file = formData.get("imagem");
+      if (!(file instanceof File) || file.size === 0) {
+        return { status: "error", message: "Escolha a foto da assinatura." };
+      }
+      await saveSignatureImageWith(
+        db,
+        ok.tenant.slug,
+        new Uint8Array(await file.arrayBuffer()),
+        ok.actor,
+      );
+    }
+  } catch (error) {
+    return failure(error, "ri.signature");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message:
+      text(formData, "op") === "remove"
+        ? "Imagem retirada."
+        : "Imagem da assinatura salva.",
+  };
 }

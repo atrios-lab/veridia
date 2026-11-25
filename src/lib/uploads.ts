@@ -417,6 +417,20 @@ export async function storeSignedPdf(
   );
 }
 
+/**
+ * A file of the Registro de Imóveis (a ficha, a título, a document of an
+ * ato) that came through the server, under the office's own folder.
+ */
+export async function storeRegistryFile(
+  tenantSlug: string,
+  bytes: Buffer,
+  fileName: string,
+  mimeType: string,
+): Promise<string> {
+  const safe = fileName.replace(/[^\w.-]+/g, "_").slice(-80) || "arquivo";
+  return store(bytes, `${tenantSlug}/ri/${randomUUID()}/${safe}`, mimeType);
+}
+
 /** Reads back a file written by `store`, wherever it went. */
 export async function readStoredFile(path: string): Promise<Buffer> {
   if (path.startsWith("http")) {

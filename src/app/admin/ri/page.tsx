@@ -100,6 +100,7 @@ export default async function RiDeskPage() {
   return (
     <RiPage
       wide
+      back={null}
       title={`Bom trabalho, ${session.user.name.split(" ")[0]}`}
       description="O que o acervo do Registro de Imóveis pede hoje: pendências da migração para fichas, o lote de CNM e o envio semanal do Indicador Real à ONR."
       actions={

@@ -39,7 +39,14 @@ const nextConfig: NextConfig = {
   // pdfkit reads its standard font metrics from files at runtime, which a
   // bundler rewrites into paths that no longer exist. Left external, it loads
   // them the way it expects to.
-  serverExternalPackages: ["pdfkit"],
+  serverExternalPackages: ["pdfkit", "fontkit", "sharp"],
+  // The TIFF of the Registro de Imóveis draws its text from these font
+  // files (src/lib/ri-tiff.ts), read at runtime: traced into the routes.
+  outputFileTracingIncludes: {
+    "/admin/ri/**": [
+      "./node_modules/@fontsource/tinos/files/tinos-latin-*-normal.woff",
+    ],
+  },
   // Brand images (logotype, hero) publish to Vercel Blob when
   // BLOB_READ_WRITE_TOKEN is set (see src/lib/uploads.ts). next/image needs
   // that host allow-listed by exact hostname, never a wildcard pattern — the

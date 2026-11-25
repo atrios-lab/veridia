@@ -137,7 +137,9 @@ export function indicadorReal(
     (a, b) => a.recordKind - b.recordKind || a.number - b.number,
   );
   for (const p of sorted) {
-    if (p.status === 4) continue;
+    // A number that never had an imóvel, and the Livro 3: the ONR's
+    // "registro tipo" knows only matrícula, matrícula-mãe and transcrição.
+    if (p.status === 4 || p.book === 3) continue;
     const label = `${p.recordKind === 4 ? "Transcrição" : "Matrícula"} ${p.number.toLocaleString("pt-BR")}`;
     if (!p.streetKind || !STREET_KINDS.has(p.streetKind)) {
       skipped.push({ label, reason: "falta o tipo de logradouro" });
@@ -238,13 +240,16 @@ export function indicadorPessoal(
     status: number;
     openedOn: string | null;
     acts: Act[];
+    book?: number;
   }[],
 ): PersonalExport {
   const skipped: Skipped[] = [];
   const rows: string[] = [];
   const sorted = [...properties].sort((a, b) => a.number - b.number);
   for (const p of sorted) {
-    if (p.status === 4) continue;
+    // NMATRICULA is a matrícula's number: the Livro 3 stays in the
+    // office's own Indicador Pessoal, not in the ONR's file.
+    if (p.status === 4 || p.book === 3) continue;
     const acts = [...p.acts].sort((a, b) => a.seq - b.seq);
     for (const act of acts) {
       for (const party of act.parties) {
