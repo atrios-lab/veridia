@@ -434,6 +434,8 @@ const EXACT: Record<string, string> = {
     "Mandou o sistema esquecer uma natureza de ato aprendida",
   "ri.requirement-fulfill": "Marcou uma exigência como cumprida",
   "ri.requirement-reopen": "Voltou uma exigência para pendente",
+  "ri.pendency-done": "Marcou uma pendência da migração como concluída",
+  "ri.pendency-reopen": "Voltou uma pendência da migração para a lista",
   "ri.pgv-import": "Importou o arquivo de retorno do PGV-CNM",
   "ri.pgv-credential-save": "Salvou a credencial de integração do PGV-CNM",
   "ri.pgv-credential-clear": "Apagou a credencial de integração do PGV-CNM",

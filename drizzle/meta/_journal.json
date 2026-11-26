@@ -680,6 +680,13 @@
       "when": 1795702947234,
       "tag": "0096_ri_aprendizado_atos",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1795714541922,
+      "tag": "0097_ri_pendencias_concluidas",
+      "breakpoints": true
     }
   ]
 }
