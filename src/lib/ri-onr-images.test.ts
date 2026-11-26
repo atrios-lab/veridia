@@ -186,12 +186,13 @@ test("applying a ficha: new matrícula, then a new averbação and a retificaç�
     .returning({ id: riOnrImages.id });
   const one = await applyOnrReadingWith(db, tenant, first?.id ?? "", ACTOR);
   assert.equal(one.added, 1);
-  const suggestion = await bookSuggestion(db, tenant, 7, reading as never);
-  assert.deepEqual(suggestion, {
+  // Only the matrícula nº 1 opens the Livro 2.
+  assert.equal(await bookSuggestion(db, tenant, 7, reading as never), null);
+  assert.deepEqual(await bookSuggestion(db, tenant, 1, reading as never), {
     date: "2024-03-10",
     fromTransport: true,
     volume: "2",
-    firstItem: 7,
+    firstItem: 1,
   });
   const second = {
     ...reading,

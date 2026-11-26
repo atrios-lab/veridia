@@ -333,9 +333,10 @@ async function readIntoQueue(
 }
 
 /**
- * No Livro 2 open: the system proposes opening it, the termo de abertura
- * on the date of the averbação de transporte of this ficha (CNN, art.
- * 336), from this matrícula on. The office confirms the date.
+ * The ficha of the matrícula nº 1 and no Livro 2 open: the system
+ * proposes opening it, the termo de abertura on the date of the averbação
+ * de transporte of that ficha (CNN, art. 336), from the matrícula 1 on.
+ * The office confirms the date and that it is the 1º ato de transporte.
  */
 export async function bookSuggestion(
   database: Database,
@@ -343,6 +344,8 @@ export async function bookSuggestion(
   number: number,
   reading: MatriculaReading | null,
 ): Promise<BookSuggestion | null> {
+  // The Livro 2 in fichas starts at the matrícula nº 1 and goes on.
+  if (number !== 1) return null;
   const books = await listBooksWith(database, tenantSlug);
   const live = books.filter((b) => b.book === 2 && !b.deletedAt);
   if (live.some((b) => !b.closedOn)) return null;

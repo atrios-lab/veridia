@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Livro 2 digital montado pelas fichas assinadas
-O sistema DEVE (SHALL) levar ao acervo, com a confirmação do funcionário, o que a ficha assinada traz: a matrícula nova, os registros e averbações novos e as retificações, guardando o texto anterior no histórico. O sistema DEVE (SHALL) propor abrir o Livro 2 na data da averbação de transporte quando não houver Livro 2 aberto, e DEVE usar a imagem assinada como página do livro. Ao substituir uma página, a anterior DEVE ficar em "Alterações".
+O sistema DEVE (SHALL) levar ao acervo, com a confirmação do funcionário, o que a ficha assinada traz: a matrícula nova, os registros e averbações novos e as retificações, guardando o texto anterior no histórico. O sistema DEVE (SHALL) propor abrir o Livro 2, a partir da matrícula nº 1, na data da averbação de transporte da ficha dessa matrícula, quando não houver Livro 2 aberto, e DEVE usar a imagem assinada como página do livro. Ao substituir uma página, a anterior DEVE ficar em "Alterações".
 
 #### Scenario: Primeira ficha assinada
 - **WHEN** o oficial assina a ficha da matrícula 1 e não há Livro 2 aberto
