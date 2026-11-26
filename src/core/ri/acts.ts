@@ -271,6 +271,30 @@ export function situationOf(acts: readonly Act[]): Situation {
       closed = true;
     }
   }
+  // A matrícula opened by a cédula (the transcrição was the origin) names
+  // only credores and devedores: the devedor who gave the imóvel in
+  // guarantee is its owner (decision of 26/11/2026), until a transmissão.
+  if (owners.length === 0) {
+    const first = ordered.find(
+      (a) => a.kind !== "M" && a.parties.some((p) => p.role === "devedor"),
+    );
+    if (
+      first &&
+      !ordered.some(
+        (a) => a.effect === "transmissao" || a.effect === "titularidade",
+      )
+    ) {
+      owners = first.parties
+        .filter((p) => p.role === "devedor")
+        .map((p) => ({
+          personId: p.personId,
+          name: p.name,
+          document: p.document,
+          share: p.share,
+          since: `${actLabel(first)} (devedor na abertura por cédula)`,
+        }));
+    }
+  }
   const last = ordered.at(-1);
   return {
     owners,
