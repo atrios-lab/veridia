@@ -1397,6 +1397,7 @@ export async function prepareOnrImageAction(
         typed: typedRaw ? Number(typedRaw) : null,
         pattern: text(formData, "padrao"),
         sign: text(formData, "assinar") === "1",
+        rubric: text(formData, "rubricar") === "1",
         confirmed: text(formData, "conferi") === "1",
       },
       ok.actor,
