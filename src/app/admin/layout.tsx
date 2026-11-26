@@ -5,7 +5,13 @@ import { Toaster } from "sonner";
 import { rootMetadata } from "@/lib/root-metadata.ts";
 import { getSiteOrigin } from "@/lib/site-origin.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { DARK, THEME_COOKIE } from "./_components/theme.ts";
+import {
+  BACKGROUND_COOKIE,
+  backgroundCss,
+  DARK,
+  parseBackground,
+  THEME_COOKIE,
+} from "./_components/theme.ts";
 import "./admin.css";
 
 // The panel's one face, the same for every office (painel-neutro-shadcn).
@@ -39,12 +45,21 @@ export default async function AdminLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   // The theme the person chose (theme-toggle.tsx), applied here so the page
   // arrives in it.
-  const dark = (await cookies()).get(THEME_COOKIE)?.value === DARK;
+  const jar = await cookies();
+  const dark = jar.get(THEME_COOKIE)?.value === DARK;
+  const background = parseBackground(jar.get(BACKGROUND_COOKIE)?.value);
+  const tintCss = backgroundCss(background.tint, background.intensity);
   return (
     <html
       lang="pt-BR"
       className={dark ? `${plexSans.variable} dark` : plexSans.variable}
     >
+      {tintCss && (
+        <head>
+          {/* The office's background (background-picker.tsx). */}
+          <style id="painel-fundo">{tintCss}</style>
+        </head>
+      )}
       <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
         <Toaster
