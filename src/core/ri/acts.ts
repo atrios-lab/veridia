@@ -129,6 +129,10 @@ export interface Act {
   /** The ato this one cancels (effect "cancelamento"). */
   cancelsActId: string | null;
   parties: ActParty[];
+  /** The protocolo (Livro 1), the selo and the value, as lançados. */
+  protocol?: string;
+  seal?: string;
+  valueCents?: number | null;
 }
 
 /** "R-3-1.234": the lançamento as art. 232 writes it. */

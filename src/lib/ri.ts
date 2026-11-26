@@ -294,6 +294,9 @@ function actOf(row: typeof riActs.$inferSelect, parties: ActParty[]): Act {
     summary: row.summary,
     cancelsActId: row.cancelsActId,
     parties,
+    protocol: row.protocol,
+    seal: row.seal,
+    valueCents: row.valueCents,
   };
 }
 

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { ArrowLeftRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { situationOf } from "@/core/ri/acts.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
@@ -79,14 +79,24 @@ export default async function MatriculasPage({
       title="Matrículas (Livro 2)"
       description="O acervo do Livro 2 e as transcrições no sistema, com a situação atual de cada uma: proprietários e ônus em vigor. O Livro 3 tem a sua própria tela."
       actions={
-        riCan(session, "ri.edit") && (
-          <Link
-            href="/admin/ri/matriculas/nova"
-            className={buttonVariants({ size: "sm" })}
-          >
-            <Plus className="size-4" /> Nova matrícula
-          </Link>
-        )
+        <>
+          {(riCan(session, "ri.import") || riCan(session, "ri.export")) && (
+            <Link
+              href="/admin/ri/importar-exportar"
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
+              <ArrowLeftRight className="size-4" /> Importar e exportar
+            </Link>
+          )}
+          {riCan(session, "ri.edit") && (
+            <Link
+              href="/admin/ri/matriculas/nova"
+              className={buttonVariants({ size: "sm" })}
+            >
+              <Plus className="size-4" /> Nova matrícula
+            </Link>
+          )}
+        </>
       }
     >
       <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">

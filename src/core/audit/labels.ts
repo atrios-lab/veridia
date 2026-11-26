@@ -448,6 +448,10 @@ const EXACT: Record<string, string> = {
     "Cadastrou a imagem da assinatura do Registro de Imóveis",
   "ri.signature-image-remove":
     "Retirou a imagem da assinatura do Registro de Imóveis",
+  "ri.transfer-export":
+    "Exportou matrículas, atos, pessoas ou indicadores do Registro de Imóveis",
+  "ri.transfer-import":
+    "Importou matrículas, atos, pessoas ou indicadores no Registro de Imóveis (com conferência)",
   "cohort.join": "Entrou por link de turma",
   "cohort.delete": "Excluiu uma turma sem participantes",
   "demo.reset": "Limpou o cartório de demonstração",
@@ -824,6 +828,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Os dados que o Assistente Virtual (ou a leitura do texto) tirou de um documento foram conferidos e aplicados à matrícula: só campos vazios e lançamentos que ainda não existiam.",
   "ri.signature-image":
     "A imagem da assinatura de quem assina pelo Registro de Imóveis foi cadastrada. Ela só aparece nos documentos que a serventia escolher emitir com ela.",
+  "ri.transfer-export":
+    "Uma planilha ou um JSON do acervo do Registro de Imóveis (matrículas, atos, pessoas ou indicadores) foi baixado. O arquivo leva nomes e CPF/CNPJ e fica com quem baixou.",
+  "ri.transfer-import":
+    "Um arquivo (planilha, JSON ou arquivo da ONR) foi conferido e importado no Registro de Imóveis. Só entrou o que faltava: nada já cadastrado foi apagado ou substituído.",
   "daily-book.import":
     "Um relatório de produtividade foi anexado e os atos lidos foram lançados como receita no Livro Diário Auxiliar.",
   "daily-book.entry-add":

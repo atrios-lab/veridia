@@ -8,11 +8,10 @@ import {
   pendenciesOf,
 } from "@/core/ri/pendencies.ts";
 import { loadAcervo } from "@/lib/ri.ts";
-import { ImportForm } from "../_components/import-form.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 
-export const metadata = { title: "Pendências e importação" };
+export const metadata = { title: "Pendências da migração" };
 
 const ORDER: PendencyKind[] = [
   "repetido",
@@ -39,18 +38,21 @@ export default async function MigrationPage() {
   return (
     <RiPage
       wide
-      title="Pendências e importação"
+      title="Pendências da migração"
       description="A migração do acervo para fichas (CNN, arts. 336 a 339): o que precisa de decisão antes do lote de CNM e do envio dos indicadores à ONR. Cada pendência traz o passo a passo e a regra de onde vem."
     >
       {riCan(session, "ri.import") && (
-        <section id="importar">
-          <Panel
-            title="Importar a planilha do índice"
-            description="O índice de matrículas que a serventia já mantém em planilha. Primeiro o sistema confere e mostra o que leu; só depois importa. Use só a planilha da própria serventia."
+        <p className="rounded-xl border bg-card px-4 py-3 text-sm shadow-xs">
+          Para trazer o índice de matrículas, os atos ou os indicadores que a
+          serventia já tem (planilha, JSON ou os arquivos da ONR), use{" "}
+          <Link
+            href="/admin/ri/importar-exportar"
+            className="font-medium text-primary underline underline-offset-2"
           >
-            <ImportForm />
-          </Panel>
-        </section>
+            Importar e exportar
+          </Link>
+          : o sistema confere e mostra o que leu antes de importar.
+        </p>
       )}
 
       {pendencies.length === 0 ? (

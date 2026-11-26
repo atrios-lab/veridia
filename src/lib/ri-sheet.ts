@@ -127,3 +127,141 @@ export async function sheetRows(file: File): Promise<string[][]> {
     'Envie a planilha em .xlsx ou .csv (no Excel ou no Google Planilhas: "Salvar como" ou "Fazer download").',
   );
 }
+
+// ---------------------------------------------------------------- writing
+
+const xmlText = (text: string) =>
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    // XML 1.0 does not take control characters (a stray one from Word).
+    .split("")
+    .filter((c) => {
+      const code = c.charCodeAt(0);
+      return code >= 32 || code === 9 || code === 10 || code === 13;
+    })
+    .join("");
+
+/** 0 → "A", 27 → "AB". */
+function columnName(index: number): string {
+  let n = index + 1;
+  let out = "";
+  while (n > 0) {
+    const r = (n - 1) % 26;
+    out = String.fromCharCode(65 + r) + out;
+    n = Math.floor((n - 1) / 26);
+  }
+  return out;
+}
+
+/**
+ * A planilha .xlsx with one sheet: every cell as text (a CPF keeps its
+ * leading zero, a number of matrícula is not turned into 1,23E+03), the
+ * header in bold and frozen.
+ */
+export async function xlsxOf(
+  rows: string[][],
+  sheet = "Planilha",
+): Promise<Uint8Array> {
+  const zip = new JSZip();
+  const name = xmlText(sheet.replace(/[\\/?*[\]:]/g, " ").slice(0, 31));
+  zip.file(
+    "[Content_Types].xml",
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+  );
+  zip.file(
+    "_rels/.rels",
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+  );
+  zip.file(
+    "xl/workbook.xml",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${name}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+  );
+  zip.file(
+    "xl/_rels/workbook.xml.rels",
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+  );
+  zip.file(
+    "xl/styles.xml",
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="0"/><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="49" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1" applyNumberFormat="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment wrapText="1" vertical="top"/></xf></cellXfs></styleSheet>',
+  );
+  const body = rows
+    .map((row, r) => {
+      const cells = row
+        .map((value, c) => {
+          const text = String(value ?? "");
+          if (!text) return "";
+          const style = r === 0 ? 1 : text.includes("\n") ? 2 : 0;
+          return `<c r="${columnName(c)}${r + 1}" t="inlineStr" s="${style}"><is><t xml:space="preserve">${xmlText(text)}</t></is></c>`;
+        })
+        .join("");
+      return `<row r="${r + 1}">${cells}</row>`;
+    })
+    .join("");
+  zip.file(
+    "xl/worksheets/sheet1.xml",
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><sheetData>${body}</sheetData></worksheet>`,
+  );
+  return zip.generateAsync({ type: "uint8array", compression: "DEFLATE" });
+}
+
+/** A CSV the Excel in Portuguese opens right: ";", quotes, UTF-8 with BOM. */
+export function csvOf(rows: string[][]): Uint8Array {
+  const cell = (value: string) => {
+    const text = String(value ?? "");
+    return /[";\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  };
+  const text = rows.map((row) => row.map(cell).join(";")).join("\r\n");
+  return new TextEncoder().encode(`﻿${text}\r\n`);
+}
+
+export type TransferFile =
+  | { type: "table"; rows: string[][]; label: string }
+  | { type: "json"; value: unknown }
+  | { type: "xml"; text: string };
+
+/** Any file of the RI's import: planilha, JSON or XML of the ONR. */
+export async function transferFile(file: {
+  name: string;
+  bytes: Uint8Array;
+}): Promise<TransferFile> {
+  const name = (file.name || "").toLowerCase();
+  const head = new TextDecoder().decode(file.bytes.subarray(0, 200)).trim();
+  if (name.endsWith(".xlsx") || head.startsWith("PK")) {
+    return {
+      type: "table",
+      rows: await xlsxRows(file.bytes),
+      label: "Planilha .xlsx",
+    };
+  }
+  if (name.endsWith(".json") || /^﻿?[[{]/.test(head)) {
+    try {
+      return {
+        type: "json",
+        value: JSON.parse(decodeText(file.bytes).replace(/^﻿/, "")),
+      };
+    } catch {
+      throw new SheetFileError(
+        "O JSON está com erro de formato e não deu para ler.",
+      );
+    }
+  }
+  if (name.endsWith(".xml") || /^﻿?</.test(head)) {
+    const latin = /encoding=["']iso-8859-1["']/i.test(head);
+    const text = latin
+      ? new TextDecoder("windows-1252").decode(file.bytes)
+      : decodeText(file.bytes);
+    return { type: "xml", text };
+  }
+  if (name.endsWith(".csv") || name.endsWith(".txt")) {
+    return {
+      type: "table",
+      rows: parseCsv(decodeText(file.bytes)),
+      label: "Planilha .csv",
+    };
+  }
+  throw new SheetFileError(
+    "Envie uma planilha (.xlsx ou .csv), um JSON (exportado aqui ou o Indicador Real da ONR) ou um XML da ONR (Indicador Pessoal ou lote de CNM).",
+  );
+}

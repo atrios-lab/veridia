@@ -61,9 +61,17 @@ export default async function PersonalIndicatorPage({
       title="Indicador Pessoal (Livro 5)"
       description="Os nomes de todas as pessoas que aparecem nos atos, ativa ou passivamente, em ordem alfabética, com as matrículas (Lei nº 6.015/1973, art. 180). A busca só por nome ou CPF pede a identificação de quem pediu e a finalidade (CNN, art. 126)."
       actions={
-        <Link href="/admin/ri/onr" className={buttonVariants({ size: "sm" })}>
-          Gerar o arquivo para a ONR
-        </Link>
+        <>
+          <Link
+            href="/admin/ri/importar-exportar"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Planilha, JSON e importação
+          </Link>
+          <Link href="/admin/ri/onr" className={buttonVariants({ size: "sm" })}>
+            Gerar o arquivo para a ONR
+          </Link>
+        </>
       }
     >
       <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">
