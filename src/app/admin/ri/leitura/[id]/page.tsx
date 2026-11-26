@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ACT_EFFECT_LABELS, PARTY_ROLE_LABELS } from "@/core/ri/acts.ts";
+import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
 import { brDate } from "@/core/ri/property.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
@@ -31,9 +32,18 @@ export default async function ReadingPage({
   const detail = file.propertyId
     ? await propertyDetailWith(db, tenant.slug, file.propertyId)
     : null;
+  const aux = stored?.reading?.book === 3;
   const back = detail
-    ? { href: `/admin/ri/matriculas/${detail.property.id}`, label: "Matrícula" }
-    : { href: "/admin/ri/matriculas/nova", label: "Nova matrícula" };
+    ? {
+        href: `/admin/ri/matriculas/${detail.property.id}`,
+        label: detail.property.book === 3 ? "Registro auxiliar" : "Matrícula",
+      }
+    : aux
+      ? {
+          href: "/admin/ri/matriculas/nova?livro=3",
+          label: "Novo registro auxiliar",
+        }
+      : { href: "/admin/ri/matriculas/nova", label: "Nova matrícula" };
   if (!stored?.reading) {
     return (
       <RiPage title="Conferir a leitura" back={back}>
@@ -92,8 +102,10 @@ export default async function ReadingPage({
           <Panel
             title={
               detail
-                ? `Completar a ${detail.property.book === 3 ? "registro auxiliar" : "matrícula"} ${detail.property.number.toLocaleString("pt-BR")}`
-                : "Criar a matrícula"
+                ? `Completar ${detail.property.book === 3 ? "o registro auxiliar" : "a matrícula"} ${detail.property.number.toLocaleString("pt-BR")}`
+                : r.book === 3
+                  ? "Criar o registro auxiliar (Livro 3)"
+                  : "Criar a matrícula"
             }
             description="Marque os lançamentos que conferiu. Cada um entra com o número que tem na ficha."
           >
@@ -114,32 +126,98 @@ export default async function ReadingPage({
             />
           </Panel>
         </div>
-        <Panel title="O que foi lido da abertura">
-          <dl className="grid gap-3">
-            <Field label="Arquivo" value={file.name} />
-            <Field
-              label="Número"
-              value={r.number?.toLocaleString("pt-BR") ?? ""}
-            />
-            <Field label="CNM" value={r.cnm} />
-            <Field label="Abertura" value={brDate(r.openedOn)} />
-            <Field label="Denominação" value={r.denomination} />
-            <Field label="Área" value={r.area} />
-            <Field label="CCIR" value={r.ccir} />
-            <Field label="NIRF" value={r.nirf} />
-            <Field label="Registro anterior" value={r.origin} />
-            <Field label="Proprietários" value={people(r.owners)} />
-            <Field
-              label="Descrição"
-              value={
-                <span className="whitespace-pre-line">
-                  {r.description.slice(0, 1500)}
-                </span>
-              }
-            />
-          </dl>
-        </Panel>
+        {r.book === 3 ? (
+          <Panel title="O que foi lido do registro (Livro 3)">
+            <dl className="grid gap-3">
+              <Field label="Arquivo" value={file.name} />
+              <Field
+                label="Número no Livro 3"
+                value={r.number?.toLocaleString("pt-BR") ?? ""}
+              />
+              <Field label="Natureza" value={r.auxKind} />
+              <Field label="Título" value={r.aux?.title} />
+              <Field
+                label="Partes"
+                value={(r.aux?.parties ?? [])
+                  .map(
+                    (p) =>
+                      `${AUX_ROLE_LABELS[p.role]}: ${p.name}${p.document ? ` (${formatTaxId(p.document)})` : ""}`,
+                  )
+                  .join("; ")}
+              />
+              <Field
+                label="Valor"
+                value={
+                  r.aux?.valueCents != null
+                    ? (r.aux.valueCents / 100).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })
+                    : ""
+                }
+              />
+              <Field label="Vencimento" value={brDate(r.aux?.dueOn)} />
+              <Field label="Garantias" value={r.aux?.guarantees} />
+              <Field label="Onde estão os bens" value={r.aux?.goodsPlace} />
+              <Field label="Regime de bens" value={r.aux?.regime} />
+              <Field
+                label="Matrícula(s) relacionada(s)"
+                value={r.linkedNumbers}
+              />
+              <Field
+                label="Protocolo"
+                value={
+                  r.aux?.protocolNumber
+                    ? `nº ${r.aux.protocolNumber}${r.aux.protocolOn ? `, em ${brDate(r.aux.protocolOn)}` : ""}`
+                    : ""
+                }
+              />
+            </dl>
+          </Panel>
+        ) : (
+          <Panel title="O que foi lido da abertura">
+            <dl className="grid gap-3">
+              <Field label="Arquivo" value={file.name} />
+              <Field
+                label="Número"
+                value={r.number?.toLocaleString("pt-BR") ?? ""}
+              />
+              <Field label="CNM" value={r.cnm} />
+              <Field label="Abertura" value={brDate(r.openedOn)} />
+              <Field label="Denominação" value={r.denomination} />
+              <Field label="Área" value={r.area} />
+              <Field label="CCIR" value={r.ccir} />
+              <Field label="NIRF" value={r.nirf} />
+              <Field label="Registro anterior" value={r.origin} />
+              <Field label="Proprietários" value={people(r.owners)} />
+              <Field
+                label="Descrição"
+                value={
+                  <span className="whitespace-pre-line">
+                    {r.description.slice(0, 1500)}
+                  </span>
+                }
+              />
+            </dl>
+          </Panel>
+        )}
       </div>
+      {stored.markdown && (
+        <Panel
+          title={
+            file.path ? "Texto lido (Markdown)" : "Texto guardado (Markdown)"
+          }
+          description={
+            file.path
+              ? "O texto do arquivo, para conferir."
+              : "O arquivo original foi descartado; o documento ficou guardado só neste texto."
+          }
+        >
+          <pre className="max-h-96 overflow-auto rounded-lg bg-muted p-3 text-xs whitespace-pre-wrap">
+            {stored.markdown.slice(0, 20000)}
+          </pre>
+        </Panel>
+      )}
     </RiPage>
   );
 }

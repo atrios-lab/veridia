@@ -110,7 +110,7 @@ const moneyCell = (cents: number | null) =>
 function auxColumns(): Column[] {
   const text = (
     label: string,
-    key: Exclude<keyof AuxData, "parties" | "valueCents">,
+    key: Exclude<keyof AuxData, "parties" | "valueCents" | "annotations">,
   ): Column => ({
     label: `${label} (Livro 3)`,
     key: `aux.${key}`,
@@ -151,6 +151,15 @@ function auxColumns(): Column[] {
     text("Escritura", "deed"),
     text("Protocolo nº", "protocolNumber"),
     text("Data do protocolo", "protocolOn"),
+    {
+      label: "Anotações (Livro 3)",
+      key: "auxNotes",
+      out: (p) =>
+        p.aux.annotations
+          .filter((n) => !n.deletedAt)
+          .map((n) => [brDate(n.on), n.text].filter(Boolean).join(" | "))
+          .join("\n"),
+    },
   ];
 }
 
@@ -409,6 +418,7 @@ export function readPropertyTable(rows: Table): TableReading<SheetRow> {
     const raw: Record<string, unknown> = {};
     let names: string[] = [];
     let documents: string[] = [];
+    let notesCell = "";
     columns.forEach((column, i) => {
       if (!column) return;
       const value = String(cells[i] ?? "").trim();
@@ -419,6 +429,8 @@ export function readPropertyTable(rows: Table): TableReading<SheetRow> {
           .filter(Boolean);
       } else if (column.key === "auxParties") {
         auxPartiesRaw(value, raw);
+      } else if (column.key === "auxNotes") {
+        notesCell = value;
       } else if (column.key === "documents") {
         documents = value.split(/\s*;\s*|\n/).map((d) => d.replace(/\D/g, ""));
       } else {
@@ -427,6 +439,26 @@ export function readPropertyTable(rows: Table): TableReading<SheetRow> {
     });
     try {
       const input = readProperty(raw);
+      if (input.book === 3 && notesCell.trim()) {
+        input.aux.annotations = notesCell
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean)
+          .map((line, i) => {
+            const [first = "", ...rest] = line.split("|");
+            const on = isoDate(first.trim());
+            return {
+              id: `importada-${i + 1}`,
+              on,
+              text: (on ? rest.join("|") : line).trim(),
+              at: "",
+              by: "",
+              deletedAt: null,
+              history: [],
+            };
+          })
+          .filter((n) => n.text);
+      }
       const warnings: string[] = [];
       const docs = documents.filter(Boolean);
       if (docs.length > 0 && documents.length !== names.length) {
@@ -1269,6 +1301,7 @@ const AUX_FIELD_NAMES: Record<keyof AuxData, string> = {
   protocolNumber: "protocolo",
   protocolOn: "data do protocolo",
   parties: "partes",
+  annotations: "anotações",
 };
 
 function fillAux(current: AuxData, incoming: AuxData, fields: string[]) {

@@ -442,6 +442,12 @@ const EXACT: Record<string, string> = {
   "ri.file-add": "Anexou um documento a uma matrícula",
   "ri.file-delete": "Apagou um documento anexado a uma matrícula",
   "ri.file-restore": "Restaurou um documento anexado a uma matrícula",
+  "ri.annotation-add": "Lançou uma anotação num registro do Livro 3",
+  "ri.annotation-edit": "Alterou uma anotação de um registro do Livro 3",
+  "ri.annotation-delete": "Apagou uma anotação de um registro do Livro 3",
+  "ri.annotation-restore": "Restaurou uma anotação apagada do Livro 3",
+  "ri.file-markdown":
+    "Guardou só o texto (Markdown) de um documento lido e descartou o arquivo",
   "ri.reading-apply":
     "Aplicou à matrícula os dados lidos de um documento (com conferência)",
   "ri.signature-image":
@@ -836,6 +842,12 @@ const EXPLANATIONS: Record<string, string> = {
     "Um arquivo gerado foi marcado como já importado na ONR. No lote de CNM, as matrículas dele passaram a contar como cadastradas no PGV-CNM.",
   "ri.export-delete":
     "Um arquivo gerado para a ONR saiu da lista, com justificativa. O conteúdo continua guardado para a auditoria.",
+  "ri.annotation-edit":
+    "Uma anotação de um registro do Livro 3 foi alterada. O texto anterior fica no histórico da anotação.",
+  "ri.annotation-delete":
+    "Uma anotação de um registro do Livro 3 foi apagada, com justificativa. Ela continua guardada e pode ser restaurada.",
+  "ri.file-markdown":
+    "Um documento do Registro de Imóveis foi lido e guardado só como texto (Markdown); o arquivo original foi descartado para não ocupar espaço, como a serventia escolheu ao anexar.",
   "ri.reading-apply":
     "Os dados que o Assistente Virtual (ou a leitura do texto) tirou de um documento foram conferidos e aplicados à matrícula: só campos vazios e lançamentos que ainda não existiam.",
   "ri.signature-image":

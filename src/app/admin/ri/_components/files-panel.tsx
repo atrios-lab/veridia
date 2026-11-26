@@ -26,8 +26,10 @@ export function FilesPanel({
   canEdit,
   direct,
   folder,
+  book,
 }: {
   propertyId: string;
+  book?: 2 | 3;
   files: RiFile[];
   canEdit: boolean;
   direct: boolean;
@@ -42,7 +44,13 @@ export function FilesPanel({
     >
       {canEdit && (
         <div className="mb-4 rounded-lg border bg-background p-3">
-          <UploadForm propertyId={propertyId} direct={direct} folder={folder} />
+          <UploadForm
+            propertyId={propertyId}
+            direct={direct}
+            folder={folder}
+            book={book === 3 ? 3 : undefined}
+            markdownDefault={book === 3}
+          />
         </div>
       )}
       {live.length === 0 ? (
@@ -62,6 +70,7 @@ export function FilesPanel({
                   {KIND_LABELS[f.kind] ?? f.kind} · {size(f.size)} ·{" "}
                   {stamp(f.createdAt)}
                   {f.reading ? " · lido" : ""}
+                  {f.path ? "" : " · só o texto (o arquivo foi descartado)"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -71,7 +80,8 @@ export function FilesPanel({
                   rel="noreferrer"
                   className={buttonVariants({ size: "sm", variant: "outline" })}
                 >
-                  <Download className="size-4" /> Abrir
+                  <Download className="size-4" />{" "}
+                  {f.path ? "Abrir" : "Abrir o texto (.md)"}
                 </a>
                 {f.mime.startsWith("image/") && (
                   <a

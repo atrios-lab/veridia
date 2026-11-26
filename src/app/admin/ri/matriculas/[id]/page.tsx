@@ -142,7 +142,8 @@ export default async function PropertyPage({
                 href={`/admin/ri/matriculas/${p.id}/ato/novo`}
                 className={buttonVariants({ size: "sm" })}
               >
-                <Plus className="size-4" /> Lançar ato
+                <Plus className="size-4" />{" "}
+                {p.book === 3 ? "Lançar averbação" : "Lançar ato"}
               </Link>
               <Link
                 href={`/admin/ri/matriculas/${p.id}/alterar`}
@@ -189,7 +190,13 @@ export default async function PropertyPage({
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5 lg:col-span-2">
           {p.book === 3 ? (
-            <AuxPanel kind={p.auxKind} aux={p.aux} linked={p.linkedNumbers} />
+            <AuxPanel
+              kind={p.auxKind}
+              aux={p.aux}
+              linked={p.linkedNumbers}
+              propertyId={p.id}
+              canEdit={canEdit}
+            />
           ) : (
             <Panel
               title="Situação atual"
@@ -276,7 +283,8 @@ export default async function PropertyPage({
                   href={`/admin/ri/matriculas/${p.id}/ato/novo`}
                   className={buttonVariants({ size: "sm", variant: "outline" })}
                 >
-                  <Plus className="size-4" /> Lançar ato
+                  <Plus className="size-4" />{" "}
+                  {p.book === 3 ? "Lançar averbação" : "Lançar ato"}
                 </Link>
               )
             }
@@ -403,6 +411,7 @@ export default async function PropertyPage({
 
           <FilesPanel
             propertyId={p.id}
+            book={p.book}
             files={files}
             canEdit={canEdit}
             direct={blobUploadEnabled()}

@@ -6,7 +6,15 @@ import { EMPTY_CONDO, EMPTY_RURAL } from "@/core/ri/property.ts";
 import { transferFromJson, transferFromTable } from "@/core/ri/transfer.ts";
 import type { Database } from "@/db/index.ts";
 import { createTestDb } from "@/db/test-db.ts";
-import { createActWith, createPropertyWith, loadAcervoWith } from "./ri.ts";
+import {
+  addAnnotationWith,
+  createActWith,
+  createPropertyWith,
+  editAnnotationWith,
+  loadAcervoWith,
+  setAnnotationDeletedWith,
+  updatePropertyWith,
+} from "./ri.ts";
 import { transferFile } from "./ri-sheet.ts";
 import {
   applyTransferWith,
@@ -244,4 +252,69 @@ test("Livro 3: as partes do registro entram no cadastro de pessoas", async () =>
   const names = [...acervo.people.values()].map((p) => p.name).sort();
   assert.deepEqual(names, ["CARLA FICTÍCIA", "DAVI FICTÍCIO"]);
   assert.equal(acervo.properties[0]?.aux.regime, "separação total de bens");
+});
+
+test("Livro 3: anotações lançadas, editadas com histórico, apagadas e restauradas", async () => {
+  const TENANT = "cartorio-teste-ri-anotacoes";
+  const id = await createPropertyWith(
+    db,
+    TENANT,
+    { ...base, book: 3, number: 12, auxKind: "Contrato de penhor rural" },
+    ACTOR,
+  );
+  const noteId = await addAnnotationWith(
+    db,
+    TENANT,
+    id,
+    {
+      on: "01/09/2026",
+      text: "Título também registrado no RTD sob nº 10 (fictício).",
+    },
+    ACTOR,
+  );
+  assert.equal(
+    await editAnnotationWith(
+      db,
+      TENANT,
+      id,
+      noteId,
+      { on: "01/09/2026", text: "Título também no RTD sob nº 11 (fictício)." },
+      ACTOR,
+    ),
+    true,
+  );
+  // Saving the registro's form keeps the anotações.
+  await updatePropertyWith(
+    db,
+    TENANT,
+    id,
+    {
+      ...base,
+      book: 3,
+      number: 12,
+      auxKind: "Contrato de penhor rural",
+      notes: "x",
+    },
+    ACTOR,
+  );
+  let p = (await loadAcervoWith(db, TENANT)).properties[0];
+  assert.equal(p?.aux.annotations.length, 1);
+  assert.equal(
+    p?.aux.annotations[0]?.text,
+    "Título também no RTD sob nº 11 (fictício).",
+  );
+  assert.equal(
+    p?.aux.annotations[0]?.history[0]?.text,
+    "Título também registrado no RTD sob nº 10 (fictício).",
+  );
+  await setAnnotationDeletedWith(db, TENANT, id, noteId, true, ACTOR);
+  p = (await loadAcervoWith(db, TENANT)).properties[0];
+  assert.ok(p?.aux.annotations[0]?.deletedAt);
+  await setAnnotationDeletedWith(db, TENANT, id, noteId, false, ACTOR);
+  p = (await loadAcervoWith(db, TENANT)).properties[0];
+  assert.equal(p?.aux.annotations[0]?.deletedAt, null);
+  await assert.rejects(
+    addAnnotationWith(db, TENANT, id, { on: "", text: "x" }, ACTOR),
+    /Escreva a anotação/,
+  );
 });

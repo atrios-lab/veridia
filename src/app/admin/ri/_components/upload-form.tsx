@@ -33,8 +33,14 @@ export function UploadForm({
   read = false,
   direct,
   folder,
+  book,
+  markdownDefault = false,
 }: {
   propertyId: string;
+  /** A registro of the Livro 3: the reading looks for its own fields. */
+  book?: 3;
+  /** "Só o texto" checked from the start (the Livro 3's default). */
+  markdownDefault?: boolean;
   /** The office's RI folder in the store (direct uploads only). */
   folder: string;
   kind?: "ficha" | "titulo" | "documento";
@@ -102,11 +108,12 @@ export function UploadForm({
       <input type="hidden" name="propertyId" value={propertyId} />
       <input type="hidden" name="ler" value={read ? "1" : ""} />
       <input type="hidden" name="folder" value={folder} />
+      {book === 3 && <input type="hidden" name="livro" value="3" />}
       <FilePicker
         name="arquivo"
         accept=".pdf,.doc,.docx,.rtf,.txt,.jpg,.jpeg,.png,.tif,.tiff,image/*,application/pdf"
         label="Arquivo"
-        hint="PDF, Word, foto ou digitalização (até 40 MB)."
+        hint="PDF, Word, foto ou digitalização (até 40 MB). Com “Guardar só o texto”, o sistema lê, guarda o documento em Markdown e descarta o arquivo, para não ocupar espaço."
       />
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5 text-sm font-medium">
@@ -123,6 +130,16 @@ export function UploadForm({
             ))}
           </NativeSelect>
         </div>
+        <label className="flex items-center gap-2 pb-2 text-sm">
+          <input
+            type="checkbox"
+            name="md"
+            value="1"
+            defaultChecked={markdownDefault}
+            className="size-4"
+          />
+          Guardar só o texto (Markdown) e descartar o arquivo
+        </label>
         {!read && (
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input

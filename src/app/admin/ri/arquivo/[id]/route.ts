@@ -9,7 +9,8 @@ import { readStoredFile } from "@/lib/uploads.ts";
 export const runtime = "nodejs";
 
 /**
- * A file attached in the Registro de Imóveis, as it was sent; with
+ * A file attached in the Registro de Imóveis, as it was sent (or its text
+ * in Markdown, when only the text was kept); with
  * `?formato=tiff`, a scanned image as the ONR's black and white TIFF (G4).
  */
 export async function GET(
@@ -26,8 +27,20 @@ export async function GET(
   const tenant = await getTenant();
   const file = await fileWith(db, tenant.slug, (await params).id);
   if (!file) return new Response("Não encontrado", { status: 404 });
-  const bytes = await readStoredFile(file.path);
   const safe = file.name.replace(/[^\w.-]+/g, "_");
+  // Kept only as Markdown: the original was discarded when it was read.
+  if (!file.path) {
+    const markdown =
+      (file.reading as { markdown?: string } | null)?.markdown ?? "";
+    return new Response(markdown, {
+      headers: {
+        "Content-Type": "text/markdown; charset=utf-8",
+        "Content-Disposition": `inline; filename="${safe}"`,
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
+  const bytes = await readStoredFile(file.path);
   if (new URL(request.url).searchParams.get("formato") === "tiff") {
     if (!file.mime.startsWith("image/")) {
       return new Response(

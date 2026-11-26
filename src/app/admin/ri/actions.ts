@@ -16,18 +16,23 @@ import {
 } from "@/core/ri/transfer.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
+import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   type ActPartyInput,
+  addAnnotationWith,
   createActWith,
   createPersonWith,
   createPropertyWith,
+  editAnnotationWith,
   generateExportWith,
   markExportImportedWith,
+  propertyDetailWith,
   RiError,
   readActInput,
   saveRiSettingsWith,
   setActDeletedWith,
+  setAnnotationDeletedWith,
   setCnmInPgvWith,
   setPersonDeletedWith,
   setPropertyDeletedWith,
@@ -70,7 +75,11 @@ import {
 } from "@/lib/ri-transfer.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
-import { readStoredFile, storeRegistryFile } from "@/lib/uploads.ts";
+import {
+  deleteStoredFile,
+  readStoredFile,
+  storeRegistryFile,
+} from "@/lib/uploads.ts";
 
 export type RiState =
   | { status: "idle" }
@@ -572,8 +581,10 @@ const KINDS = ["ficha", "titulo", "documento"] as const;
 
 /**
  * Attaches a file (and, when asked, reads it and opens the conferência).
- * In the deploy the browser already sent it to the store and this gets its
- * address; in development the form carries the file.
+ * With "só o texto" (`md`), the file is read, kept as Markdown in the
+ * database and the original is discarded, so it takes no room in the
+ * store (decision of 26/11/2026). `livro=3` tells the reading it is a
+ * registro of the Livro 3.
  */
 export async function uploadFileAction(
   _previous: RiState,
@@ -584,12 +595,15 @@ export async function uploadFileAction(
   const propertyId = text(formData, "propertyId") || null;
   const kindRaw = text(formData, "kind");
   const kind = KINDS.find((k) => k === kindRaw) ?? "documento";
+  const keepText = text(formData, "md") === "1";
   const read =
-    text(formData, "ler") === "1" || text(formData, "lerAgora") === "1";
+    keepText ||
+    text(formData, "ler") === "1" ||
+    text(formData, "lerAgora") === "1";
+  const book = text(formData, "livro") === "3" ? 3 : undefined;
   let fileId: string;
   try {
     let bytes: Uint8Array;
-    let path: string;
     let name: string;
     let mime: string;
     const url = text(formData, "url");
@@ -597,7 +611,6 @@ export async function uploadFileAction(
       if (!ownUpload(url, ok.tenant.slug)) {
         return { status: "error", message: "Arquivo não reconhecido." };
       }
-      path = url;
       name = text(formData, "nome") || "arquivo";
       mime = text(formData, "tipo") || "application/octet-stream";
       bytes = read
@@ -614,27 +627,72 @@ export async function uploadFileAction(
       bytes = new Uint8Array(await file.arrayBuffer());
       name = file.name || "arquivo";
       mime = file.type || "application/octet-stream";
-      path = await storeRegistryFile(
-        ok.tenant.slug,
-        Buffer.from(bytes),
-        name,
-        mime,
-      );
     }
-    const size = url
-      ? Number(text(formData, "tamanho")) || 0
-      : bytes.byteLength;
-    fileId = await addFileWith(
-      db,
-      ok.tenant.slug,
-      { propertyId, kind, name, mime, size, path },
-      ok.actor,
-    );
-    if (read) {
-      const result = await readMatriculaFilesWith(db, ok.tenant.slug, [
-        { name, mime, bytes },
-      ]);
+    if (keepText) {
+      const result = await readMatriculaFilesWith(
+        db,
+        ok.tenant.slug,
+        [{ name, mime, bytes }],
+        { book },
+      );
+      const markdown = result.markdown?.trim() ?? "";
+      if (!markdown) {
+        return {
+          status: "error",
+          message:
+            'Não deu para tirar o texto deste arquivo. Anexe sem marcar "só o texto" para guardar o original.',
+        };
+      }
+      fileId = await addFileWith(
+        db,
+        ok.tenant.slug,
+        {
+          propertyId,
+          kind,
+          name: `${name.replace(/\.[^.]+$/, "")}.md`,
+          mime: "text/markdown",
+          size: new TextEncoder().encode(markdown).byteLength,
+          path: "",
+        },
+        ok.actor,
+      );
       await saveReadingWith(db, ok.tenant.slug, fileId, result);
+      // The original goes: only the text stays.
+      if (url) await deleteStoredFile(url);
+      await recordAuditWith(db, {
+        tenantSlug: ok.tenant.slug,
+        actorId: ok.actor.id,
+        action: "ri.file-markdown",
+        targetType: "ri-property",
+        targetId: propertyId,
+      });
+    } else {
+      const path = url
+        ? url
+        : await storeRegistryFile(
+            ok.tenant.slug,
+            Buffer.from(bytes),
+            name,
+            mime,
+          );
+      const size = url
+        ? Number(text(formData, "tamanho")) || 0
+        : bytes.byteLength;
+      fileId = await addFileWith(
+        db,
+        ok.tenant.slug,
+        { propertyId, kind, name, mime, size, path },
+        ok.actor,
+      );
+      if (read) {
+        const { markdown: _md, ...result } = await readMatriculaFilesWith(
+          db,
+          ok.tenant.slug,
+          [{ name, mime, bytes }],
+          { book },
+        );
+        await saveReadingWith(db, ok.tenant.slug, fileId, result);
+      }
     }
   } catch (error) {
     return failure(error, "ri.file.upload");
@@ -686,10 +744,22 @@ export async function readFileAction(
     if (!file || file.deletedAt) {
       return { status: "error", message: "Arquivo não encontrado." };
     }
-    const bytes = new Uint8Array(await readStoredFile(file.path));
-    const result = await readMatriculaFilesWith(db, ok.tenant.slug, [
-      { name: file.name, mime: file.mime, bytes },
-    ]);
+    const previous = file.reading as ReadingResult | null;
+    // A file kept only as Markdown is read again from its text.
+    const bytes = file.path
+      ? new Uint8Array(await readStoredFile(file.path))
+      : new TextEncoder().encode(previous?.markdown ?? "");
+    const property = file.propertyId
+      ? await propertyDetailWith(db, ok.tenant.slug, file.propertyId)
+      : null;
+    const result = await readMatriculaFilesWith(
+      db,
+      ok.tenant.slug,
+      [{ name: file.name, mime: file.path ? file.mime : "text/plain", bytes }],
+      { book: property?.property.book === 3 ? 3 : undefined },
+    );
+    if (file.path) delete result.markdown;
+    else result.markdown = previous?.markdown;
     await saveReadingWith(db, ok.tenant.slug, id, result);
   } catch (error) {
     return failure(error, "ri.file.read");
@@ -979,5 +1049,71 @@ export async function setProtocolVoidedAction(
     message: voided
       ? "Protocolo apagado (fica marcado no Livro 1)."
       : "Protocolo restaurado.",
+  };
+}
+
+// ------------------------------------------------- anotações (Livro 3)
+
+export async function saveAnnotationAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const propertyId = text(formData, "propertyId");
+  const noteId = text(formData, "noteId");
+  const note = { on: text(formData, "on"), text: text(formData, "texto") };
+  try {
+    if (noteId) {
+      const changed = await editAnnotationWith(
+        db,
+        ok.tenant.slug,
+        propertyId,
+        noteId,
+        note,
+        ok.actor,
+      );
+      if (!changed) return { status: "success", message: "Nada mudou." };
+    } else {
+      await addAnnotationWith(db, ok.tenant.slug, propertyId, note, ok.actor);
+    }
+  } catch (error) {
+    return failure(error, "ri.annotation.save");
+  }
+  revalidatePath(propertyPath(propertyId));
+  return {
+    status: "success",
+    message: noteId ? "Anotação alterada." : "Anotação lançada.",
+  };
+}
+
+export async function setAnnotationDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const propertyId = text(formData, "propertyId");
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setAnnotationDeletedWith(
+      db,
+      ok.tenant.slug,
+      propertyId,
+      text(formData, "noteId"),
+      deleted,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.annotation.delete");
+  }
+  revalidatePath(propertyPath(propertyId));
+  return {
+    status: "success",
+    message: deleted
+      ? "Anotação apagada (fica no histórico)."
+      : "Anotação restaurada.",
   };
 }

@@ -1,6 +1,8 @@
 import { EMPTY_AUX } from "@/core/ri/auxiliary.ts";
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
+import { mergeAux } from "@/core/ri/auxiliary.ts";
+import { readAuxText, toMarkdown } from "@/core/ri/auxiliary-text.ts";
 import {
   coerceReading,
   type MatriculaReading,
@@ -164,6 +166,11 @@ export interface ReadingResult {
   reading: MatriculaReading;
   source: "assistente" | "texto";
   notes: string[];
+  /**
+   * The document as Markdown: kept in place of the file when the office
+   * chooses "só o texto" (decision of 26/11/2026).
+   */
+  markdown?: string;
 }
 
 async function textOf(file: IncomingFile): Promise<string> {
@@ -190,6 +197,11 @@ const MATRICULA_TASK = [
   '- owners: os proprietários da abertura: [{"name", "document" (CPF/CNPJ só dígitos), "share"}].',
   '- acts: cada lançamento R ou AV, na ordem: {"kind": "R" ou "AV", "seq": o número de ordem, "nature": "Compra e venda", "Hipoteca", "Cancelamento"…, "effect": "transmissao" (troca de dono), "onus" (hipoteca, alienação fiduciária, penhora, usufruto, cédula), "cancelamento", "descricao" (construção, retificação, georreferenciamento, desmembramento), "encerramento" ou "outro", "registeredOn": "dd/mm/aaaa", "summary": o texto do lançamento como está, "cancelsSeq": o número do ato que um cancelamento cancela, "parties": [{"name", "document", "role": "adquirente", "transmitente", "credor", "devedor" ou "outro", "share"}]}.',
   "- notes: até 5 frases curtas do que a serventia deve conferir (rasuras, números que não batem, partes sem CPF, lançamento ilegível).",
+  "Livro 3 (Registro Auxiliar: cédula de crédito industrial, penhor rural ou industrial, pacto antenupcial, convenção de condomínio, debêntures, bem de família, título no inteiro teor). Ele NÃO tem imóvel: deixe vazios os campos de imóvel e preencha:",
+  '- auxKind: a natureza, uma destas: "Emissão de debêntures", "Cédula de crédito industrial", "Convenção de condomínio (edilício, geral voluntário ou multipropriedade)", "Penhor de máquinas e aparelhos da indústria", "Convenção antenupcial (pacto antenupcial)", "Contrato de penhor rural", "Título registrado no inteiro teor, a pedido do interessado", "Instituição de bem de família (escritura)".',
+  '- number: o número do registro no Livro 3. linkedNumbers: as matrículas citadas (remissões), separadas por "; ".',
+  '- aux: {"title": "Cédula rural pignoratícia nº ...", "issuedOn": "dd/mm/aaaa", "value": "R$ 0,00", "dueOn": "dd/mm/aaaa", "paymentPlace", "terms" (forma de pagamento e encargos), "guarantees" (bens em garantia, como estão), "goodsPlace" (onde estão os bens), "regime" (regime de bens, no pacto), "weddingOn", "domicile", "deed" (tabelionato, livro e folhas da escritura), "protocolNumber", "protocolOn", "parties": [{"name", "document", "role": "emitente", "devedor", "credor", "avalista", "interveniente", "depositario", "conjuge", "emissora", "agente", "condominio", "requerente" ou "outro"}], "annotations": [{"on": "dd/mm/aaaa", "text": a anotação ou remissão como está}]}. As averbações à margem (aditivo, endosso, cessão, prorrogação, quitação, cancelamento) vão em acts, como AV, com o número de ordem.',
+  "- markdown: o documento inteiro transcrito em Markdown, fiel ao original (títulos com #, rótulos em negrito, parágrafos), sem resumir.",
   "Responda só com um JSON, sem texto antes ou depois.",
 ].join("\n");
 
@@ -198,7 +210,9 @@ export async function readMatriculaFilesWith(
   database: Database,
   tenantSlug: string,
   files: IncomingFile[],
+  options: { book?: 2 | 3 } = {},
 ): Promise<ReadingResult> {
+  const title = files.map((f) => f.name.replace(/\.[^.]+$/, "")).join(", ");
   const notes: string[] = [];
   const texts = await Promise.all(files.map(textOf));
   const allText = texts.join("\n\n");
@@ -221,13 +235,25 @@ export async function readMatriculaFilesWith(
       });
       const raw = await readRegistryDocuments({
         files: titleFiles,
-        task: MATRICULA_TASK,
+        task:
+          options.book === 3
+            ? `${MATRICULA_TASK}\nEste documento é do Livro 3 (Registro Auxiliar): book = 3.`
+            : MATRICULA_TASK,
       });
-      const reading = coerceReading(raw);
+      const hinted =
+        options.book === 3 && raw && typeof raw === "object"
+          ? { ...(raw as object), book: 3 }
+          : raw;
+      const reading = coerceReading(hinted);
+      const md =
+        raw && typeof raw === "object"
+          ? String((raw as Record<string, unknown>).markdown ?? "")
+          : "";
       return {
         reading,
         source: "assistente",
         notes: [...notes, ...reading.notes],
+        markdown: md.trim() ? md.slice(0, 400_000) : toMarkdown(allText, title),
       };
     } catch (error) {
       const said =
@@ -245,8 +271,46 @@ export async function readMatriculaFilesWith(
       "O arquivo não tem texto para ler (foto ou PDF digitalizado) e o Assistente Virtual não está disponível para ler a imagem.",
     );
   }
-  const reading = readMatriculaText(allText);
-  return { reading, source: "texto", notes: [...notes, ...reading.notes] };
+  const base = readMatriculaText(allText);
+  const reading =
+    options.book === 3 || base.book === 3 ? auxReadingOf(base, allText) : base;
+  return {
+    reading,
+    source: "texto",
+    notes: [...notes, ...reading.notes],
+    markdown: toMarkdown(allText, title),
+  };
+}
+
+/** A Livro 3 registro read from its text: no imóvel, the model's labels. */
+function auxReadingOf(base: MatriculaReading, text: string): MatriculaReading {
+  const a = readAuxText(text);
+  return {
+    ...base,
+    book: 3,
+    // "matrícula nº" in a Livro 3 text is a remissão, not its number.
+    number: a.number,
+    openedOn: a.openedOn ?? base.openedOn,
+    location: null,
+    denomination: "",
+    area: "",
+    ccir: "",
+    nirf: "",
+    car: "",
+    incra: "",
+    sigef: "",
+    origin: "",
+    description: "",
+    owners: [],
+    acts: base.acts.filter((act) => act.kind === "AV"),
+    notes: [
+      ...a.notes,
+      ...(a.number ? [] : ["Não achei o número do registro no Livro 3."]),
+    ],
+    auxKind: a.auxKind,
+    linkedNumbers: a.linkedNumbers,
+    aux: a.aux,
+  };
 }
 
 /** The reading as the matrícula's form would be filled. */
@@ -267,9 +331,14 @@ export function inputFromReading(
     openedOn: b?.openedOn ?? reading.openedOn,
     origin: keep(b?.origin, reading.origin),
     ficha: b?.ficha ?? "",
-    location: b?.location ?? reading.location ?? 1,
-    propertyKind: b?.propertyKind ?? (reading.location === 1 ? 9 : null),
-    streetKind: b?.streetKind ?? (reading.location === 1 ? 177 : null),
+    // The Livro 3 has no imóvel: nothing of the Indicador Real.
+    location: b?.location ?? (reading.book === 3 ? 0 : (reading.location ?? 1)),
+    propertyKind:
+      b?.propertyKind ??
+      (reading.book !== 3 && reading.location === 1 ? 9 : null),
+    streetKind:
+      b?.streetKind ??
+      (reading.book !== 3 && reading.location === 1 ? 177 : null),
     street: keep(b?.street, reading.street || reading.denomination),
     streetNumber: b?.streetNumber ?? "",
     district: keep(b?.district, reading.district),
@@ -293,10 +362,13 @@ export function inputFromReading(
     },
     condo: b?.condo ?? { ...EMPTY_CONDO },
     area: keep(b?.area, reading.area),
-    auxKind: b?.auxKind ?? "",
-    linkedNumbers: b?.linkedNumbers ?? "",
+    auxKind: keep(b?.auxKind, reading.auxKind ?? ""),
+    linkedNumbers: keep(b?.linkedNumbers, reading.linkedNumbers ?? ""),
     priorActs: b?.priorActs ?? 0,
-    aux: b?.aux ?? { ...EMPTY_AUX, parties: [] },
+    aux: mergeAux(
+      b?.aux ?? { ...EMPTY_AUX, parties: [] },
+      reading.aux ?? { ...EMPTY_AUX, parties: [] },
+    ),
     description: keep(b?.description, reading.description),
     notes: b?.notes ?? "",
   };
@@ -354,6 +426,9 @@ export async function applyReadingWith(
         area: filled.area,
         description: filled.description,
         openedOn: filled.openedOn,
+        auxKind: filled.auxKind,
+        linkedNumbers: filled.linkedNumbers,
+        aux: filled.aux,
         updatedAt: new Date(),
         history: [
           ...((row.history as unknown[]) ?? []),

@@ -108,8 +108,12 @@ export function ApplyForm({
           {pending
             ? "Salvando…"
             : isNew
-              ? "Conferi: criar a matrícula com o que está marcado"
-              : "Conferi: completar a matrícula com o que está marcado"}
+              ? book === 3
+                ? "Conferi: criar o registro auxiliar"
+                : "Conferi: criar a matrícula com o que está marcado"
+              : book === 3
+                ? "Conferi: completar o registro auxiliar"
+                : "Conferi: completar a matrícula com o que está marcado"}
         </Button>
       </div>
     </form>
