@@ -56,6 +56,11 @@ import {
   setFileDeletedWith,
 } from "@/lib/ri-files.ts";
 import {
+  addGeometryWith,
+  readGeometrySource,
+  setGeometryDeletedWith,
+} from "@/lib/ri-geo.ts";
+import {
   createProtocolWith,
   issueRequirementsWith,
   readProtocolInput,
@@ -1115,5 +1120,84 @@ export async function setAnnotationDeletedAction(
     message: deleted
       ? "Anotação apagada (fica no histórico)."
       : "Anotação restaurada.",
+  };
+}
+
+// ------------------------------------------- georreferenciamento e mapa
+
+export async function addGeometryAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const propertyId = text(formData, "propertyId");
+  try {
+    const file = formData.get("arquivo");
+    const reading = await readGeometrySource({
+      text: text(formData, "memorial"),
+      file:
+        file instanceof File && file.size > 0
+          ? { name: file.name, bytes: new Uint8Array(await file.arrayBuffer()) }
+          : null,
+    });
+    if (reading.vertices.length < 3) {
+      return {
+        status: "error",
+        message:
+          reading.notes[0] ??
+          "Não achei pelo menos 3 vértices com coordenadas.",
+      };
+    }
+    await addGeometryWith(
+      db,
+      ok.tenant.slug,
+      propertyId,
+      {
+        vertices: reading.vertices,
+        source: reading.source,
+        sourceText: reading.sourceText,
+        actId: text(formData, "actId") || null,
+        sigefCode: text(formData, "sigef"),
+        notes: reading.notes.join(" "),
+      },
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.geometry.add");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Perímetro lançado: confira a planta, a área e as sobreposições.",
+  };
+}
+
+export async function setGeometryDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setGeometryDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      deleted,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.geometry.delete");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: deleted
+      ? "Perímetro apagado (fica guardado)."
+      : "Perímetro restaurado.",
   };
 }

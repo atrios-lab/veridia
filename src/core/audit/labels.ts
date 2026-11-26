@@ -443,6 +443,9 @@ const EXACT: Record<string, string> = {
   "ri.file-delete": "Apagou um documento anexado a uma matrícula",
   "ri.file-restore": "Restaurou um documento anexado a uma matrícula",
   "ri.annotation-add": "Lançou uma anotação num registro do Livro 3",
+  "ri.geometry-add": "Lançou o perímetro georreferenciado de uma matrícula",
+  "ri.geometry-delete": "Apagou o perímetro georreferenciado de uma matrícula",
+  "ri.geometry-restore": "Restaurou um perímetro georreferenciado apagado",
   "ri.annotation-edit": "Alterou uma anotação de um registro do Livro 3",
   "ri.annotation-delete": "Apagou uma anotação de um registro do Livro 3",
   "ri.annotation-restore": "Restaurou uma anotação apagada do Livro 3",
@@ -842,6 +845,10 @@ const EXPLANATIONS: Record<string, string> = {
     "Um arquivo gerado foi marcado como já importado na ONR. No lote de CNM, as matrículas dele passaram a contar como cadastradas no PGV-CNM.",
   "ri.export-delete":
     "Um arquivo gerado para a ONR saiu da lista, com justificativa. O conteúdo continua guardado para a auditoria.",
+  "ri.geometry-add":
+    "O perímetro de uma matrícula foi lido do memorial descritivo ou da planilha do Sigef e guardado, com área, perímetro e planta (Lei nº 6.015/1973, art. 176, §§ 3º a 5º).",
+  "ri.geometry-delete":
+    "Um perímetro georreferenciado foi apagado, com justificativa. Ele continua guardado e pode ser restaurado.",
   "ri.annotation-edit":
     "Uma anotação de um registro do Livro 3 foi alterada. O texto anterior fica no histórico da anotação.",
   "ri.annotation-delete":

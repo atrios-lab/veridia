@@ -31,14 +31,20 @@ import {
 import { statusLabel } from "@/core/ri/sheet.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
-import { propertyDetailWith } from "@/lib/ri.ts";
+import { loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
 import { riSignerFor } from "@/lib/ri-docs.ts";
 import { listFilesWith, riFolder } from "@/lib/ri-files.ts";
+import {
+  currentGeometriesWith,
+  geometriesOfWith,
+  overlapsOf,
+} from "@/lib/ri-geo.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { AuxPanel } from "../../_components/aux-panel.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
 import { FilesPanel } from "../../_components/files-panel.tsx";
+import { GeoPanel } from "../../_components/geo-panel.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
 import { PrintPanel } from "../../_components/print-panel.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
@@ -99,10 +105,19 @@ export default async function PropertyPage({
   const detail = await propertyDetailWith(db, tenant.slug, id);
   if (!detail) notFound();
   const { property: p, acts, deletedActs } = detail;
-  const [files, signing] = await Promise.all([
-    listFilesWith(db, tenant.slug, id),
-    riSignerFor(tenant),
-  ]);
+  const [files, signing, geometries, allGeometries, acervo] = await Promise.all(
+    [
+      listFilesWith(db, tenant.slug, id),
+      riSignerFor(tenant),
+      geometriesOfWith(db, tenant.slug, id),
+      currentGeometriesWith(db, tenant.slug),
+      loadAcervo(tenant.slug),
+    ],
+  );
+  const overlaps = overlapsOf(allGeometries);
+  const labels = new Map(
+    acervo.properties.map((x) => [x.id, propertyTitle(x)]),
+  );
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
   const situation = situationOf(acts);
   const canEdit = riCan(session, "ri.edit") && !p.deletedAt;
@@ -408,6 +423,24 @@ export default async function PropertyPage({
               </div>
             )}
           </Panel>
+
+          {p.book !== 3 && (
+            <GeoPanel
+              propertyId={p.id}
+              title={title}
+              area={p.area}
+              rows={geometries}
+              overlaps={overlaps}
+              labels={labels}
+              acts={acts
+                .filter((a) => a.kind !== "M")
+                .map((a) => ({
+                  id: a.id,
+                  label: `${actLabel(a, p.number)} ${a.nature}`,
+                }))}
+              canEdit={canEdit}
+            />
+          )}
 
           <FilesPanel
             propertyId={p.id}

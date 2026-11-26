@@ -265,3 +265,41 @@ export async function transferFile(file: {
     "Envie uma planilha (.xlsx ou .csv), um JSON (exportado aqui ou o Indicador Real da ONR) ou um XML da ONR (Indicador Pessoal ou lote de CNM).",
   );
 }
+
+/**
+ * The rows of an .ods (the planilha the Sigef gives for download): the
+ * first table, each cell's text, repeated cells expanded.
+ */
+export async function odsRows(bytes: Uint8Array): Promise<string[][]> {
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(bytes);
+  } catch {
+    throw new SheetFileError("Não deu para abrir a planilha (.ods).");
+  }
+  const xml = (await zip.file("content.xml")?.async("string")) ?? "";
+  const table = /<table:table\b[\s\S]*?<\/table:table>/.exec(xml)?.[0] ?? "";
+  const rows: string[][] = [];
+  for (const row of table.match(
+    /<table:table-row\b[\s\S]*?<\/table:table-row>/g,
+  ) ?? []) {
+    const cells: string[] = [];
+    for (const cell of row.match(
+      /<table:(?:covered-)?table-cell\b[^>]*?(?:\/>|>[\s\S]*?<\/table:(?:covered-)?table-cell>)/g,
+    ) ?? []) {
+      const repeat = Math.min(
+        50,
+        Number(/table:number-columns-repeated="(\d+)"/.exec(cell)?.[1] ?? 1),
+      );
+      const text = unescapeXml(
+        (cell.match(/<text:p\b[^>]*>([\s\S]*?)<\/text:p>/g) ?? [])
+          .map((p) => p.replace(/<[^>]+>/g, ""))
+          .join("\n"),
+      );
+      for (let i = 0; i < repeat; i++) cells.push(text);
+    }
+    while (cells.length && !cells[cells.length - 1]) cells.pop();
+    rows.push(cells);
+  }
+  return rows.filter((r) => r.some((c) => c.trim()));
+}

@@ -73,6 +73,7 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
         href: "/admin/ri/indicadores/pessoal",
         icon: BookMarked,
       },
+      { label: "Mapa (SIG-RI)", href: "/admin/ri/mapa", icon: MapIcon },
     ],
   },
   {
@@ -95,12 +96,6 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
   {
     title: "Próximas fases",
     entries: [
-      {
-        label: "Mapa (SIG-RI)",
-        href: "#mapa",
-        icon: MapIcon,
-        soon: true,
-      },
       {
         label: "Livros e assinatura",
         href: "#livros",
