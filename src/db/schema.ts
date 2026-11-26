@@ -3823,3 +3823,26 @@ export const riLearnedActs = pgTable(
   },
   (t) => [uniqueIndex("ri_learned_acts_cue").on(t.tenantSlug, t.cue)],
 );
+
+/**
+ * A pendência of the migração the office marked as done (decision of
+ * 26/11/2026: "o botão de concluído, para sair as notificações quando de
+ * fato for ajustado"). Undoing marks `undoneAt`; nothing is deleted.
+ */
+export const riPendencyMarks = pgTable(
+  "ri_pendency_marks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** The pendência: its kind and the matrículas it names. */
+    key: text("key").notNull(),
+    note: text("note").notNull().default(""),
+    markedBy: text("marked_by").notNull(),
+    markedAt: timestamp("marked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    undoneAt: timestamp("undone_at", { withTimezone: true }),
+    undoneBy: text("undone_by"),
+  },
+  (t) => [index("ri_pendency_marks_tenant").on(t.tenantSlug, t.key)],
+);

@@ -237,6 +237,8 @@ const EXACT: Record<string, AuditLevel> = {
   "ri.learned-act-forget": "analise",
   "ri.requirement-fulfill": "analise",
   "ri.requirement-reopen": "analise",
+  "ri.pendency-done": "analise",
+  "ri.pendency-reopen": "analise",
   "ri.pgv-import": "analise",
   "ri.pgv-credential-save": "atencao",
   "ri.pgv-credential-clear": "atencao",

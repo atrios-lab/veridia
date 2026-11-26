@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { situationOf } from "@/core/ri/acts.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import {
   PENDENCY_HOW_TO,
@@ -7,9 +6,17 @@ import {
   type PendencyKind,
   pendenciesOf,
 } from "@/core/ri/pendencies.ts";
+import { db } from "@/db/index.ts";
 import { loadAcervo } from "@/lib/ri.ts";
+import {
+  markedPendenciesWith,
+  ownerCountOf,
+  pendencyKey,
+} from "@/lib/ri-pendencies.ts";
+import { ActionButton, ConfirmButton } from "../_components/client.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
-import { requireRi, riCan } from "../_lib.ts";
+import { requireRi, riCan, stamp } from "../_lib.ts";
+import { markPendencyAction } from "../actions.ts";
 
 export const metadata = { title: "Pendências da migração" };
 
@@ -28,13 +35,17 @@ export default async function MigrationPage() {
   const { session, tenant } = await requireRi();
   const acervo = await loadAcervo(tenant.slug);
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
-  const pendencies = pendenciesOf(
+  const marked = await markedPendenciesWith(db, tenant.slug);
+  const canEdit = riCan(session, "ri.edit");
+  const all = pendenciesOf(
     cns,
     acervo.properties.map((p) => ({
       ...p,
-      ownerCount: situationOf(acervo.acts.get(p.id) ?? []).owners.length,
+      ownerCount: ownerCountOf(acervo.acts.get(p.id) ?? []),
     })),
   );
+  const pendencies = all.filter((p) => !marked.has(pendencyKey(p.kind, p.ids)));
+  const done = all.filter((p) => marked.has(pendencyKey(p.kind, p.ids)));
   return (
     <RiPage
       wide
@@ -92,7 +103,15 @@ export default async function MigrationPage() {
                         {p.detail}
                       </span>
                       {p.ids.length > 0 && (
-                        <span className="flex flex-wrap gap-2 text-xs">
+                        <span className="flex flex-wrap items-center gap-2 text-xs">
+                          {kind === "proprietario" && canEdit && (
+                            <Link
+                              href={`/admin/ri/matriculas/${p.ids[0]}/ato/novo?natureza=${encodeURIComponent("Abertura de matrícula")}`}
+                              className="rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground"
+                            >
+                              Lançar o ato que falta
+                            </Link>
+                          )}
                           {p.ids.map((id, i) => (
                             <Link
                               key={id}
@@ -103,6 +122,18 @@ export default async function MigrationPage() {
                               {p.ids.length > 1 ? `a ${i + 1}ª` : "a matrícula"}
                             </Link>
                           ))}
+                          {canEdit && (
+                            <ConfirmButton
+                              action={markPendencyAction}
+                              fields={{ key: pendencyKey(p.kind, p.ids) }}
+                              trigger="Concluído"
+                              question="Marcar esta pendência como concluída?"
+                              consequence="Ela sai da lista e das notificações. Fica no histórico abaixo e na auditoria, e dá para voltar."
+                              confirmLabel="Concluído"
+                              pendingLabel="Salvando…"
+                              destructive={false}
+                            />
+                          )}
                         </span>
                       )}
                     </li>
@@ -118,6 +149,42 @@ export default async function MigrationPage() {
             </section>
           );
         })
+      )}
+      {done.length > 0 && (
+        <Panel
+          title={`Concluídas (${done.length})`}
+          description="Marcadas pelo cartório. Se voltar a acontecer, volte para a lista."
+        >
+          <ul className="divide-y rounded-lg border bg-background">
+            {done.map((p) => {
+              const key = pendencyKey(p.kind, p.ids);
+              return (
+                <li
+                  key={key}
+                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                >
+                  <span>
+                    {p.title}
+                    <span className="block text-xs text-muted-foreground">
+                      Concluída em {stamp(marked.get(key)?.at ?? new Date())}
+                      {marked.get(key)?.note
+                        ? `: ${marked.get(key)?.note}`
+                        : ""}
+                    </span>
+                  </span>
+                  {canEdit && (
+                    <ActionButton
+                      action={markPendencyAction}
+                      fields={{ key, op: "undo" }}
+                      label="Voltar para a lista"
+                      pendingLabel="Salvando…"
+                    />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
       )}
     </RiPage>
   );

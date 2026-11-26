@@ -82,6 +82,7 @@ import {
   setCopiedWith,
   setOnrImageDeletedWith,
 } from "@/lib/ri-onr-images.ts";
+import { markPendencyWith } from "@/lib/ri-pendencies.ts";
 import { importPgvReturnWith, savePgvCredentialWith } from "@/lib/ri-pgv.ts";
 import { closeDaysWith, reopenDayWith } from "@/lib/ri-protocol-days.ts";
 import {
@@ -382,6 +383,34 @@ export async function fulfillRequirementAction(
     message: undo
       ? "A exigência voltou a ficar pendente."
       : "Exigência marcada como cumprida. Pode continuar.",
+  };
+}
+
+export async function markPendencyAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const undo = text(formData, "op") === "undo";
+  try {
+    await markPendencyWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "key"),
+      String(formData.get("justificativa") ?? ""),
+      undo,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.pendency.mark");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: undo
+      ? "A pendência voltou para a lista."
+      : "Pendência concluída. Ela sai da lista e fica no histórico.",
   };
 }
 

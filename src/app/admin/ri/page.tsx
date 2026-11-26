@@ -10,13 +10,17 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { situationOf } from "@/core/ri/acts.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import { PENDENCY_LABELS, pendenciesOf } from "@/core/ri/pendencies.ts";
 import { addressLine, propertyTitle } from "@/core/ri/property.ts";
 import { statusLabel } from "@/core/ri/sheet.ts";
 import { db } from "@/db/index.ts";
 import { EXPORT_LABELS, listExportsWith, loadAcervo } from "@/lib/ri.ts";
+import {
+  markedPendenciesWith,
+  ownerCountOf,
+  pendencyKey,
+} from "@/lib/ri-pendencies.ts";
 import {
   countersOf,
   listProtocolsWith,
@@ -40,12 +44,13 @@ export default async function RiDeskPage() {
   const counters = countersOf(protocols, officeToday());
   const late = counters.qualifyLate + counters.prenotationEnding;
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
-  const ownerCount = (id: string) =>
-    situationOf(acervo.acts.get(id) ?? []).owners.length;
+  const ownerCount = (id: string) => ownerCountOf(acervo.acts.get(id) ?? []);
+  const marked = await markedPendenciesWith(db, tenant.slug);
+  // The ones the office marked done leave the counters (decision of 26/11/2026).
   const pendencies = pendenciesOf(
     cns,
     acervo.properties.map((p) => ({ ...p, ownerCount: ownerCount(p.id) })),
-  );
+  ).filter((p) => !marked.has(pendencyKey(p.kind, p.ids)));
   const byKind = new Map<string, number>();
   for (const p of pendencies) byKind.set(p.kind, (byKind.get(p.kind) ?? 0) + 1);
   const active = acervo.properties.filter((p) => p.status === 0);
