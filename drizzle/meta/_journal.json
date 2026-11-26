@@ -666,6 +666,13 @@
       "when": 1795698239488,
       "tag": "0094_ri_pgv_credencial",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1795702418799,
+      "tag": "0095_ri_selo_imagem",
+      "breakpoints": true
     }
   ]
 }

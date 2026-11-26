@@ -3460,6 +3460,11 @@ export const riActs = pgTable(
     protocol: text("protocol").notNull().default(""),
     /** The selo, typed by hand (decision of 25/11/2026). */
     seal: text("seal").notNull().default(""),
+    /**
+     * The image of the selo, PNG in base64, attached to the ato (decision
+     * of 26/11/2026); the book shows it when the office chooses so.
+     */
+    sealImage: text("seal_image").notNull().default(""),
     valueCents: bigint("value_cents", { mode: "number" }),
     history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
     createdBy: text("created_by"),

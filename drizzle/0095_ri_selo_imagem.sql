@@ -1,0 +1,1 @@
+ALTER TABLE "ri_acts" ADD COLUMN "seal_image" text DEFAULT '' NOT NULL;

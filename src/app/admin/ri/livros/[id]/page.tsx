@@ -21,6 +21,7 @@ import {
 import { Button, buttonVariants } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
+import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { BookForm, CloseBookForm } from "../../_components/book-form.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
@@ -185,6 +186,47 @@ export default async function BookPage({
             title={`Livro ${row.volume}`}
             size="sm"
           />
+          <form
+            method="get"
+            action={`${base}/pdf`}
+            target="_blank"
+            className="flex flex-wrap items-end gap-2 rounded-lg border bg-background p-3"
+          >
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="book-seal">Selo dos atos nesta impressão</Label>
+              <NativeSelect id="book-seal" name="selo" defaultValue="numero">
+                <option value="numero">Só o número</option>
+                <option value="imagem">Número e imagem do selo</option>
+                <option value="nenhum">Sem selo</option>
+              </NativeSelect>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="book-format">Formato</Label>
+              <NativeSelect id="book-format" name="formato" defaultValue="pdf">
+                <option value="pdf">PDF pronto</option>
+                <option value="word">Word, para editar</option>
+              </NativeSelect>
+            </div>
+            {(dateRange || itemRange) && (
+              <>
+                <Input
+                  name="de"
+                  aria-label="De"
+                  placeholder={dateRange ? "De (AAAA-MM-DD)" : "Da nº"}
+                  className="w-36 bg-background"
+                />
+                <Input
+                  name="ate"
+                  aria-label="Até"
+                  placeholder={dateRange ? "Até (AAAA-MM-DD)" : "Até o nº"}
+                  className="w-36 bg-background"
+                />
+              </>
+            )}
+            <Button type="submit" size="sm">
+              Gerar com essas opções
+            </Button>
+          </form>
         </div>
       </Panel>
 

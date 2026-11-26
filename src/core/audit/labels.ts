@@ -427,6 +427,9 @@ const EXACT: Record<string, string> = {
   "ri.onr-image-hide":
     "Tirou uma imagem apagada da lista do histórico (continua guardada)",
   "ri.certidao-issue": "Emitiu uma certidão do Registro de Imóveis",
+  "ri.act-seal-image": "Anexou a imagem do selo de um ato",
+  "ri.act-seal-image-remove":
+    "Tirou a imagem do selo de um ato (fica no histórico)",
   "ri.pgv-import": "Importou o arquivo de retorno do PGV-CNM",
   "ri.pgv-credential-save": "Salvou a credencial de integração do PGV-CNM",
   "ri.pgv-credential-clear": "Apagou a credencial de integração do PGV-CNM",

@@ -31,6 +31,8 @@ export interface ActFormValue {
   cancelsActId: string;
   protocol: string;
   seal: string;
+  /** An image of the selo is attached. */
+  hasSealImage?: boolean;
   value: string;
   parties: PartyRow[];
 }
@@ -289,6 +291,22 @@ export function ActForm({
                   placeholder="Digite o selo do ato"
                   className="bg-background"
                 />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="a-seal-image">Imagem do selo (opcional)</Label>
+                <input
+                  id="a-seal-image"
+                  name="sealImage"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="text-xs"
+                />
+                {act?.hasSealImage && (
+                  <label className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" name="removeSealImage" value="1" />
+                    Tirar a imagem atual (ela fica guardada no histórico)
+                  </label>
+                )}
               </div>
             </>
           )}

@@ -1016,6 +1016,76 @@ async function checkCancels(
 }
 
 /** A new R or AV, numbered after every lançamento ever made on it. */
+/**
+ * Attaches (or takes off) the image of the selo of an ato. The image is
+ * not copied into the history; the history says it changed, and the audit
+ * says who did it.
+ */
+export async function actSealImageWith(
+  database: Database,
+  tenantSlug: string,
+  actId: string,
+): Promise<string> {
+  if (!UUID.test(actId)) return "";
+  const [row] = await database
+    .select({ sealImage: riActs.sealImage })
+    .from(riActs)
+    .where(and(eq(riActs.tenantSlug, tenantSlug), eq(riActs.id, actId)))
+    .limit(1);
+  return row?.sealImage ?? "";
+}
+
+export async function setActSealImageWith(
+  database: Database,
+  tenantSlug: string,
+  actId: string,
+  pngBase64: string,
+  actor: Actor,
+): Promise<void> {
+  if (!UUID.test(actId)) throw new RiError("Ato não encontrado.");
+  const [row] = await database
+    .select({
+      id: riActs.id,
+      sealImage: riActs.sealImage,
+      history: riActs.history,
+    })
+    .from(riActs)
+    .where(and(eq(riActs.tenantSlug, tenantSlug), eq(riActs.id, actId)))
+    .limit(1);
+  if (!row) throw new RiError("Ato não encontrado.");
+  if (row.sealImage === pngBase64) return;
+  await database
+    .update(riActs)
+    .set({
+      sealImage: pngBase64,
+      updatedAt: new Date(),
+      history: [
+        ...((row.history as unknown[]) ?? []),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          changes: [
+            {
+              field: "sealImage",
+              before: row.sealImage ? "imagem anexada" : "",
+              after: pngBase64 ? "nova imagem anexada" : "",
+            },
+          ],
+          // The image it had stays here: nothing is lost on a change.
+          ...(row.sealImage ? { previousSealImage: row.sealImage } : {}),
+        },
+      ],
+    })
+    .where(eq(riActs.id, actId));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: pngBase64 ? "ri.act-seal-image" : "ri.act-seal-image-remove",
+    targetType: "ri-act",
+    targetId: actId,
+  });
+}
+
 export async function createActWith(
   database: Database,
   tenantSlug: string,
