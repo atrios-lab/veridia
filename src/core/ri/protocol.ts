@@ -197,6 +197,12 @@ export function registryChecks(
 export interface Requirement {
   text: string;
   source: string;
+  /**
+   * Marked as met by the clerk (decision of 26/11/2026: "o funcionário
+   * pode selecionar que já foi cumprido e pode continuar"), with who,
+   * when and how.
+   */
+  fulfilled?: { at: string; by: string; note: string };
 }
 
 /**

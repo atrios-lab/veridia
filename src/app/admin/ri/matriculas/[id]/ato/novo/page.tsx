@@ -3,6 +3,7 @@ import { actLabel, nextSeq, situationOf } from "@/core/ri/acts.ts";
 import { propertyTitle } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
 import { loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
+import { listLearnedActsWith } from "@/lib/ri-learning.ts";
 import { ActForm } from "../../../../_components/act-form.tsx";
 import { RiPage } from "../../../../_components/page.tsx";
 import { requireRi } from "../../../../_lib.ts";
@@ -60,6 +61,7 @@ export default async function NewActPage({
       }
     >
       <ActForm
+        learned={await listLearnedActsWith(db, tenant.slug)}
         propertyId={id}
         nextLabel={p.book === 3 ? `AV-${seq}` : `R-${seq} ou AV-${seq}`}
         burdens={situationOf(detail.acts).burdens.map((b) => ({

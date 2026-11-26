@@ -3,6 +3,8 @@ import { UF_IBGE } from "@/core/ri/codes.ts";
 import { db } from "@/db/index.ts";
 import { riSettingsWith } from "@/lib/ri.ts";
 import { riSignerFor } from "@/lib/ri-docs.ts";
+import { listLearnedActsWith } from "@/lib/ri-learning.ts";
+import { ConfirmButton } from "../_components/client.tsx";
 import { Field, Panel, RiPage } from "../_components/page.tsx";
 import { SettingsForm } from "../_components/settings-form.tsx";
 import {
@@ -10,6 +12,7 @@ import {
   SignerForm,
 } from "../_components/signature-forms.tsx";
 import { requireRi, riCan } from "../_lib.ts";
+import { forgetLearnedActAction } from "../actions.ts";
 
 export const metadata = { title: "Configurações do Registro de Imóveis" };
 
@@ -20,6 +23,7 @@ export default async function RiSettingsPage() {
     riSignerFor(tenant),
   ]);
   const image = signing.settings.signatureImage;
+  const learned = await listLearnedActsWith(db, tenant.slug);
   return (
     <RiPage
       title="Configurações do Registro de Imóveis"
@@ -142,6 +146,45 @@ export default async function RiSettingsPage() {
           <SettingsForm ibgeCity={settings.ibgeCity} />
         ) : (
           <Field label="Código IBGE do município" value={settings.ibgeCity} />
+        )}
+      </Panel>
+      <Panel
+        title={`O que o sistema aprendeu com os atos (${learned.length})`}
+        description="A cada ato lançado ou corrigido, o sistema guarda só as palavras da natureza (nunca nome, número ou documento), se foi registro (R) ou averbação (AV) e o que o ato fez. Isso vira sugestão nos próximos lançamentos. Esquecer para a sugestão, mas o registro fica guardado e na auditoria."
+      >
+        {learned.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Ainda nada. O aprendizado começa no próximo ato salvo.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {learned.map((l) => (
+              <li
+                key={l.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm"
+              >
+                <span>
+                  <span className="font-medium">{l.cue}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · {l.kind === "R" ? "registro (R)" : "averbação (AV)"} ·{" "}
+                    {l.uses} vez(es)
+                  </span>
+                </span>
+                {riCan(session, "ri.edit") && (
+                  <ConfirmButton
+                    action={forgetLearnedActAction}
+                    fields={{ id: l.id }}
+                    trigger="Esquecer"
+                    question={`Esquecer "${l.cue}"?`}
+                    consequence="O sistema deixa de sugerir isso. Fica guardado e na auditoria, com a sua justificativa."
+                    confirmLabel="Esquecer"
+                    pendingLabel="Salvando…"
+                  />
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </Panel>
     </RiPage>

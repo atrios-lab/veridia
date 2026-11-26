@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useActionState, useState } from "react";
+import { cueOf, type LearnedAct, suggestAct } from "@/core/ri/act-learning.ts";
 import {
   ACT_EFFECT_LABELS,
   ACT_NATURES,
@@ -63,6 +64,7 @@ export function ActForm({
   people,
   fromProtocol,
   auxiliary = false,
+  learned = [],
 }: {
   propertyId: string;
   /** "R-8 / AV-8": the number this one takes when saved. */
@@ -70,6 +72,8 @@ export function ActForm({
   act?: ActFormValue;
   burdens: { actId: string; label: string }[];
   people: { name: string; document: string }[];
+  /** What the office taught by its earlier atos (core/ri/act-learning). */
+  learned?: LearnedAct[];
   /** A new ato from a protocolo: its number and the natureza asked. */
   fromProtocol?: { number: string; nature: string };
   /** A registro of the Livro 3: only averbações, with its own natures. */
@@ -83,6 +87,7 @@ export function ActForm({
   const [effect, setEffect] = useState<ActEffect>(
     act?.effect ?? (auxiliary ? "outro" : "transmissao"),
   );
+  const [hint, setHint] = useState("");
   const [nature, setNature] = useState(
     act?.nature ??
       (fromProtocol?.nature ||
@@ -109,6 +114,18 @@ export function ActForm({
     if (known && !act) {
       setKind(known.kind === "M" ? "AV" : known.kind);
       changeEffect(known.effect);
+      setHint("");
+      return;
+    }
+    const guess = act ? null : suggestAct(value, learned);
+    if (guess) {
+      setKind(guess.kind);
+      changeEffect(guess.effect);
+      setHint(
+        `Aprendido com os atos do cartório: lançado como ${guess.kind === "R" ? "registro (R)" : "averbação (AV)"} ${guess.uses} vez(es). Confira antes de salvar.`,
+      );
+    } else {
+      setHint("");
     }
   }
 
@@ -170,11 +187,25 @@ export function ActForm({
                   onChange={(event) => pickNature(event.target.value)}
                   className="bg-background"
                 />
+                {hint && (
+                  <p className="text-xs text-muted-foreground">{hint}</p>
+                )}
                 <datalist id="ri-natures">
                   {(auxiliary ? AUX_ACT_NATURES : ACT_NATURES)
                     .filter((n) => n.kind !== "M")
                     .map((n) => (
                       <option key={n.name} value={n.name} />
+                    ))}
+                  {learned
+                    .filter(
+                      (l) =>
+                        !(auxiliary ? AUX_ACT_NATURES : ACT_NATURES).some(
+                          (n) => cueOf(n.name) === l.cue,
+                        ),
+                    )
+                    .slice(0, 30)
+                    .map((l) => (
+                      <option key={`l-${l.cue}`} value={l.cue} />
                     ))}
                 </datalist>
               </div>
