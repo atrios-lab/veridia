@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { EMPTY_AUX } from "./auxiliary.ts";
 import { fichaContent } from "./ficha.ts";
 import {
   coerceReading,
@@ -110,6 +111,7 @@ const property: PropertyInput = {
   auxKind: "",
   linkedNumbers: "",
   priorActs: 0,
+  aux: { ...EMPTY_AUX, parties: [] },
   description: "",
   notes: "",
 };

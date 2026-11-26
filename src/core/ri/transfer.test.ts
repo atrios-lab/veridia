@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { Act } from "./acts.ts";
+import { EMPTY_AUX } from "./auxiliary.ts";
 import { EMPTY_CONDO, EMPTY_RURAL, type PropertyInput } from "./property.ts";
 import {
   actTable,
@@ -46,6 +47,7 @@ const property: PropertyInput = {
   auxKind: "",
   linkedNumbers: "",
   priorActs: 2,
+  aux: { ...EMPTY_AUX, parties: [] },
   description: "Um imóvel fictício.",
   notes: "",
 };

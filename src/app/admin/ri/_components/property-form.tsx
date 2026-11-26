@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { auxGuideFor, EMPTY_AUX } from "@/core/ri/auxiliary.ts";
 import { cnmOf } from "@/core/ri/cnm.ts";
 import {
   CNM_SITUATIONS,
@@ -23,6 +24,7 @@ import { Label } from "../../_ui/label.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
 import { Textarea } from "../../_ui/textarea.tsx";
 import { type RiState, savePropertyAction } from "../actions.ts";
+import { AuxFields } from "./aux-fields.tsx";
 
 const IDLE: RiState = { status: "idle" };
 
@@ -128,6 +130,7 @@ export function PropertyForm({
   const [number, setNumber] = useState(String(property?.number ?? ""));
   const [book, setBook] = useState(String(property?.book ?? defaultBook));
   const [rural, setRural] = useState(String(property?.location ?? 1) === "1");
+  const [auxKind, setAuxKind] = useState(property?.auxKind ?? "");
   const n = Number(number.replace(/\D/g, ""));
   let computed = "";
   try {
@@ -162,12 +165,14 @@ export function PropertyForm({
             className="bg-background"
           />
         </div>
-        <Select
-          name="recordKind"
-          label="Tipo de registro (ONR)"
-          defaultValue={String(p?.recordKind ?? 1)}
-          options={[...RECORD_KINDS]}
-        />
+        {book !== "3" && (
+          <Select
+            name="recordKind"
+            label="Tipo de registro (ONR)"
+            defaultValue={String(p?.recordKind ?? 1)}
+            options={[...RECORD_KINDS]}
+          />
+        )}
         <Select
           name="status"
           label="Situação (PGV-CNM)"
@@ -176,7 +181,7 @@ export function PropertyForm({
         />
         <Text
           name="openedOn"
-          label="Data de abertura"
+          label={book === "3" ? "Data do registro" : "Data de abertura"}
           placeholder="dd/mm/aaaa"
           defaultValue={
             p?.openedOn ? p.openedOn.split("-").reverse().join("/") : ""
@@ -188,18 +193,28 @@ export function PropertyForm({
           placeholder="Ex.: Livro 2-I, ficha 1"
           defaultValue={p?.ficha}
         />
-        <Text
-          name="origin"
-          label="Origem (registro anterior)"
-          placeholder="Ex.: Transcrição 1.234, Livro 3-B, fls. 10"
-          defaultValue={p?.origin}
-        />
+        {book !== "3" && (
+          <Text
+            name="origin"
+            label="Origem (registro anterior)"
+            placeholder="Ex.: Transcrição 1.234, Livro 3-B, fls. 10"
+            defaultValue={p?.origin}
+          />
+        )}
         <Text
           name="priorActs"
-          label="Atos já lançados na ficha"
+          label={
+            book === "3"
+              ? "Averbações já feitas à margem"
+              : "Atos já lançados na ficha"
+          }
           inputMode="numeric"
           defaultValue={p?.priorActs ?? 0}
-          hint="O próximo R ou AV no sistema continua desta numeração (Lei nº 6.015/1973, art. 232)."
+          hint={
+            book === "3"
+              ? "A próxima averbação à margem continua desta numeração."
+              : "O próximo R ou AV no sistema continua desta numeração (Lei nº 6.015/1973, art. 232)."
+          }
         />
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="f-cnm">CNM</Label>
@@ -235,7 +250,9 @@ export function PropertyForm({
               id="f-auxKind"
               name="auxKind"
               list="ri-aux-kinds"
-              defaultValue={p?.auxKind ?? ""}
+              required
+              value={auxKind}
+              onChange={(event) => setAuxKind(event.target.value)}
               className="bg-background"
             />
             <datalist id="ri-aux-kinds">
@@ -254,128 +271,148 @@ export function PropertyForm({
           </div>
           <Text
             name="linkedNumbers"
-            label="Matrícula(s) a que se refere"
+            label="Matrícula(s) relacionada(s), se houver"
             placeholder="Ex.: 1.234; 1.235"
             defaultValue={p?.linkedNumbers}
+            hint="O Livro 3 não precisa de imóvel. Preencha só quando houver ato ligado no Livro 2 (hipoteca cedular, pacto averbado, bens num imóvel), para a remissão recíproca."
+          />
+          <AuxFields
+            key={auxGuideFor(auxKind).match.source}
+            kind={auxKind}
+            aux={p?.aux ?? { ...EMPTY_AUX, parties: [] }}
           />
         </Group>
       )}
 
-      <Group title="Localização (Indicador Real, Livro 4)">
-        <Select
-          name="location"
-          label="Localização"
-          defaultValue={rural ? "1" : "0"}
-          onChange={(value) => setRural(value === "1")}
-          options={[...LOCATIONS]}
-        />
-        <Select
-          name="propertyKind"
-          label="Tipo de imóvel"
-          defaultValue={String(p?.propertyKind ?? (rural ? 9 : ""))}
-          empty="Não informado"
-          options={[...PROPERTY_KINDS]}
-        />
-        <Select
-          name="streetKind"
-          label="Tipo de logradouro"
-          defaultValue={String(p?.streetKind ?? (rural ? 177 : ""))}
-          empty="Escolha"
-          options={withCode(STREET_KINDS)}
-        />
-        <Text
-          name="street"
-          label={
-            rural
-              ? "Nome do logradouro ou da propriedade"
-              : "Nome do logradouro"
-          }
-          defaultValue={p?.street}
-        />
-        <Text
-          name="streetNumber"
-          label="Número"
-          defaultValue={p?.streetNumber}
-        />
-        <Text
-          name="district"
-          label="Bairro ou localidade"
-          defaultValue={p?.district ?? (rural ? "Zona Rural" : "")}
-        />
-        <Text
-          name="cep"
-          label="CEP"
-          inputMode="numeric"
-          defaultValue={p?.cep}
-        />
-        <Text
-          name="complement"
-          label="Complemento"
-          defaultValue={p?.complement}
-        />
-        <Text name="quadra" label="Quadra" defaultValue={p?.quadra} />
-        <Text name="lote" label="Lote" defaultValue={p?.lote} />
-        <Text
-          name="loteamento"
-          label="Loteamento"
-          defaultValue={p?.loteamento}
-        />
-        <Text name="setor" label="Setor" defaultValue={p?.setor} />
-        <Text name="conjunto" label="Conjunto" defaultValue={p?.conjunto} />
-        <Text
-          name="contributors"
-          label="Inscrição imobiliária (IPTU)"
-          defaultValue={p?.contributors.join("; ")}
-          hint="Mais de uma: separe com ponto e vírgula."
-        />
-      </Group>
-
-      <Group title="Imóvel rural">
-        {(Object.keys(RURAL_LABELS) as (keyof RuralData)[]).map((key) => (
-          <Text
-            key={key}
-            name={`rural.${key}`}
-            label={RURAL_LABELS[key]}
-            defaultValue={p?.rural[key]}
-          />
-        ))}
-      </Group>
-
-      <details className="rounded-xl border bg-card px-4 py-3 shadow-xs md:px-5">
-        <summary className="cursor-pointer text-sm font-semibold text-foreground">
-          Condomínio (unidade autônoma)
-        </summary>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(Object.keys(CONDO_LABELS) as (keyof CondoData)[]).map((key) => (
-            <Text
-              key={key}
-              name={`condo.${key}`}
-              label={CONDO_LABELS[key]}
-              defaultValue={p?.condo[key]}
+      {book !== "3" && (
+        <>
+          <Group title="Localização (Indicador Real, Livro 4)">
+            <Select
+              name="location"
+              label="Localização"
+              defaultValue={rural ? "1" : "0"}
+              onChange={(value) => setRural(value === "1")}
+              options={[...LOCATIONS]}
             />
-          ))}
-        </div>
-      </details>
+            <Select
+              name="propertyKind"
+              label="Tipo de imóvel"
+              defaultValue={String(p?.propertyKind ?? (rural ? 9 : ""))}
+              empty="Não informado"
+              options={[...PROPERTY_KINDS]}
+            />
+            <Select
+              name="streetKind"
+              label="Tipo de logradouro"
+              defaultValue={String(p?.streetKind ?? (rural ? 177 : ""))}
+              empty="Escolha"
+              options={withCode(STREET_KINDS)}
+            />
+            <Text
+              name="street"
+              label={
+                rural
+                  ? "Nome do logradouro ou da propriedade"
+                  : "Nome do logradouro"
+              }
+              defaultValue={p?.street}
+            />
+            <Text
+              name="streetNumber"
+              label="Número"
+              defaultValue={p?.streetNumber}
+            />
+            <Text
+              name="district"
+              label="Bairro ou localidade"
+              defaultValue={p?.district ?? (rural ? "Zona Rural" : "")}
+            />
+            <Text
+              name="cep"
+              label="CEP"
+              inputMode="numeric"
+              defaultValue={p?.cep}
+            />
+            <Text
+              name="complement"
+              label="Complemento"
+              defaultValue={p?.complement}
+            />
+            <Text name="quadra" label="Quadra" defaultValue={p?.quadra} />
+            <Text name="lote" label="Lote" defaultValue={p?.lote} />
+            <Text
+              name="loteamento"
+              label="Loteamento"
+              defaultValue={p?.loteamento}
+            />
+            <Text name="setor" label="Setor" defaultValue={p?.setor} />
+            <Text name="conjunto" label="Conjunto" defaultValue={p?.conjunto} />
+            <Text
+              name="contributors"
+              label="Inscrição imobiliária (IPTU)"
+              defaultValue={p?.contributors.join("; ")}
+              hint="Mais de uma: separe com ponto e vírgula."
+            />
+          </Group>
+
+          <Group title="Imóvel rural">
+            {(Object.keys(RURAL_LABELS) as (keyof RuralData)[]).map((key) => (
+              <Text
+                key={key}
+                name={`rural.${key}`}
+                label={RURAL_LABELS[key]}
+                defaultValue={p?.rural[key]}
+              />
+            ))}
+          </Group>
+
+          <details className="rounded-xl border bg-card px-4 py-3 shadow-xs md:px-5">
+            <summary className="cursor-pointer text-sm font-semibold text-foreground">
+              Condomínio (unidade autônoma)
+            </summary>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(Object.keys(CONDO_LABELS) as (keyof CondoData)[]).map((key) => (
+                <Text
+                  key={key}
+                  name={`condo.${key}`}
+                  label={CONDO_LABELS[key]}
+                  defaultValue={p?.condo[key]}
+                />
+              ))}
+            </div>
+          </details>
+        </>
+      )}
 
       <fieldset className="flex flex-col gap-4 rounded-xl border bg-card px-4 py-4 shadow-xs md:px-5">
         <legend className="px-1 text-sm font-semibold text-foreground">
-          Descrição e observações
+          {book === "3" ? "Texto e observações" : "Descrição e observações"}
         </legend>
-        <Text
-          name="area"
-          label="Área"
-          placeholder="Ex.: 12,5000 ha ou 360,00 m²"
-          defaultValue={p?.area}
-        />
+        {book !== "3" && (
+          <Text
+            name="area"
+            label="Área"
+            placeholder="Ex.: 12,5000 ha ou 360,00 m²"
+            defaultValue={p?.area}
+          />
+        )}
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="f-description">Descrição do imóvel</Label>
+          <Label htmlFor="f-description">
+            {book === "3"
+              ? "Texto do registro (opcional, como está no livro)"
+              : "Descrição do imóvel"}
+          </Label>
           <Textarea
             id="f-description"
             name="description"
             rows={5}
             defaultValue={p?.description ?? ""}
             className="field-sizing-fixed bg-background"
-            placeholder="Características, confrontações e medidas, como estão na ficha."
+            placeholder={
+              book === "3"
+                ? "As demais condições do título, se a serventia transcreve no registro."
+                : "Características, confrontações e medidas, como estão na ficha."
+            }
           />
         </div>
         <div className="flex flex-col gap-1.5">
@@ -404,7 +441,9 @@ export function PropertyForm({
             ? "Salvando…"
             : id
               ? "Salvar alterações"
-              : "Cadastrar matrícula"}
+              : book === "3"
+                ? "Cadastrar registro auxiliar"
+                : "Cadastrar matrícula"}
         </Button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 import { formatTaxId } from "../tax-id.ts";
 import { type Act, actLabel, PARTY_ROLE_LABELS, situationOf } from "./acts.ts";
+import { auxText } from "./auxiliary.ts";
 import { formatCnm } from "./cnm.ts";
 import { LOCATIONS, STREET_KINDS } from "./codes.ts";
 import { brDate, type PropertyInput, propertyTitle } from "./property.ts";
@@ -66,9 +67,10 @@ export function fichaContent(input: {
   const migration = ordered.find((a) => a.kind === "M");
   const opening: string[] = [];
   if (p.book === 3) {
-    if (p.auxKind) opening.push(`Registro de ${p.auxKind}.`);
-    if (p.linkedNumbers)
-      opening.push(`Matrícula(s) vinculada(s): ${p.linkedNumbers}.`);
+    // The Livro 3 has no imóvel (art. 177): the registro is the título,
+    // its parties and what it secures, as the registradores write it.
+    if (p.auxKind) opening.push(`NATUREZA: ${p.auxKind}.`);
+    opening.push(...auxText(p.auxKind, p.aux, p.linkedNumbers));
     if (p.description) opening.push(p.description);
   } else {
     opening.push(p.description || describe(p));
@@ -81,7 +83,9 @@ export function fichaContent(input: {
   const blocks: FichaBlock[] = [
     {
       label: p.book === 3 ? "Registro" : "Abertura",
-      meta: p.openedOn ? `Aberta em ${brDate(p.openedOn)}` : "",
+      meta: p.openedOn
+        ? `${p.book === 3 ? "Registrado" : "Aberta"} em ${brDate(p.openedOn)}`
+        : "",
       text: opening.filter(Boolean).join("\n"),
     },
   ];

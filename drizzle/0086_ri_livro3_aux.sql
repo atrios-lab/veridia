@@ -1,0 +1,1 @@
+ALTER TABLE "ri_properties" ADD COLUMN "aux" jsonb DEFAULT '{}'::jsonb NOT NULL;

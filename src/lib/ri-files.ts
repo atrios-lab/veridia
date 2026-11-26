@@ -1,3 +1,4 @@
+import { EMPTY_AUX } from "@/core/ri/auxiliary.ts";
 import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import {
@@ -295,6 +296,7 @@ export function inputFromReading(
     auxKind: b?.auxKind ?? "",
     linkedNumbers: b?.linkedNumbers ?? "",
     priorActs: b?.priorActs ?? 0,
+    aux: b?.aux ?? { ...EMPTY_AUX, parties: [] },
     description: keep(b?.description, reading.description),
     notes: b?.notes ?? "",
   };

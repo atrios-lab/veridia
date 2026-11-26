@@ -3369,6 +3369,12 @@ export const riProperties = pgTable(
     linkedNumbers: text("linked_numbers").notNull().default(""),
     /** Lançamentos the ficha had before the system: R/AV go on from here. */
     priorActs: integer("prior_acts").notNull().default(0),
+    /**
+     * Livro 3 (Registro Auxiliar): what a registro there has instead of an
+     * imóvel: título, partes, valor, vencimento, garantias and where the
+     * goods are, the pacto (core/ri/auxiliary AuxData).
+     */
+    aux: jsonb("aux").notNull().default(sql`'{}'::jsonb`),
     description: text("description").notNull().default(""),
     notes: text("notes").notNull().default(""),
     /** Where it came from: "manual" or "planilha". */

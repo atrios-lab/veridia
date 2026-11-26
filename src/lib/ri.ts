@@ -11,6 +11,7 @@ import {
   ROLES_BY_EFFECT,
   situationOf,
 } from "@/core/ri/acts.ts";
+import { auxOf } from "@/core/ri/auxiliary.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import {
   cnmBatch,
@@ -106,6 +107,7 @@ export function toProperty(row: PropertyRow): StoredProperty {
     auxKind: row.auxKind,
     linkedNumbers: row.linkedNumbers,
     priorActs: row.priorActs,
+    aux: auxOf(row.aux),
     description: row.description,
     notes: row.notes,
     source: row.source,
@@ -147,6 +149,7 @@ function columnsOf(input: PropertyInput) {
     auxKind: input.auxKind,
     linkedNumbers: input.linkedNumbers,
     priorActs: input.priorActs,
+    aux: input.aux,
     description: input.description,
     notes: input.notes,
   };
@@ -444,6 +447,7 @@ export async function createPropertyWith(
         });
       }
     }
+    await auxPeopleWith(tx as unknown as Database, tenantSlug, input, actor);
     await recordAuditWith(tx as unknown as Database, {
       tenantSlug,
       actorId: actor.id,
@@ -453,6 +457,23 @@ export async function createPropertyWith(
     });
     return row.id;
   });
+}
+
+/**
+ * The parties of a registro of the Livro 3 go to the cadastro of people,
+ * so the Indicador Pessoal has them (Lei nº 6.015/1973, art. 180: the
+ * people of "todos os demais livros").
+ */
+async function auxPeopleWith(
+  database: Database,
+  tenantSlug: string,
+  input: PropertyInput,
+  actor: Actor,
+): Promise<void> {
+  if (input.book !== 3) return;
+  for (const party of input.aux.parties) {
+    await findOrCreatePersonWith(database, tenantSlug, party, actor);
+  }
 }
 
 /** Changes a matrícula, keeping what it had. 0 when nothing changed. */
@@ -477,6 +498,7 @@ export async function updatePropertyWith(
     .update(riProperties)
     .set({ ...after, history, updatedAt: new Date() })
     .where(eq(riProperties.id, id));
+  await auxPeopleWith(database, tenantSlug, input, actor);
   await recordAuditWith(database, {
     tenantSlug,
     actorId: actor.id,
