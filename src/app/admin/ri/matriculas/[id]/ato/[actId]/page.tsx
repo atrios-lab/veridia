@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { actLabel, situationOf } from "@/core/ri/acts.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
-import { loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
+import { actSealImageWith, loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
 import { ActForm } from "../../../../_components/act-form.tsx";
 import { RiPage } from "../../../../_components/page.tsx";
 import { requireRi } from "../../../../_lib.ts";
@@ -58,6 +58,9 @@ export default async function EditActPage({
           cancelsActId: act.cancelsActId ?? "",
           protocol: act.protocol,
           seal: act.seal,
+          hasSealImage: Boolean(
+            await actSealImageWith(db, tenant.slug, act.id),
+          ),
           value:
             act.valueCents === null
               ? ""

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
 import { actLabel, matriculaPeople, situationOf } from "@/core/ri/acts.ts";
 import { AUX_ROLE_LABELS, auxText, notesOf } from "@/core/ri/auxiliary.ts";
@@ -26,7 +26,7 @@ import { formatTaxId } from "@/core/tax-id.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
-import { riBooks, riOnrImages, riProtocols } from "@/db/schema.ts";
+import { riActs, riBooks, riOnrImages, riProtocols } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { brandFor } from "./document-brand.ts";
 import { renderDocument } from "./pdf.ts";
@@ -35,8 +35,10 @@ import {
   drawFichas,
   drawTableBook,
   type FichaPage,
+  type TableBook,
   type TableRow,
 } from "./ri-book-model.ts";
+import { bookToWord, type WordBlock } from "./ri-book-word.ts";
 import { riSignerFor } from "./ri-docs.ts";
 import { currentOf } from "./ri-onr-images.ts";
 import { closedDaysWith, type ProtocolDayRow } from "./ri-protocol-days.ts";
@@ -783,19 +785,31 @@ export async function bookPdfFor(
   id: string,
   range: BookRange,
   withImage: boolean,
-): Promise<{ bytes: Uint8Array; name: string } | null> {
+  options: {
+    /** The selo of each ato: none, its number, or number and image. */
+    seal?: "nenhum" | "numero" | "imagem";
+    /** Word, for the office to adjust. */
+    word?: boolean;
+  } = {},
+): Promise<{ bytes: Uint8Array; name: string; word?: boolean } | null> {
+  const sealMode = options.seal ?? "numero";
+  const blocks: WordBlock[] = [];
   const row = await bookWith(database, tenant.slug, id);
   if (!row) return null;
   const record = recordOf(row);
   const office = termOffice(tenant);
   const signer = await signerLines(tenant, withImage);
   const brand = await brandFor(tenant);
-  const parts: Uint8Array[] = [
-    await renderDocument(
-      termDocument(tenant, openingTerm(record, office), signer),
-      brand,
-    ),
-  ];
+  const parts: Uint8Array[] = [];
+  const addTerm = async (doc: RequerimentoDocument) => {
+    if (options.word) blocks.push({ kind: "term", document: doc });
+    else parts.push(await renderDocument(doc, brand));
+  };
+  const addTable = async (book: TableBook) => {
+    if (options.word) blocks.push({ kind: "table", book });
+    else parts.push(await drawTableBook(book));
+  };
+  await addTerm(termDocument(tenant, openingTerm(record, office), signer));
   const footer = `${officialName(tenant)} · Livro nº ${row.volume}`;
   const year = `ANO: ${(row.closedOn ?? officeToday()).slice(0, 4)}`;
   if (record.book === 1) {
@@ -837,23 +851,21 @@ export async function bookPdfFor(
         bold: Boolean(text),
       });
     }
-    parts.push(
-      await drawTableBook({
-        title: "PROTOCOLO",
-        book: 1,
-        volume: row.volume,
-        year,
-        columns: [
-          { label: "Nº de ordem", width: 0.1 },
-          { label: "Data", width: 0.11 },
-          { label: "Nome do apresentante", width: 0.27 },
-          { label: "Natureza formal do título", width: 0.22 },
-          { label: "Anotações", width: 0.3 },
-        ],
-        rows,
-        footer,
-      }),
-    );
+    await addTable({
+      title: "PROTOCOLO",
+      book: 1,
+      volume: row.volume,
+      year,
+      columns: [
+        { label: "Nº de ordem", width: 0.1 },
+        { label: "Data", width: 0.11 },
+        { label: "Nome do apresentante", width: 0.27 },
+        { label: "Natureza formal do título", width: 0.22 },
+        { label: "Anotações", width: 0.3 },
+      ],
+      rows,
+      footer,
+    });
   } else {
     const acervo = await loadAcervoWith(database, tenant.slug);
     if (record.book === 2) {
@@ -883,9 +895,24 @@ export async function bookPdfFor(
             .where(eq(riOnrImages.tenantSlug, tenant.slug)),
         ).map((r) => [r.number, r.tiff]),
       );
+      const sealImages = new Map<string, Uint8Array>();
+      if (sealMode === "imagem") {
+        const rows = await database
+          .select({ id: riActs.id, image: riActs.sealImage })
+          .from(riActs)
+          .where(
+            and(eq(riActs.tenantSlug, tenant.slug), ne(riActs.sealImage, "")),
+          );
+        for (const r of rows) {
+          sealImages.set(r.id, new Uint8Array(Buffer.from(r.image, "base64")));
+        }
+      }
       let run: FichaPage[] = [];
       const flush = async () => {
-        if (run.length) parts.push(await drawFichas(run));
+        if (run.length) {
+          if (options.word) blocks.push({ kind: "fichas", fichas: run });
+          else parts.push(await drawFichas(run));
+        }
         run = [];
       };
       for (const [index, p] of items.entries()) {
@@ -893,7 +920,15 @@ export async function bookPdfFor(
         if (image) {
           // The Livro 2 digital: the signed ficha is the page.
           await flush();
-          parts.push(await tiffToPdf(Buffer.from(image, "base64")));
+          if (options.word) {
+            blocks.push({
+              kind: "image",
+              tiff: Buffer.from(image, "base64"),
+              label: `Matrícula nº ${String(p.number).padStart(3, "0")} (imagem assinada)`,
+            });
+          } else {
+            parts.push(await tiffToPdf(Buffer.from(image, "base64")));
+          }
           continue;
         }
         const acts = acervo.acts.get(p.id) ?? [];
@@ -915,6 +950,8 @@ export async function bookPdfFor(
             .map((a) => ({
               label: `${actLabel(a, p.number)}${a.registeredOn ? ` · ${brDay(a.registeredOn)}` : ""} ·`,
               text: [a.nature, a.summary].filter(Boolean).join(". "),
+              seal: sealMode === "nenhum" ? undefined : a.seal || undefined,
+              sealImage: sealImages.get(a.id),
             })),
           cnm: p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
           footer,
@@ -931,76 +968,72 @@ export async function bookPdfFor(
             p.number <= (record.lastItem ?? Number.MAX_SAFE_INTEGER),
         )
         .sort((a, b) => a.number - b.number);
-      parts.push(
-        await drawTableBook({
-          title: "REGISTRO AUXILIAR",
-          book: 3,
-          volume: row.volume,
-          year,
-          columns: [
-            { label: "Nº de ordem", width: 0.09 },
-            { label: "Data", width: 0.1 },
-            { label: "Registro", width: 0.43 },
-            { label: "Ref. aos demais livros", width: 0.14 },
-            { label: "Averbações", width: 0.24 },
+      await addTable({
+        title: "REGISTRO AUXILIAR",
+        book: 3,
+        volume: row.volume,
+        year,
+        columns: [
+          { label: "Nº de ordem", width: 0.09 },
+          { label: "Data", width: 0.1 },
+          { label: "Registro", width: 0.43 },
+          { label: "Ref. aos demais livros", width: 0.14 },
+          { label: "Averbações", width: 0.24 },
+        ],
+        rows: items.map((p) => ({
+          cells: [
+            p.number.toLocaleString("pt-BR"),
+            brDay(p.openedOn),
+            [p.auxKind, ...auxText(p.auxKind, p.aux, "")]
+              .filter(Boolean)
+              .join(" "),
+            p.linkedNumbers ? `Mat. ${p.linkedNumbers}` : "",
+            [
+              ...(acervo.acts.get(p.id) ?? [])
+                .filter((a) => a.kind === "AV")
+                .map((a) => `${actLabel(a)} ${a.nature} ${a.summary}`),
+              ...notesOf(p.aux.annotations)
+                .filter((n) => !n.deletedAt)
+                .map((n) => `${brDay(n.on)} ${n.text}`),
+            ]
+              .join(" · ")
+              .trim(),
           ],
-          rows: items.map((p) => ({
-            cells: [
-              p.number.toLocaleString("pt-BR"),
-              brDay(p.openedOn),
-              [p.auxKind, ...auxText(p.auxKind, p.aux, "")]
-                .filter(Boolean)
-                .join(" "),
-              p.linkedNumbers ? `Mat. ${p.linkedNumbers}` : "",
-              [
-                ...(acervo.acts.get(p.id) ?? [])
-                  .filter((a) => a.kind === "AV")
-                  .map((a) => `${actLabel(a)} ${a.nature} ${a.summary}`),
-                ...notesOf(p.aux.annotations)
-                  .filter((n) => !n.deletedAt)
-                  .map((n) => `${brDay(n.on)} ${n.text}`),
-              ]
-                .join(" · ")
-                .trim(),
-            ],
-          })),
-          footer,
-        }),
-      );
+        })),
+        footer,
+      });
     } else if (record.book === 4) {
       const items = acervo.properties
         .filter((p) => !p.deletedAt && p.book === 2 && p.status !== 4)
         .sort((a, b) => addressLine(a).localeCompare(addressLine(b), "pt-BR"));
-      parts.push(
-        await drawTableBook({
-          title: "INDICADOR REAL",
-          book: 4,
-          volume: row.volume,
-          year,
-          columns: [
-            { label: "Nº de ordem", width: 0.1 },
-            { label: "Identificação do imóvel", width: 0.5 },
-            { label: "Referência aos demais livros", width: 0.2 },
-            { label: "Anotações", width: 0.2 },
+      await addTable({
+        title: "INDICADOR REAL",
+        book: 4,
+        volume: row.volume,
+        year,
+        columns: [
+          { label: "Nº de ordem", width: 0.1 },
+          { label: "Identificação do imóvel", width: 0.5 },
+          { label: "Referência aos demais livros", width: 0.2 },
+          { label: "Anotações", width: 0.2 },
+        ],
+        rows: items.map((p, i) => ({
+          cells: [
+            String(i + 1),
+            [
+              addressLine(p),
+              p.rural.denominacao,
+              p.rural.ccir && `CCIR ${p.rural.ccir}`,
+              p.rural.car && `CAR ${p.rural.car}`,
+            ]
+              .filter(Boolean)
+              .join(" · ") || propertyTitle(p),
+            `Livro 2, matrícula ${p.number.toLocaleString("pt-BR")}`,
+            p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
           ],
-          rows: items.map((p, i) => ({
-            cells: [
-              String(i + 1),
-              [
-                addressLine(p),
-                p.rural.denominacao,
-                p.rural.ccir && `CCIR ${p.rural.ccir}`,
-                p.rural.car && `CAR ${p.rural.car}`,
-              ]
-                .filter(Boolean)
-                .join(" · ") || propertyTitle(p),
-              `Livro 2, matrícula ${p.number.toLocaleString("pt-BR")}`,
-              p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
-            ],
-          })),
-          footer,
-        }),
-      );
+        })),
+        footer,
+      });
     } else {
       const people = new Map<
         string,
@@ -1035,41 +1068,39 @@ export async function bookPdfFor(
       const rows = [...people.values()].sort((a, b) =>
         a.name.localeCompare(b.name, "pt-BR"),
       );
-      parts.push(
-        await drawTableBook({
-          title: "INDICADOR PESSOAL",
-          book: 5,
-          volume: row.volume,
-          year,
-          columns: [
-            { label: "Nº de ordem", width: 0.1 },
-            { label: "Pessoas", width: 0.42 },
-            { label: "Referência aos demais livros", width: 0.26 },
-            { label: "Anotações", width: 0.22 },
+      await addTable({
+        title: "INDICADOR PESSOAL",
+        book: 5,
+        volume: row.volume,
+        year,
+        columns: [
+          { label: "Nº de ordem", width: 0.1 },
+          { label: "Pessoas", width: 0.42 },
+          { label: "Referência aos demais livros", width: 0.26 },
+          { label: "Anotações", width: 0.22 },
+        ],
+        rows: rows.map((e, i) => ({
+          cells: [
+            String(i + 1),
+            e.name,
+            [...e.refs].join("; "),
+            [...e.roles].join(", "),
           ],
-          rows: rows.map((e, i) => ({
-            cells: [
-              String(i + 1),
-              e.name,
-              [...e.refs].join("; "),
-              [...e.roles].join(", "),
-            ],
-          })),
-          footer,
-        }),
-      );
+        })),
+        footer,
+      });
     }
   }
   if (row.closedOn) {
-    parts.push(
-      await renderDocument(
-        termDocument(tenant, closingTerm(record, office), signer),
-        brand,
-      ),
-    );
+    await addTerm(termDocument(tenant, closingTerm(record, office), signer));
   }
-  return {
-    bytes: await joinPdfs(parts),
-    name: `livro-${row.volume.toLowerCase()}`,
-  };
+  const name = `livro-${row.volume.toLowerCase()}`;
+  if (options.word) {
+    return {
+      bytes: new Uint8Array(await bookToWord(`Livro nº ${row.volume}`, blocks)),
+      name,
+      word: true,
+    };
+  }
+  return { bytes: await joinPdfs(parts), name };
 }

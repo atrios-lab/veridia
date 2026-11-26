@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import sharp from "sharp";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
 import {
@@ -35,6 +36,7 @@ import {
   readActInput,
   saveRiSettingsWith,
   setActDeletedWith,
+  setActSealImageWith,
   setAnnotationDeletedWith,
   setCnmInPgvWith,
   setPersonDeletedWith,
@@ -366,10 +368,32 @@ export async function saveActAction(
       value: text(formData, "value"),
       parties: partiesFrom(formData),
     });
+    let savedId = actId;
     if (actId) {
       await updateActWith(db, ok.tenant.slug, actId, input, ok.actor);
     } else {
-      await createActWith(db, ok.tenant.slug, propertyId, input, ok.actor);
+      savedId = (
+        await createActWith(db, ok.tenant.slug, propertyId, input, ok.actor)
+      ).id;
+    }
+    const file = formData.get("sealImage");
+    if (file instanceof File && file.size > 0) {
+      if (file.size > 3 * 1024 * 1024) {
+        return { status: "error", message: "A imagem do selo passa de 3 MB." };
+      }
+      const png = await sharp(Buffer.from(await file.arrayBuffer()))
+        .resize({ width: 420, withoutEnlargement: true })
+        .png()
+        .toBuffer();
+      await setActSealImageWith(
+        db,
+        ok.tenant.slug,
+        savedId,
+        png.toString("base64"),
+        ok.actor,
+      );
+    } else if (text(formData, "removeSealImage") === "1") {
+      await setActSealImageWith(db, ok.tenant.slug, savedId, "", ok.actor);
     }
   } catch (error) {
     return failure(error, "ri.act.save");

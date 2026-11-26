@@ -57,7 +57,13 @@ export interface FichaPage {
   identification: string;
   owner: string;
   previous: string;
-  acts: { label: string; text: string }[];
+  acts: {
+    label: string;
+    text: string;
+    /** The selo, as the office chose at printing. */
+    seal?: string;
+    sealImage?: Uint8Array;
+  }[];
   /** "CNM 094615.2.0000001-07", top right of every page (CNN, art. 331). */
   cnm: string;
   footer: string;
@@ -82,6 +88,11 @@ function header(
 }
 
 function foot(pdf: PDFKit.PDFDocument, text: string, page: number) {
+  // The foot sits in the bottom margin: open it while writing, or pdfkit
+  // takes the line as overflow and adds a page (which draws the foot again).
+  const bottom = pdf.page.margins.bottom;
+  const { x, y } = pdf;
+  pdf.page.margins.bottom = 0;
   pdf.font("Times-Roman").fontSize(7.5).fillColor("gray");
   pdf.text(`${text} · página ${page}`, MARGIN, A4[1] - MARGIN + 6, {
     width: WIDTH,
@@ -89,6 +100,9 @@ function foot(pdf: PDFKit.PDFDocument, text: string, page: number) {
     lineBreak: false,
   });
   pdf.fillColor("black");
+  pdf.page.margins.bottom = bottom;
+  pdf.x = x;
+  pdf.y = y;
 }
 
 function done(pdf: PDFKit.PDFDocument): Promise<Buffer> {
@@ -261,6 +275,22 @@ export async function drawFichas(
         width: WIDTH,
         align: "justify",
       });
+      if (act.sealImage) {
+        if (pdf.y + 64 > A4[1] - MARGIN - 16) pdf.addPage();
+        const top = pdf.y + 4;
+        pdf.image(Buffer.from(act.sealImage), MARGIN, top, { fit: [140, 56] });
+        if (act.seal) {
+          pdf.fontSize(9).text(`Selo: ${act.seal}`, MARGIN + 150, top + 22, {
+            width: WIDTH - 150,
+          });
+        }
+        pdf.x = MARGIN;
+        pdf.y = top + 60;
+      } else if (act.seal) {
+        pdf.fontSize(9).text(`Selo: ${act.seal}`, MARGIN, pdf.y, {
+          width: WIDTH,
+        });
+      }
       pdf.moveDown(0.6);
     }
   }

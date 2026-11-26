@@ -37,8 +37,27 @@ async function handle(
         to: query.get("ate") ?? undefined,
       },
       query.get("assinatura") === "imagem",
+      {
+        seal:
+          query.get("selo") === "nenhum"
+            ? "nenhum"
+            : query.get("selo") === "imagem"
+              ? "imagem"
+              : "numero",
+        word: query.get("formato") === "word",
+      },
     );
     if (!book) return new Response("Não encontrado", { status: 404 });
+    if (book.word) {
+      return new Response(new Uint8Array(book.bytes), {
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "Content-Disposition": `attachment; filename="${book.name}.docx"`,
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
     return new Response(new Uint8Array(book.bytes), {
       headers: {
         "Content-Type": "application/pdf",

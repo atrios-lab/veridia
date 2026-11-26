@@ -90,6 +90,7 @@ const FIELD_NAMES: Record<string, string> = {
   priorActs: "Atos já lançados na ficha",
   description: "Descrição",
   notes: "Observações",
+  sealImage: "Imagem do selo",
 };
 
 /** One change of the history, said the way the office says it. */
