@@ -261,6 +261,31 @@ export async function renderDocumentDocx(
       }),
     );
   }
+  if (document.seal && (document.seal.number || document.seal.image)) {
+    body.push(
+      new Paragraph({
+        spacing: { before: 240 },
+        children: [
+          ...(document.seal.image
+            ? [
+                new ImageRun({
+                  type: "png",
+                  data: Buffer.from(document.seal.image),
+                  transformation: { width: 150, height: 65 },
+                }),
+                run("   "),
+              ]
+            : []),
+          run(
+            document.seal.number
+              ? `Selo de fiscalização: ${document.seal.number}`
+              : "",
+            { bold: true },
+          ),
+        ],
+      }),
+    );
+  }
   if (document.signee) {
     body.push(
       new Paragraph({ spacing: { before: 720 }, children: [] }),

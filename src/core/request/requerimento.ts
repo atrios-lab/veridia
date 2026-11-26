@@ -177,6 +177,12 @@ export interface RequerimentoDocument {
    * counting from `first`.
    */
   sheet?: { first: number; label: string };
+  /**
+   * The selo de fiscalização, as the office chose at printing (decision of
+   * 26/11/2026): the number, and its image when attached. Drawn after the
+   * text, before the signature.
+   */
+  seal?: { number: string; image?: Uint8Array };
 }
 
 export interface RequerimentoData {
