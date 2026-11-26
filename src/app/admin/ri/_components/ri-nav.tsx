@@ -6,6 +6,7 @@ import {
   BookMarked,
   BookOpen,
   ClipboardList,
+  FileImage,
   Files,
   LayoutDashboard,
   Library,
@@ -96,6 +97,11 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
       },
       { label: "CNM", href: "/admin/ri/cnm", icon: ScanBarcode },
       { label: "Arquivos para a ONR", href: "/admin/ri/onr", icon: Send },
+      {
+        label: "Imagens do Livro 2 (ONR)",
+        href: "/admin/ri/onr/imagens",
+        icon: FileImage,
+      },
     ],
   },
   {

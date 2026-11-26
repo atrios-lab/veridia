@@ -39,12 +39,14 @@ const nextConfig: NextConfig = {
   // pdfkit reads its standard font metrics from files at runtime, which a
   // bundler rewrites into paths that no longer exist. Left external, it loads
   // them the way it expects to.
-  serverExternalPackages: ["pdfkit", "fontkit", "sharp"],
+  serverExternalPackages: ["pdfkit", "fontkit", "sharp", "mupdf"],
   // The TIFF of the Registro de Imóveis draws its text from these font
   // files (src/lib/ri-tiff.ts), read at runtime: traced into the routes.
   outputFileTracingIncludes: {
     "/admin/ri/**": [
       "./node_modules/@fontsource/tinos/files/tinos-latin-*-normal.woff",
+      // The images for the ONR turn the PDF into pages with mupdf (WASM).
+      "./node_modules/mupdf/dist/mupdf-wasm.wasm",
     ],
   },
   // Brand images (logotype, hero) publish to Vercel Blob when

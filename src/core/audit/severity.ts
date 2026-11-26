@@ -245,6 +245,8 @@ const EXACT: Record<string, AuditLevel> = {
   "ri.book-reopen": "atencao",
   "ri.book-delete": "atencao",
   "ri.book-restore": "atencao",
+  "ri.onr-image-delete": "atencao",
+  "ri.onr-image-restore": "atencao",
   "ri.annotation-delete": "atencao",
   "ri.annotation-restore": "atencao",
   "ri.protocol-status": "analise",

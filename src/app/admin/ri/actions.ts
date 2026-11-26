@@ -69,6 +69,11 @@ import {
   setGeometryDeletedWith,
 } from "@/lib/ri-geo.ts";
 import {
+  prepareOnrImageWith,
+  setCopiedWith,
+  setOnrImageDeletedWith,
+} from "@/lib/ri-onr-images.ts";
+import {
   createProtocolWith,
   issueRequirementsWith,
   readProtocolInput,
@@ -1321,5 +1326,109 @@ export async function setBookDeletedAction(
   return {
     status: "success",
     message: deleted ? "Livro apagado (fica guardado)." : "Livro restaurado.",
+  };
+}
+
+/* --------------------------------------------- the images for the ONR */
+
+export type OnrImageState =
+  | { status: "idle" }
+  | { status: "saved"; number: number; issues: string[] }
+  | { status: "check"; number: number | null; issues: string[] }
+  | { status: "error"; message: string };
+
+/**
+ * One matrícula (PDF or Word) into the TIFF of the manual. The client
+ * sends one file per call, in order. With "check", nothing was saved: the
+ * office looks at what was pointed out and sends again with "conferi".
+ */
+export async function prepareOnrImageAction(
+  formData: FormData,
+): Promise<OnrImageState> {
+  const ok = await access("ri.export");
+  if (!ok)
+    return { status: "error", message: NO_PERMISSION["ri.export"] ?? "" };
+  const file = formData.get("arquivo");
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: "Escolha o arquivo da matrícula." };
+  }
+  const typedRaw = text(formData, "numero").replace(/\D/g, "");
+  try {
+    const result = await prepareOnrImageWith(
+      db,
+      ok.tenant,
+      {
+        name: file.name,
+        bytes: new Uint8Array(await file.arrayBuffer()),
+        typed: typedRaw ? Number(typedRaw) : null,
+        pattern: text(formData, "padrao"),
+        sign: text(formData, "assinar") === "1",
+        confirmed: text(formData, "conferi") === "1",
+      },
+      ok.actor,
+    );
+    if (result.id && result.number) {
+      revalidatePath("/admin/ri/onr/imagens");
+      return { status: "saved", number: result.number, issues: result.issues };
+    }
+    return { status: "check", number: result.number, issues: result.issues };
+  } catch (error) {
+    const state = failure(error, "ri.onr-image.prepare");
+    return {
+      status: "error",
+      message: state.status === "error" ? state.message : "Erro.",
+    };
+  }
+}
+
+export async function setOnrCopiedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.export");
+  if (!ok) return denied("ri.export");
+  const ids = [
+    ...formData.getAll("id").map(String),
+    ...text(formData, "ids").split(","),
+  ].filter(Boolean);
+  const copied = text(formData, "op") !== "undo";
+  try {
+    const n = await setCopiedWith(db, ok.tenant.slug, ids, copied, ok.actor);
+    revalidatePath("/admin/ri/onr/imagens");
+    return {
+      status: "success",
+      message: copied
+        ? `${n} ${n === 1 ? "imagem marcada" : "imagens marcadas"} como copiada para a pasta do CSL2.`
+        : "Marca desfeita.",
+    };
+  } catch (error) {
+    return failure(error, "ri.onr-image.copied");
+  }
+}
+
+export async function setOnrImageDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.export");
+  if (!ok) return denied("ri.export");
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setOnrImageDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      deleted,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.onr-image.delete");
+  }
+  revalidatePath("/admin/ri/onr/imagens");
+  return {
+    status: "success",
+    message: deleted ? "Imagem apagada (fica guardada)." : "Imagem restaurada.",
   };
 }
