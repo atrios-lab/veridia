@@ -230,3 +230,30 @@ test("applying a ficha: new matrícula, then a new averbação and a retificaç�
     },
   );
 });
+
+test("the rubrica goes at the top right corner of every folha", async () => {
+  const pdf = await PDFDocument.create();
+  pdf.addPage([595.28, 841.89]);
+  pdf.addPage([595.28, 841.89]);
+  const rubric = await sharp({
+    create: {
+      width: 200,
+      height: 100,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
+  const out = await pdfToOnrTiff(await pdf.save(), null, rubric);
+  assert.equal(out.pages, 2);
+  for (const page of [0, 1]) {
+    const { data, info } = await sharp(out.tiff, { page })
+      .extract({ left: 1654 - 200, top: 70, width: 120, height: 60 })
+      .greyscale()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const dark = [...data].filter((v) => v < 128).length;
+    assert.ok(dark > info.width * info.height * 0.5, `folha ${page + 1}`);
+  }
+});

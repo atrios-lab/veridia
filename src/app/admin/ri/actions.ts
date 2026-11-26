@@ -864,19 +864,32 @@ export async function saveSignatureImageAction(
         "Só quem cuida dos certificados digitais da serventia cadastra a imagem da assinatura.",
     };
   }
+  const rubric = text(formData, "tipo") === "rubrica";
   try {
     if (text(formData, "op") === "remove") {
-      await saveSignatureImageWith(db, ok.tenant.slug, null, ok.actor);
+      await saveSignatureImageWith(
+        db,
+        ok.tenant.slug,
+        null,
+        ok.actor,
+        rubric ? "rubrica" : "assinatura",
+      );
     } else {
       const file = formData.get("imagem");
       if (!(file instanceof File) || file.size === 0) {
-        return { status: "error", message: "Escolha a foto da assinatura." };
+        return {
+          status: "error",
+          message: rubric
+            ? "Escolha a foto da rubrica."
+            : "Escolha a foto da assinatura.",
+        };
       }
       await saveSignatureImageWith(
         db,
         ok.tenant.slug,
         new Uint8Array(await file.arrayBuffer()),
         ok.actor,
+        rubric ? "rubrica" : "assinatura",
       );
     }
   } catch (error) {
@@ -888,7 +901,9 @@ export async function saveSignatureImageAction(
     message:
       text(formData, "op") === "remove"
         ? "Imagem retirada."
-        : "Imagem da assinatura salva.",
+        : rubric
+          ? "Imagem da rubrica salva."
+          : "Imagem da assinatura salva.",
   };
 }
 

@@ -144,13 +144,13 @@ export default async function OnrImagesPage({
                         Ver em PDF
                       </a>
                       <a
-                        href={`/admin/ri/onr/imagens/baixar?id=${r.id}`}
+                        href={`/admin/ri/onr/imagens/baixar?ids=${r.id}`}
                         className={buttonVariants({
                           size: "sm",
                           variant: "outline",
                         })}
                       >
-                        Baixar TIF
+                        Baixar (com a pasta)
                       </a>
                       <ActionButton
                         action={setOnrCopiedAction}
@@ -270,6 +270,13 @@ export default async function OnrImagesPage({
               Clique em "Baixar as ainda não copiadas", descompacte o .zip
               dentro da pasta das matrículas configurada no CSL2 (WinService
               .CSLSConfig.exe) e marque como copiadas.
+            </li>
+            <li>
+              Cada arquivo .TIF guarda todas as folhas da matrícula. O "Fotos"
+              do Windows mostra só a primeira; para ver todas, use "Ver em PDF"
+              aqui ou abra o .TIF no Visualizador de Fotos do Windows ou no
+              IrfanView. A rubrica (RI › Configurações) entra no canto superior
+              direito de cada folha.
             </li>
             <li>
               O CSL2 envia sozinho no horário configurado; o computador precisa

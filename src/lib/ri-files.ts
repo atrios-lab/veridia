@@ -536,6 +536,7 @@ export async function signatureSettingsWith(
       signerIndex: riSettings.signerIndex,
       signatureImage: riSettings.signatureImage,
       signatureUpdatedAt: riSettings.signatureUpdatedAt,
+      rubricImage: riSettings.rubricImage,
     })
     .from(riSettings)
     .where(eq(riSettings.tenantSlug, tenantSlug))
@@ -546,6 +547,9 @@ export async function signatureSettingsWith(
       ? new Uint8Array(Buffer.from(row.signatureImage, "base64"))
       : null,
     signatureUpdatedAt: row?.signatureUpdatedAt ?? null,
+    rubricImage: row?.rubricImage
+      ? new Uint8Array(Buffer.from(row.rubricImage, "base64"))
+      : null,
   };
 }
 
@@ -582,6 +586,7 @@ export async function saveSignatureImageWith(
   tenantSlug: string,
   bytes: Uint8Array | null,
   actor: Actor,
+  kind: "assinatura" | "rubrica" = "assinatura",
 ): Promise<void> {
   let value = "";
   if (bytes) {
@@ -596,26 +601,33 @@ export async function saveSignatureImageWith(
       );
     }
   }
+  const set =
+    kind === "rubrica"
+      ? {
+          rubricImage: value,
+          rubricUpdatedBy: actor.id,
+          rubricUpdatedAt: new Date(),
+        }
+      : {
+          signatureImage: value,
+          signatureUpdatedBy: actor.id,
+          signatureUpdatedAt: new Date(),
+        };
   await database
     .insert(riSettings)
-    .values({
-      tenantSlug,
-      signatureImage: value,
-      signatureUpdatedBy: actor.id,
-      signatureUpdatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: riSettings.tenantSlug,
-      set: {
-        signatureImage: value,
-        signatureUpdatedBy: actor.id,
-        signatureUpdatedAt: new Date(),
-      },
-    });
+    .values({ tenantSlug, ...set })
+    .onConflictDoUpdate({ target: riSettings.tenantSlug, set });
   await recordAuditWith(database, {
     tenantSlug,
     actorId: actor.id,
-    action: value ? "ri.signature-image" : "ri.signature-image-remove",
+    action:
+      kind === "rubrica"
+        ? value
+          ? "ri.rubric-image"
+          : "ri.rubric-image-remove"
+        : value
+          ? "ri.signature-image"
+          : "ri.signature-image-remove",
     targetType: "ri-settings",
     targetId: null,
   });

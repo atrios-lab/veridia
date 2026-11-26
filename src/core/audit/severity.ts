@@ -235,6 +235,7 @@ const EXACT: Record<string, AuditLevel> = {
   "ri.export-not-imported": "analise",
   "ri.reading-apply": "analise",
   "ri.signature-image": "atencao",
+  "ri.rubric-image": "atencao",
   "ri.file-restore": "atencao",
   "ri.transfer-export": "atencao",
   "ri.protocol-edit": "analise",

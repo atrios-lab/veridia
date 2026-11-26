@@ -473,6 +473,10 @@ const EXACT: Record<string, string> = {
     "Cadastrou a imagem da assinatura do Registro de Imóveis",
   "ri.signature-image-remove":
     "Retirou a imagem da assinatura do Registro de Imóveis",
+  "ri.rubric-image":
+    "Cadastrou ou trocou a imagem da rubrica do Registro de Imóveis",
+  "ri.rubric-image-remove":
+    "Retirou a imagem da rubrica do Registro de Imóveis",
   "ri.protocol-create":
     "Lançou um título no Protocolo (Livro 1) do Registro de Imóveis",
   "ri.protocol-edit": "Alterou os dados de um protocolo do Registro de Imóveis",

@@ -320,8 +320,24 @@ export interface PdfImage {
 export async function pdfToOnrTiff(
   bytes: Uint8Array,
   signatureImage?: Uint8Array | null,
+  rubricImage?: Uint8Array | null,
 ): Promise<PdfImage> {
   const mupdf = await import("mupdf");
+  // The rubrica at the top right corner of every folha, as on the paper
+  // book: at most 30 × 14 mm, 8 mm from the edges.
+  const rubric = rubricImage
+    ? await sharp(rubricImage)
+        .resize({
+          width: Math.round(30 * MM),
+          height: Math.round(14 * MM),
+          fit: "inside",
+        })
+        .png()
+        .toBuffer()
+    : null;
+  const rubricWidth = rubric
+    ? ((await sharp(rubric).metadata()).width ?? 0)
+    : 0;
   const doc = mupdf.Document.openDocument(bytes, "application/pdf");
   const count = doc.countPages();
   if (count < 1) throw new Error("PDF sem páginas.");
@@ -400,6 +416,15 @@ export async function pdfToOnrTiff(
       }
     }
     void pageW;
+    if (rubric) {
+      image = sharp(await image.png().toBuffer()).composite([
+        {
+          input: rubric,
+          left: Math.round(PAGE_W - 8 * MM - rubricWidth),
+          top: Math.round(8 * MM),
+        },
+      ]);
+    }
     rasters.push(
       await image
         .flatten({ background: { r: 255, g: 255, b: 255 } })

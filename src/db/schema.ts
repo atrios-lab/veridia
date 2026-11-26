@@ -3313,6 +3313,13 @@ export const riSettings = pgTable("ri_settings", {
   signatureImage: text("signature_image").notNull().default(""),
   signatureUpdatedBy: text("signature_updated_by"),
   signatureUpdatedAt: timestamp("signature_updated_at", { withTimezone: true }),
+  /**
+   * The rubrica (the short signature), the same way: drawn at the top
+   * right corner of every folha of the images for the ONR.
+   */
+  rubricImage: text("rubric_image").notNull().default(""),
+  rubricUpdatedBy: text("rubric_updated_by"),
+  rubricUpdatedAt: timestamp("rubric_updated_at", { withTimezone: true }),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()

@@ -46,7 +46,13 @@ export function SignerForm({
   );
 }
 
-export function SignatureImageForm({ preview }: { preview: string | null }) {
+export function SignatureImageForm({
+  preview,
+  kind = "assinatura",
+}: {
+  preview: string | null;
+  kind?: "assinatura" | "rubrica";
+}) {
   const [state, action, pending] = useActionState(
     saveSignatureImageAction,
     IDLE,
@@ -59,11 +65,12 @@ export function SignatureImageForm({ preview }: { preview: string | null }) {
           {/* biome-ignore lint/performance/noImgElement: a data URL of the office's own image */}
           <img
             src={preview}
-            alt="Imagem da assinatura cadastrada"
+            alt={`Imagem da ${kind} cadastrada`}
             className="h-16 w-auto"
           />
           <form action={action}>
             <input type="hidden" name="op" value="remove" />
+            <input type="hidden" name="tipo" value={kind} />
             <Button
               type="submit"
               size="sm"
@@ -76,13 +83,18 @@ export function SignatureImageForm({ preview }: { preview: string | null }) {
         </div>
       )}
       <form action={action} className="flex flex-col gap-3">
+        <input type="hidden" name="tipo" value={kind} />
         <FilePicker
           name="imagem"
           accept="image/jpeg,image/png,image/webp"
           label={
-            preview ? "Trocar a imagem" : "Foto ou digitalização da assinatura"
+            preview ? "Trocar a imagem" : `Foto ou digitalização da ${kind}`
           }
-          hint="Assine numa folha branca, fotografe de perto e envie. O papel e a sombra saem; fica só a tinta, em preto."
+          hint={
+            kind === "rubrica"
+              ? "Rubrique numa folha branca, fotografe de perto e envie. Ela vai no canto superior direito de cada folha da imagem para a ONR."
+              : "Assine numa folha branca, fotografe de perto e envie. O papel e a sombra saem; fica só a tinta, em preto."
+          }
         />
         {state.status === "error" && (
           <p role="alert" className="text-sm font-medium text-destructive">
