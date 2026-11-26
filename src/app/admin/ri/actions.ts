@@ -88,6 +88,7 @@ import { importPgvReturnWith, savePgvCredentialWith } from "@/lib/ri-pgv.ts";
 import { closeDaysWith, reopenDayWith } from "@/lib/ri-protocol-days.ts";
 import {
   createProtocolWith,
+  fulfillRequirementWith,
   issueRequirementsWith,
   readProtocolInput,
   readRequirements,
@@ -353,6 +354,36 @@ export async function forgetLearnedActAction(
   return {
     status: "success",
     message: "Esquecido. Fica guardado e na auditoria.",
+  };
+}
+
+export async function fulfillRequirementAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const undo = text(formData, "op") === "undo";
+  const id = text(formData, "id");
+  try {
+    await fulfillRequirementWith(
+      db,
+      ok.tenant.slug,
+      id,
+      Number(text(formData, "index")),
+      String(formData.get("justificativa") ?? formData.get("note") ?? ""),
+      undo,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.requirement.fulfill");
+  }
+  revalidatePath(`/admin/ri/protocolo/${id}`);
+  return {
+    status: "success",
+    message: undo
+      ? "A exigência voltou a ficar pendente."
+      : "Exigência marcada como cumprida. Pode continuar.",
   };
 }
 

@@ -60,12 +60,16 @@ export function suggestAct(
   if (!cue) return null;
   const exact = learned.find((l) => l.cue === cue);
   if (exact) return exact;
-  const words = new Set(cue.split(" "));
+  const list = cue.split(" ");
+  const words = new Set(list);
   let best: { l: LearnedAct; score: number } | null = null;
   for (const l of learned) {
-    const shared = l.cue.split(" ").filter((w) => words.has(w)).length;
+    const own = l.cue.split(" ");
+    const shared = own.filter((w) => words.has(w)).length;
     if (shared === 0) continue;
-    const score = shared * 1000 + l.uses;
+    // "Cancelamento de hipoteca" is a cancelamento: the first word leads.
+    const leads = own.includes(list[0] ?? "") ? 500 : 0;
+    const score = shared * 1000 + leads + Math.min(l.uses, 499);
     if (!best || score > best.score) best = { l, score };
   }
   return best?.l ?? null;

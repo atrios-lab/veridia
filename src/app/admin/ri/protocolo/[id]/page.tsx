@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { FeeTableReminder } from "@/app/admin/_components/fee-table-reminder.tsx";
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { can } from "@/core/auth/roles.ts";
+import { planActs } from "@/core/ri/act-plan.ts";
 import { situationOf } from "@/core/ri/acts.ts";
 import { PROTOCOL_FIELD_NAMES, plainValue } from "@/core/ri/history-text.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
@@ -13,6 +14,7 @@ import { db } from "@/db/index.ts";
 import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import { loadAcervo } from "@/lib/ri.ts";
 import { signatureSettingsWith } from "@/lib/ri-files.ts";
+import { listLearnedActsWith } from "@/lib/ri-learning.ts";
 import {
   officeToday,
   type ProtocolHistoryEntry,
@@ -28,6 +30,8 @@ import {
 } from "../../_components/protocol-form.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
+  exportMatriculaToOnrAction,
+  fulfillRequirementAction,
   protocolStatusAction,
   registerProtocolAction,
   setProtocolVoidedAction,
@@ -64,6 +68,10 @@ export default async function ProtocolPage({
   const exam = row.kind === "exame";
   const label = `${exam ? "Exame e cálculo" : "Protocolo"} nº ${row.number.toLocaleString("pt-BR")}`;
   const open = ["prenotado", "exigencia", "duvida"].includes(row.status);
+  const plan = planActs(
+    row.actsSummary || row.titleKind,
+    await listLearnedActsWith(db, tenant.slug),
+  );
   const ids = (row.propertyIds as string[]) ?? [];
   const properties = acervo.properties.filter((p) => ids.includes(p.id));
   const requirements = (row.requirements as Requirement[]) ?? [];
@@ -205,7 +213,15 @@ export default async function ProtocolPage({
           >
             {properties.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhuma matrícula ligada. Informe em Alterar dados.
+                Nenhuma matrícula ligada. Informe em Alterar dados. Se o título
+                é do Livro 3 (Registro Auxiliar), anexe e digitalize em{" "}
+                <Link
+                  href="/admin/ri/livro-3"
+                  className="text-primary underline underline-offset-2"
+                >
+                  Registro Auxiliar (Livro 3)
+                </Link>
+                : o sistema lê o documento e avisa se o número já tem registro.
               </p>
             ) : (
               <ul className="flex flex-col gap-4">
@@ -233,12 +249,49 @@ export default async function ProtocolPage({
                         {canEdit && !exam && open && (
                           <Link
                             href={`/admin/ri/matriculas/${p.id}/ato/novo?protocolo=${row.number}&de=${row.id}&natureza=${natureza}`}
-                            className={buttonVariants({ size: "sm" })}
+                            className={buttonVariants({
+                              size: "sm",
+                              variant: "outline",
+                            })}
                           >
-                            Lançar o ato com este protocolo
+                            Lançar outro ato
                           </Link>
                         )}
                       </div>
+                      {!exam && plan.length > 0 && (
+                        <div className="mt-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+                          <p className="text-xs font-semibold">
+                            Atos a fazer, na ordem (proposta do assistente
+                            virtual; confira cada um antes de salvar)
+                          </p>
+                          <ol className="mt-1 flex list-decimal flex-col gap-1 pl-5 text-sm">
+                            {plan.map((a) => (
+                              <li key={a.nature}>
+                                <span className="font-medium">
+                                  {a.kind
+                                    ? `${a.kind === "R" ? "Registro (R)" : "Averbação (AV)"}: `
+                                    : "A conferir: "}
+                                  {a.nature}
+                                </span>
+                                <span className="block text-xs text-muted-foreground">
+                                  {a.basis === "aprendido"
+                                    ? "Aprendido com os atos do cartório. "
+                                    : ""}
+                                  {a.source}
+                                </span>
+                                {canEdit && open && (
+                                  <Link
+                                    href={`/admin/ri/matriculas/${p.id}/ato/novo?protocolo=${row.number}&de=${row.id}&natureza=${encodeURIComponent(a.nature)}`}
+                                    className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+                                  >
+                                    Fazer este ato (consolidar na matrícula)
+                                  </Link>
+                                )}
+                              </li>
+                            ))}
+                          </ol>
+                        </div>
+                      )}
                       <p className="mt-1 text-xs text-muted-foreground">
                         Proprietário(s):{" "}
                         {situation.owners
@@ -317,6 +370,79 @@ export default async function ProtocolPage({
             </Panel>
           )}
 
+          {row.status === "registrado" && (
+            <Panel
+              title="Próximos passos"
+              description="O título foi registrado. Faça o que falta, na ordem."
+            >
+              <p className="mb-3 rounded-md border border-warning/50 bg-warning-soft px-3 py-2 text-sm text-warning-text">
+                A ficha da matrícula mudou: imprima a ficha nova e substitua a
+                folha anterior no livro físico. No livro digital, gere de novo a
+                imagem para a ONR.
+              </p>
+              <ul className="flex flex-col gap-3">
+                {properties.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center gap-2 rounded-lg border bg-background p-3 text-sm"
+                  >
+                    <span className="mr-auto font-semibold">
+                      {propertyTitle(p)}
+                    </span>
+                    <a
+                      href={`/admin/ri/matriculas/${p.id}/ficha`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonVariants({
+                        size: "sm",
+                        variant: "outline",
+                      })}
+                    >
+                      Imprimir a ficha nova
+                    </a>
+                    {p.book === 2 && riCan(session, "ri.export") && (
+                      <ActionButton
+                        action={exportMatriculaToOnrAction}
+                        fields={{ id: p.id }}
+                        label="Gerar a imagem para a ONR"
+                        pendingLabel="Gerando…"
+                      />
+                    )}
+                    <Link
+                      href={`/admin/ri/certidoes?matricula=${p.id}`}
+                      className={buttonVariants({
+                        size: "sm",
+                        variant: "outline",
+                      })}
+                    >
+                      Emitir certidão
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href="/admin/ri/onr"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  Indicadores e lote de CNM para a ONR
+                </Link>
+                <Link
+                  href="/admin/ri/livros"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  Livros (digital e físico, termos)
+                </Link>
+                <Link
+                  href="/admin/ri/protocolo/dias"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  Encerrar o Protocolo do dia
+                </Link>
+              </div>
+            </Panel>
+          )}
+
           <Panel
             title={exam ? "Exigências do exame" : "Nota devolutiva"}
             description="Lei nº 6.015/1973, art. 198: todas as exigências de uma vez, de forma clara, com a fonte."
@@ -324,13 +450,51 @@ export default async function ProtocolPage({
             {requirements.length > 0 && (
               <div className="mb-4 flex flex-col gap-3">
                 <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm">
-                  {requirements.map((r) => (
+                  {requirements.map((r, index) => (
                     <li key={r.text}>
-                      {r.text}
+                      <span
+                        className={r.fulfilled ? "line-through opacity-70" : ""}
+                      >
+                        {r.text}
+                      </span>
                       {r.source && (
                         <span className="block text-xs text-muted-foreground">
                           Fonte: {r.source}
                         </span>
+                      )}
+                      {r.fulfilled ? (
+                        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-success-text">
+                          ✓ Cumprida em {stamp(new Date(r.fulfilled.at))}
+                          {r.fulfilled.note ? `: ${r.fulfilled.note}` : ""}
+                          {canEdit && (
+                            <ActionButton
+                              action={fulfillRequirementAction}
+                              fields={{
+                                id: row.id,
+                                index: String(index),
+                                op: "undo",
+                              }}
+                              label="Voltar para pendente"
+                              pendingLabel="Salvando…"
+                            />
+                          )}
+                        </span>
+                      ) : (
+                        canEdit &&
+                        row.status !== "registrado" && (
+                          <span className="mt-1 block">
+                            <ConfirmButton
+                              action={fulfillRequirementAction}
+                              fields={{ id: row.id, index: String(index) }}
+                              trigger="Já foi cumprida"
+                              question="Marcar esta exigência como cumprida?"
+                              consequence="Escreva como foi cumprida (o documento apresentado, por exemplo). Fica no histórico do protocolo e na auditoria, e dá para voltar atrás."
+                              confirmLabel="Marcar cumprida"
+                              pendingLabel="Salvando…"
+                              destructive={false}
+                            />
+                          </span>
+                        )
                       )}
                     </li>
                   ))}

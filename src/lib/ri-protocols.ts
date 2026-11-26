@@ -472,6 +472,60 @@ export async function issueRequirementsWith(
   });
 }
 
+/** Marks one exigência as met (or undoes it), with a note. */
+export async function fulfillRequirementWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  index: number,
+  note: string,
+  undo: boolean,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownProtocol(database, tenantSlug, id);
+  const list = ((row.requirements as Requirement[]) ?? []).map((r) => ({
+    ...r,
+  }));
+  const target = list[index];
+  if (!target) throw new RiError("Exigência não encontrada.");
+  const before = target.fulfilled;
+  if (undo) delete target.fulfilled;
+  else {
+    target.fulfilled = {
+      at: new Date().toISOString(),
+      by: actor.id,
+      note: note.trim().slice(0, 2000),
+    };
+  }
+  await saveHistory(
+    database,
+    row,
+    { requirements: list },
+    {
+      at: new Date().toISOString(),
+      by: actor.id,
+      what: undo
+        ? `Exigência ${index + 1} voltou a ficar pendente`
+        : `Exigência ${index + 1} marcada como cumprida${note.trim() ? `: ${note.trim().slice(0, 200)}` : ""}`,
+      changes: [
+        {
+          field: "requirements",
+          before: before ? "cumprida" : "pendente",
+          after: undo ? "pendente" : "cumprida",
+        },
+      ],
+    },
+  );
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: undo ? "ri.requirement-reopen" : "ri.requirement-fulfill",
+    targetType: "ri-protocol",
+    targetId: id,
+    reason: note.trim().slice(0, 2000) || undefined,
+  });
+}
+
 /**
  * The título comes back with the exigências met, within the prenotação:
  * the registro is due in 5 dias úteis (art. 188, § 1º, III).
