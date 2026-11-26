@@ -22,6 +22,7 @@ import {
   RECORD_KINDS,
   STREET_KINDS,
 } from "@/core/ri/codes.ts";
+import { plainValue } from "@/core/ri/history-text.ts";
 import {
   brDate,
   CONDO_LABELS,
@@ -91,6 +92,19 @@ const FIELD_NAMES: Record<string, string> = {
   notes: "Observações",
 };
 
+/** One change of the history, said the way the office says it. */
+function changeText(c: { field: string; before: unknown; after: unknown }) {
+  if (c.field === "leitura") {
+    return "Leitura do documento anexado: o sistema completou os campos que estavam vazios. Nada que já estava preenchido foi trocado.";
+  }
+  const name = FIELD_NAMES[c.field] ?? c.field;
+  const before = plainValue(c.before);
+  const after = plainValue(c.after);
+  return before === "vazio"
+    ? `${name}: estava vazio, passou a ${after}.`
+    : `${name}: era ${before}, passou a ${after}.`;
+}
+
 const money = (cents: number | null) =>
   cents === null
     ? ""
@@ -129,6 +143,15 @@ export default async function PropertyPage({
           (r) => r.number === detail.property.number,
         )
       : undefined;
+  const editLink =
+    riCan(session, "ri.edit") && !detail.property.deletedAt ? (
+      <Link
+        href={`/admin/ri/matriculas/${detail.property.id}/alterar`}
+        className={buttonVariants({ size: "sm", variant: "outline" })}
+      >
+        <Pencil className="size-4" /> Editar
+      </Link>
+    ) : null;
   const pad3 = (n: number) => String(n).padStart(3, "0");
   // The ficha has the number of the matrícula (decision of 26/11/2026),
   // unless the office typed another one; the folhas come from the image.
@@ -499,7 +522,7 @@ export default async function PropertyPage({
               hasImage={Boolean(signing.settings.signatureImage)}
             />
           )}
-          <Panel title="Identificação">
+          <Panel title="Identificação" actions={editLink}>
             <dl className="grid gap-3">
               {p.book !== 3 && (
                 <Field label="Tipo" value={RECORD_KINDS.get(p.recordKind)} />
@@ -536,7 +559,7 @@ export default async function PropertyPage({
             </dl>
           </Panel>
           {p.book !== 3 && (
-            <Panel title="Localização (Livro 4)">
+            <Panel title="Localização (Livro 4)" actions={editLink}>
               <dl className="grid gap-3">
                 <Field label="Localização" value={LOCATIONS.get(p.location)} />
                 <Field
@@ -659,14 +682,7 @@ export default async function PropertyPage({
                   </p>
                   <ul className="mt-1 flex flex-col gap-0.5 text-muted-foreground">
                     {entry.changes.map((c) => (
-                      <li key={c.field}>
-                        {FIELD_NAMES[c.field] ?? c.field}: era{" "}
-                        <span className="text-foreground">
-                          {typeof c.before === "object"
-                            ? JSON.stringify(c.before)
-                            : String(c.before ?? "vazio") || "vazio"}
-                        </span>
-                      </li>
+                      <li key={c.field}>{changeText(c)}</li>
                     ))}
                   </ul>
                 </li>
