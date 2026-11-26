@@ -17,6 +17,7 @@ import {
 } from "@/core/ri/onr-images.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { Database } from "@/db/index.ts";
 import { riActs, riOnrImages, riProperties } from "@/db/schema.ts";
 import { aiBlockedWith, readRegistryDocuments } from "./ai.ts";
@@ -697,6 +698,32 @@ export async function onrImageFileWith(
  * The images in force (or the ones asked for) in a zip with the folders of
  * the manual, to unzip straight into the folder of the matrículas.
  */
+/** Now, as the office's wall clock, in the Date's local fields. */
+export function officeClock(now = new Date()): Date {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: OFFICE_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, Number(p.value)]),
+  );
+  return new Date(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+}
+
 export async function onrZipWith(
   database: Database,
   tenantSlug: string,
@@ -713,8 +740,19 @@ export async function onrZipWith(
   }
   if (options.onlyNotCopied) chosen = chosen.filter((r) => !r.copiedAt);
   const zip = new JSZip();
+  // The zip keeps the clock without a time zone and the server runs in
+  // UTC: write the office's hour, or Windows shows 3 hours early.
+  const date = officeClock();
   for (const r of chosen) {
-    zip.file(onrPath(r.number, r.pattern), Buffer.from(r.tiff, "base64"));
+    const path = onrPath(r.number, r.pattern);
+    const parts = path.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      zip.file(`${parts.slice(0, i).join("/")}/`, null, { dir: true, date });
+    }
+    zip.file(path, Buffer.from(r.tiff, "base64"), {
+      date,
+      createFolders: false,
+    });
   }
   const bytes = await zip.generateAsync({
     type: "uint8array",

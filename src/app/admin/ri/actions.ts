@@ -19,6 +19,8 @@ import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { brandFor } from "@/lib/document-brand.ts";
+import { renderDocument } from "@/lib/pdf.ts";
 import {
   type ActPartyInput,
   addAnnotationWith,
@@ -50,6 +52,7 @@ import {
   setBookDeletedWith,
   updateBookWith,
 } from "@/lib/ri-books.ts";
+import { fichaDocument, fichaFor } from "@/lib/ri-docs.ts";
 import {
   addFileWith,
   applyReadingWith,
@@ -64,6 +67,7 @@ import {
   saveSignatureImageWith,
   saveSignerWith,
   setFileDeletedWith,
+  signatureSettingsWith,
 } from "@/lib/ri-files.ts";
 import {
   addGeometryWith,
@@ -1466,6 +1470,56 @@ export type OnrImageState =
  * sends one file per call, in order. With "check", nothing was saved: the
  * office looks at what was pointed out and sends again with "conferi".
  */
+/**
+ * "Exportar para a ONR" straight from the matrícula (decision of
+ * 26/11/2026): the ficha the system keeps becomes the PDF, and the PDF the
+ * signed TIFF of the manual, with no file to attach.
+ */
+export async function exportMatriculaToOnrAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.export");
+  if (!ok) return denied("ri.export");
+  try {
+    const ficha = await fichaFor(ok.tenant, text(formData, "id"));
+    if (!ficha)
+      return { status: "error", message: "Matrícula não encontrada." };
+    const pdf = await renderDocument(
+      fichaDocument(ok.tenant, ficha.content, null),
+      await brandFor(ok.tenant),
+    );
+    const settings = await signatureSettingsWith(db, ok.tenant.slug);
+    const result = await prepareOnrImageWith(
+      db,
+      ok.tenant,
+      {
+        name: `matricula-${ficha.number}.pdf`,
+        bytes: new Uint8Array(pdf),
+        typed: ficha.number,
+        pattern: "p12",
+        sign: Boolean(settings.signatureImage),
+        rubric: Boolean(settings.rubricImage),
+        confirmed: true,
+      },
+      ok.actor,
+    );
+    if (!result.id) {
+      return {
+        status: "error",
+        message: result.issues.join(" ") || "Não deu para gerar a imagem.",
+      };
+    }
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message: `Imagem da matrícula nº ${ficha.number} gerada${settings.signatureImage ? " e assinada" : " (sem assinatura: cadastre a sua em RI › Configurações)"}. Baixe em Arquivos para a ONR › Imagens.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.onr-image.export");
+  }
+}
+
 export async function prepareOnrImageAction(
   formData: FormData,
 ): Promise<OnrImageState> {

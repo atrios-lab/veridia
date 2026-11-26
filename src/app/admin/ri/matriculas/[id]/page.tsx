@@ -41,16 +41,18 @@ import {
   geometriesOfWith,
   overlapsOf,
 } from "@/lib/ri-geo.ts";
+import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { AuxPanel } from "../../_components/aux-panel.tsx";
-import { ConfirmButton } from "../../_components/client.tsx";
+import { ActionButton, ConfirmButton } from "../../_components/client.tsx";
 import { FilesPanel } from "../../_components/files-panel.tsx";
 import { GeoPanel } from "../../_components/geo-panel.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
 import { PrintPanel } from "../../_components/print-panel.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
+  exportMatriculaToOnrAction,
   setActDeletedAction,
   setPropertyDeletedAction,
 } from "../../actions.ts";
@@ -121,6 +123,20 @@ export default async function PropertyPage({
     acervo.properties.map((x) => [x.id, propertyTitle(x)]),
   );
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
+  const onrImage =
+    detail.property.book === 2
+      ? currentOf(await listOnrImagesWith(db, tenant.slug)).find(
+          (r) => r.number === detail.property.number,
+        )
+      : undefined;
+  const pad3 = (n: number) => String(n).padStart(3, "0");
+  // The ficha has the number of the matrícula (decision of 26/11/2026),
+  // unless the office typed another one; the folhas come from the image.
+  const fichaLabel = `${detail.property.ficha.trim() || pad3(detail.property.number)}${
+    onrImage
+      ? ` · folhas ${pad3(1)} a ${pad3(onrImage.pages)}`
+      : " · folhas: gere a imagem para a ONR para contar"
+  }`;
   const situation = situationOf(acts);
   const canEdit = riCan(session, "ri.edit") && !p.deletedAt;
   const title = propertyTitle(p);
@@ -162,6 +178,18 @@ export default async function PropertyPage({
                 <Plus className="size-4" />{" "}
                 {p.book === 3 ? "Lançar averbação" : "Lançar ato"}
               </Link>
+              {p.book === 2 && riCan(session, "ri.export") && (
+                <ActionButton
+                  action={exportMatriculaToOnrAction}
+                  fields={{ id: p.id }}
+                  label={
+                    onrImage
+                      ? "Gerar de novo a imagem para a ONR"
+                      : "Exportar para a ONR (imagem assinada)"
+                  }
+                  pendingLabel="Gerando a imagem…"
+                />
+              )}
               <Link
                 href={`/admin/ri/matriculas/${p.id}/alterar`}
                 className={buttonVariants({ size: "sm", variant: "outline" })}
@@ -486,7 +514,7 @@ export default async function PropertyPage({
                 label={p.book === 3 ? "Data do registro" : "Abertura"}
                 value={brDate(p.openedOn)}
               />
-              <Field label="Ficha" value={p.ficha} />
+              <Field label="Ficha" value={fichaLabel} />
               {p.book !== 3 && (
                 <>
                   <Field label="Origem" value={p.origin} />
