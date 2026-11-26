@@ -37,6 +37,11 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
     title: "Trabalho",
     entries: [
       { label: "Mesa do RI", href: "/admin/ri", icon: LayoutDashboard },
+      {
+        label: "Protocolo (Livro 1)",
+        href: "/admin/ri/protocolo",
+        icon: ClipboardList,
+      },
     ],
   },
   {
@@ -90,12 +95,6 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
   {
     title: "Próximas fases",
     entries: [
-      {
-        label: "Protocolo (Livro 1)",
-        href: "#protocolo",
-        icon: ClipboardList,
-        soon: true,
-      },
       {
         label: "Mapa (SIG-RI)",
         href: "#mapa",

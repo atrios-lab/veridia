@@ -3530,6 +3530,8 @@ export const riFiles = pgTable(
     tenantSlug,
     propertyId: uuid("property_id").references(() => riProperties.id),
     actId: uuid("act_id").references(() => riActs.id),
+    /** The protocolo whose título this is (Livro 1). */
+    protocolId: uuid("protocol_id"),
     /** "ficha", "titulo" or "documento". */
     kind: text("kind").notNull().default("documento"),
     name: text("name").notNull(),
@@ -3548,5 +3550,71 @@ export const riFiles = pgTable(
   (t) => [
     index("ri_files_property").on(t.propertyId),
     index("ri_files_tenant").on(t.tenantSlug),
+  ],
+);
+
+/**
+ * The Protocolo of the Registro de Imóveis (Livro 1, Lei nº 6.015/1973,
+ * arts. 174 and 175): every título presented, with its order number (one
+ * series for the prenotações, another for exame e cálculo, art. 12,
+ * parágrafo único), the prazos in dias úteis (arts. 9º, 188 and 205), the
+ * nota devolutiva and what became of it. An entry of the Livro 1 is never
+ * deleted: "apagar" marks it as lançado por engano, with the reason.
+ */
+export const riProtocols = pgTable(
+  "ri_protocols",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "prenotacao" or "exame". */
+    kind: text("kind").notNull().default("prenotacao"),
+    number: integer("number").notNull(),
+    presentedAt: timestamp("presented_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    presentedOn: date("presented_on").notNull(),
+    presenterName: text("presenter_name").notNull(),
+    presenterDocument: text("presenter_document").notNull().default(""),
+    presenterContact: text("presenter_contact").notNull().default(""),
+    titleKind: text("title_kind").notNull(),
+    /** The atos it asks for, resumidamente (art. 175, V). */
+    actsSummary: text("acts_summary").notNull().default(""),
+    /** The matrículas involved (ri_properties ids). */
+    propertyIds: jsonb("property_ids").notNull().default(sql`'[]'::jsonb`),
+    /** One of the cases of art. 188, § 1º (5 dias úteis). */
+    fast: boolean("fast").notNull().default(false),
+    /** Reurb of interesse social (art. 205, parágrafo único: 40 dias). */
+    reurb: boolean("reurb").notNull().default(false),
+    qualifyBy: date("qualify_by"),
+    prenotationEnds: date("prenotation_ends"),
+    /** core/ri/protocol ProtocolStatus. */
+    status: text("status").notNull().default("prenotado"),
+    /** The exigências of the nota devolutiva: [{ text, source }]. */
+    requirements: jsonb("requirements").notNull().default(sql`'[]'::jsonb`),
+    requirementIssuedAt: timestamp("requirement_issued_at", {
+      withTimezone: true,
+    }),
+    requirementIssuedBy: text("requirement_issued_by"),
+    reentryOn: date("reentry_on"),
+    /** Emolumentos as the office charged them: códigos and values. */
+    fees: text("fees").notNull().default(""),
+    feeCents: bigint("fee_cents", { mode: "number" }),
+    notes: text("notes").notNull().default(""),
+    /** What the assistente virtual proposed from the título. */
+    reading: jsonb("reading"),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+  },
+  (t) => [
+    uniqueIndex("ri_protocols_number").on(t.tenantSlug, t.kind, t.number),
+    index("ri_protocols_status").on(t.tenantSlug, t.status),
   ],
 );

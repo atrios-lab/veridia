@@ -448,6 +448,18 @@ const EXACT: Record<string, string> = {
     "Cadastrou a imagem da assinatura do Registro de Imóveis",
   "ri.signature-image-remove":
     "Retirou a imagem da assinatura do Registro de Imóveis",
+  "ri.protocol-create":
+    "Lançou um título no Protocolo (Livro 1) do Registro de Imóveis",
+  "ri.protocol-edit": "Alterou os dados de um protocolo do Registro de Imóveis",
+  "ri.protocol-requirements":
+    "Emitiu a nota devolutiva (exigências) de um protocolo",
+  "ri.protocol-reentry":
+    "Registrou o reingresso de um título com as exigências cumpridas",
+  "ri.protocol-status":
+    "Mudou a situação de um protocolo (desistência, cessação, dúvida)",
+  "ri.protocol-register": "Concluiu um protocolo como registrado",
+  "ri.protocol-delete": "Apagou um protocolo lançado por engano",
+  "ri.protocol-restore": "Restaurou um protocolo apagado",
   "ri.transfer-export":
     "Exportou matrículas, atos, pessoas ou indicadores do Registro de Imóveis",
   "ri.transfer-import":
@@ -828,6 +840,21 @@ const EXPLANATIONS: Record<string, string> = {
     "Os dados que o Assistente Virtual (ou a leitura do texto) tirou de um documento foram conferidos e aplicados à matrícula: só campos vazios e lançamentos que ainda não existiam.",
   "ri.signature-image":
     "A imagem da assinatura de quem assina pelo Registro de Imóveis foi cadastrada. Ela só aparece nos documentos que a serventia escolher emitir com ela.",
+  "ri.protocol-create":
+    "Um título foi lançado no Protocolo (Livro 1) com o número de ordem, que fixa a prioridade (Lei nº 6.015/1973, arts. 174, 182 e 186), e os prazos em dias úteis.",
+  "ri.protocol-edit":
+    "Os dados de um protocolo foram alterados. O protocolo guarda no histórico o que era antes e o que ficou.",
+  "ri.protocol-requirements":
+    "A nota devolutiva de um protocolo foi emitida ou refeita, com todas as exigências de uma vez (Lei nº 6.015/1973, art. 198). A anterior fica no histórico.",
+  "ri.protocol-reentry":
+    "O título voltou com as exigências cumpridas dentro da prenotação; o registro fica para 5 dias úteis (Lei nº 6.015/1973, art. 188, § 1º, III).",
+  "ri.protocol-status":
+    "A situação de um protocolo mudou (desistência, prenotação cessada, dúvida suscitada, exame concluído ou reaberto), com o motivo.",
+  "ri.protocol-register":
+    "Um protocolo foi concluído como registrado, com os atos lançados na matrícula e o selo de cada um.",
+  "ri.protocol-delete":
+    "Um protocolo lançado por engano foi apagado, com o motivo. Ele continua no Livro 1 e o número não é usado de novo.",
+  "ri.protocol-restore": "Um protocolo apagado foi restaurado, com o motivo.",
   "ri.transfer-export":
     "Uma planilha ou um JSON do acervo do Registro de Imóveis (matrículas, atos, pessoas ou indicadores) foi baixado. O arquivo leva nomes e CPF/CNPJ e fica com quem baixou.",
   "ri.transfer-import":

@@ -11,9 +11,15 @@ export const metadata = { title: "Lançar ato" };
 
 export default async function NewActPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  const query = await searchParams;
+  const fromProtocol = /^\d{1,9}$/.test(query.protocolo ?? "")
+    ? { number: String(query.protocolo), nature: query.natureza ?? "" }
+    : undefined;
   const { tenant } = await requireRi("ri.edit");
   const { id } = await params;
   const [detail, acervo] = await Promise.all([
@@ -36,7 +42,14 @@ export default async function NewActPage({
     <RiPage
       title={`Lançar ato na ${propertyTitle(p)}`}
       description={`O número será o ${seq}: ${actLabel({ kind: "R", seq }, p.number)} ou ${actLabel({ kind: "AV", seq }, p.number)}.`}
-      back={{ href: `/admin/ri/matriculas/${id}`, label: propertyTitle(p) }}
+      back={
+        fromProtocol && /^[0-9a-f-]{36}$/i.test(query.de ?? "")
+          ? {
+              href: `/admin/ri/protocolo/${query.de}`,
+              label: `Protocolo nº ${fromProtocol.number}`,
+            }
+          : { href: `/admin/ri/matriculas/${id}`, label: propertyTitle(p) }
+      }
     >
       <ActForm
         propertyId={id}
@@ -46,6 +59,7 @@ export default async function NewActPage({
           label: `${b.label} ${b.nature}`,
         }))}
         people={people}
+        fromProtocol={fromProtocol}
       />
     </RiPage>
   );

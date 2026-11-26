@@ -14,6 +14,7 @@ import {
   transferFromTable,
   transferFromXml,
 } from "@/core/ri/transfer.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
@@ -49,6 +50,17 @@ import {
   saveSignerWith,
   setFileDeletedWith,
 } from "@/lib/ri-files.ts";
+import {
+  createProtocolWith,
+  issueRequirementsWith,
+  readProtocolInput,
+  readRequirements,
+  reentryWith,
+  registerProtocolWith,
+  setProtocolStatusWith,
+  setProtocolVoidedWith,
+  updateProtocolWith,
+} from "@/lib/ri-protocols.ts";
 import { SheetFileError, transferFile } from "@/lib/ri-sheet.ts";
 import {
   applyTransferWith,
@@ -786,5 +798,186 @@ export async function saveSignatureImageAction(
       text(formData, "op") === "remove"
         ? "Imagem retirada."
         : "Imagem da assinatura salva.",
+  };
+}
+
+// ------------------------------------------------- protocolo (Livro 1)
+
+const protocolPath = (id: string) => `/admin/ri/protocolo/${id}`;
+
+function rawOf(formData: FormData): Record<string, unknown> {
+  const raw: Record<string, unknown> = {};
+  for (const [key, value] of formData.entries()) {
+    if (typeof value === "string") raw[key] = value;
+  }
+  return raw;
+}
+
+export async function saveProtocolAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  let target = id;
+  let warning = "";
+  try {
+    const input = readProtocolInput(rawOf(formData));
+    const holidays = officeHolidays(ok.tenant);
+    if (id) {
+      const { changed, missing } = await updateProtocolWith(
+        db,
+        ok.tenant.slug,
+        id,
+        input,
+        holidays,
+        ok.actor,
+      );
+      if (missing.length) {
+        warning = ` Não achei no Livro 2: ${missing.join(", ")}.`;
+      }
+      if (changed === 0 && !warning) {
+        return { status: "success", message: "Nada mudou no protocolo." };
+      }
+    } else {
+      const created = await createProtocolWith(
+        db,
+        ok.tenant.slug,
+        input,
+        holidays,
+        ok.actor,
+      );
+      target = created.id;
+    }
+  } catch (error) {
+    return failure(error, "ri.protocol.save");
+  }
+  revalidatePath("/admin/ri", "layout");
+  if (!id) redirect(protocolPath(target));
+  return { status: "success", message: `Protocolo salvo.${warning}` };
+}
+
+export async function issueRequirementsAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  try {
+    await issueRequirementsWith(
+      db,
+      ok.tenant.slug,
+      id,
+      readRequirements(text(formData, "exigencias")),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.protocol.requirements");
+  }
+  revalidatePath(protocolPath(id));
+  return {
+    status: "success",
+    message:
+      "Nota devolutiva pronta. Imprima ou assine e entregue ao apresentante.",
+  };
+}
+
+export async function reentryAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  try {
+    await reentryWith(
+      db,
+      ok.tenant.slug,
+      id,
+      text(formData, "data"),
+      officeHolidays(ok.tenant),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.protocol.reentry");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Reingresso lançado: o registro vence em 5 dias úteis.",
+  };
+}
+
+export async function protocolStatusAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  try {
+    await setProtocolStatusWith(
+      db,
+      ok.tenant.slug,
+      id,
+      text(formData, "status"),
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.protocol.status");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return { status: "success", message: "Situação do protocolo alterada." };
+}
+
+export async function registerProtocolAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  try {
+    await registerProtocolWith(db, ok.tenant.slug, id, ok.actor);
+  } catch (error) {
+    return failure(error, "ri.protocol.register");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return { status: "success", message: "Protocolo concluído: registrado." };
+}
+
+export async function setProtocolVoidedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  const voided = text(formData, "op") !== "restore";
+  try {
+    await setProtocolVoidedWith(
+      db,
+      ok.tenant.slug,
+      id,
+      voided,
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.protocol.void");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: voided
+      ? "Protocolo apagado (fica marcado no Livro 1)."
+      : "Protocolo restaurado.",
   };
 }

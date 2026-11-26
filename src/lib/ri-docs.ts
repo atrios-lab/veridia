@@ -1,11 +1,14 @@
 import "server-only";
 import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
 import { type FichaContent, fichaContent } from "@/core/ri/ficha.ts";
+import { type Requirement, requirementNote } from "@/core/ri/protocol.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { formatOfficeDate } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { propertyDetailWith } from "./ri.ts";
 import { signatureSettingsWith } from "./ri-files.ts";
+import { protocolWith } from "./ri-protocols.ts";
 import { getGuideSettings } from "./tax-guides.ts";
 
 /** Who signs for the RI: the one chosen in its Configurações, from "Quem assina". */
@@ -66,5 +69,51 @@ export function fichaDocument(
     signatureImage: signatureImage ?? undefined,
     signature: content.signer ? [content.signer.title] : [],
     footer: `${content.office} · ${tenant.legalFooter}`,
+  };
+}
+
+/**
+ * The nota devolutiva of a protocolo (Lei nº 6.015/1973, art. 198): every
+ * exigência at once, in order, with its source, what the apresentante may
+ * do and until when the prenotação lasts. Signed by who signs for the RI.
+ */
+export async function noteDocumentFor(
+  tenant: Tenant,
+  protocolId: string,
+  withImage: boolean,
+): Promise<{ document: RequerimentoDocument; number: number } | null> {
+  const row = await protocolWith(db, tenant.slug, protocolId);
+  if (!row || row.voidedAt) return null;
+  const requirements = (row.requirements as Requirement[]) ?? [];
+  if (requirements.length === 0) return null;
+  const { signer, settings } = await riSignerFor(tenant);
+  const office = officialName(tenant);
+  const sections = requirementNote({
+    protocolNumber: row.number,
+    presentedOn: row.presentedOn,
+    titleKind: row.titleKind,
+    presenter: row.presenterName,
+    requirements,
+    prenotationEnds: row.prenotationEnds ?? row.presentedOn,
+  });
+  const issued = row.requirementIssuedAt ?? new Date();
+  return {
+    number: row.number,
+    document: {
+      eyebrow: "Registro de Imóveis · Nota devolutiva",
+      title: `Nota devolutiva · Protocolo nº ${row.number.toLocaleString("pt-BR")}`,
+      subtitle: `Lei nº 6.015/1973, art. 198 · emitida em ${formatOfficeDate(issued)}`,
+      office: [office, tenant.subtitle],
+      sections:
+        row.kind === "exame"
+          ? sections.filter((s) => s.heading !== "O que fazer")
+          : sections,
+      signee: signer?.name,
+      signatureImage: withImage
+        ? (settings.signatureImage ?? undefined)
+        : undefined,
+      signature: signer ? [signer.title] : [],
+      footer: `${office} · ${tenant.legalFooter}`,
+    },
   };
 }

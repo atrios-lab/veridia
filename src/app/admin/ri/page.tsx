@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  ClipboardList,
   ListChecks,
   MapPin,
   Plus,
@@ -16,6 +17,11 @@ import { addressLine, propertyTitle } from "@/core/ri/property.ts";
 import { statusLabel } from "@/core/ri/sheet.ts";
 import { db } from "@/db/index.ts";
 import { EXPORT_LABELS, listExportsWith, loadAcervo } from "@/lib/ri.ts";
+import {
+  countersOf,
+  listProtocolsWith,
+  officeToday,
+} from "@/lib/ri-protocols.ts";
 import { buttonVariants } from "../_ui/button.tsx";
 import { Panel, RiPage } from "./_components/page.tsx";
 import { requireRi, riCan, stamp } from "./_lib.ts";
@@ -26,10 +32,13 @@ const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 export default async function RiDeskPage() {
   const { session, tenant } = await requireRi();
-  const [acervo, exports] = await Promise.all([
+  const [acervo, exports, protocols] = await Promise.all([
     loadAcervo(tenant.slug),
     listExportsWith(db, tenant.slug),
+    listProtocolsWith(db, tenant.slug),
   ]);
+  const counters = countersOf(protocols, officeToday());
+  const late = counters.qualifyLate + counters.prenotationEnding;
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
   const ownerCount = (id: string) =>
     situationOf(acervo.acts.get(id) ?? []).owners.length;
@@ -55,6 +64,18 @@ export default async function RiDeskPage() {
   const canExport = riCan(session, "ri.export");
 
   const tiles = [
+    {
+      label: "Protocolo em andamento",
+      value: counters.open,
+      detail: late
+        ? `${counters.qualifyLate} qualificação vencida, ${counters.prenotationEnding} prenotação no fim`
+        : counters.qualifyToday
+          ? `${counters.qualifyToday} vence(m) hoje`
+          : "nenhum prazo vencido",
+      href: "/admin/ri/protocolo",
+      icon: ClipboardList,
+      tone: late ? "warning" : counters.qualifyToday ? "info" : "success",
+    },
     {
       label: "Matrículas ativas",
       value: active.length,
@@ -102,19 +123,27 @@ export default async function RiDeskPage() {
       wide
       back={null}
       title={`Bom trabalho, ${session.user.name.split(" ")[0]}`}
-      description="O que o acervo do Registro de Imóveis pede hoje: pendências da migração para fichas, o lote de CNM e o envio semanal do Indicador Real à ONR."
+      description="O que o Registro de Imóveis pede hoje: os títulos do Protocolo e seus prazos, as pendências da migração para fichas, o lote de CNM e o envio semanal do Indicador Real à ONR."
       actions={
         canEdit && (
-          <Link
-            href="/admin/ri/matriculas/nova"
-            className={buttonVariants({ size: "sm" })}
-          >
-            <Plus className="size-4" /> Nova matrícula
-          </Link>
+          <>
+            <Link
+              href="/admin/ri/protocolo/novo"
+              className={buttonVariants({ size: "sm" })}
+            >
+              <Plus className="size-4" /> Novo protocolo
+            </Link>
+            <Link
+              href="/admin/ri/matriculas/nova"
+              className={buttonVariants({ size: "sm", variant: "outline" })}
+            >
+              <Plus className="size-4" /> Nova matrícula
+            </Link>
+          </>
         )
       }
     >
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {tiles.map((tile) => {
           const Icon = tile.icon;
           return (
@@ -192,7 +221,9 @@ export default async function RiDeskPage() {
                     >
                       <span className="font-medium">{propertyTitle(p)}</span>
                       <span className="min-w-0 flex-1 truncate text-muted-foreground">
-                        {addressLine(p) || "sem endereço"}
+                        {p.book === 3
+                          ? p.auxKind || "registro auxiliar"
+                          : addressLine(p) || "sem endereço"}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {statusLabel(p.status)} · {stamp(p.updatedAt)}
