@@ -1,6 +1,8 @@
 import { can } from "@/core/auth/roles.ts";
-import { fichaFor } from "@/lib/ri-docs.ts";
-import { fichaTiff } from "@/lib/ri-tiff.ts";
+import { db } from "@/db/index.ts";
+import { fichaLegalPdfWith } from "@/lib/ri-books.ts";
+import { riSignerFor } from "@/lib/ri-docs.ts";
+import { pdfToOnrTiff } from "@/lib/ri-tiff.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -23,14 +25,18 @@ export async function GET(
     return new Response("Não autorizado", { status: 403 });
   }
   const tenant = await getTenant();
-  const ficha = await fichaFor(tenant, (await params).id);
+  // The ficha in the model of the law, rasterised as the ONR asks.
+  const ficha = await fichaLegalPdfWith(db, tenant, (await params).id);
   if (!ficha) return new Response("Não encontrado", { status: 404 });
   const withImage =
     new URL(request.url).searchParams.get("assinatura") === "imagem";
-  const tif = await fichaTiff(
-    ficha.content,
-    withImage ? ficha.signatureImage : null,
-  );
+  const { settings } = await riSignerFor(tenant);
+  const tif = (
+    await pdfToOnrTiff(
+      new Uint8Array(ficha.bytes),
+      withImage ? settings.signatureImage : null,
+    )
+  ).tiff;
   return new Response(new Uint8Array(tif), {
     headers: {
       "Content-Type": "image/tiff",

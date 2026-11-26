@@ -20,8 +20,6 @@ import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
-import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument } from "@/lib/pdf.ts";
 import {
   type ActPartyInput,
   addAnnotationWith,
@@ -48,13 +46,13 @@ import {
 } from "@/lib/ri.ts";
 import {
   closeBookWith,
+  fichaLegalPdfWith,
   openBookWith,
   readBookInput,
   reopenBookWith,
   setBookDeletedWith,
   updateBookWith,
 } from "@/lib/ri-books.ts";
-import { fichaDocument, fichaFor } from "@/lib/ri-docs.ts";
 import {
   addFileWith,
   applyReadingWith,
@@ -1571,13 +1569,11 @@ export async function exportMatriculaToOnrAction(
   const ok = await access("ri.export");
   if (!ok) return denied("ri.export");
   try {
-    const ficha = await fichaFor(ok.tenant, text(formData, "id"));
+    // The ficha in the model annexed to the Lei nº 6.015/1973.
+    const ficha = await fichaLegalPdfWith(db, ok.tenant, text(formData, "id"));
     if (!ficha)
       return { status: "error", message: "Matrícula não encontrada." };
-    const pdf = await renderDocument(
-      fichaDocument(ok.tenant, ficha.content, null),
-      await brandFor(ok.tenant),
-    );
+    const pdf = ficha.bytes;
     const settings = await signatureSettingsWith(db, ok.tenant.slug);
     const result = await prepareOnrImageWith(
       db,
