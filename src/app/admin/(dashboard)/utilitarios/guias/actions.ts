@@ -439,6 +439,8 @@ export async function withdrawGuideStatusAction(
   _previous: GuideStatusFormState,
   formData: FormData,
 ): Promise<GuideStatusFormState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why, fieldErrors: {} };
   const auth = await guideManager();
   const guideId = String(formData.get("guideId") ?? "");
   if (!auth || !guideId) {

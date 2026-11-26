@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   changeSectorsWith,
   RoutingError,
@@ -69,6 +70,10 @@ export async function changeSectorAction(
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const op = String(formData.get("op") ?? "");
+  if (op === "hide") {
+    const why = justify(formData);
+    if (why) return { status: "error", message: why };
+  }
   const id = String(formData.get("id") ?? "");
   const label = String(formData.get("label") ?? "");
   let change: SectorChange;

@@ -51,6 +51,7 @@ import { ResumeCard } from "./_components/resume-card.tsx";
 import { TodayAgenda } from "./_components/today-agenda.tsx";
 import { TutorialTrailCard } from "./_components/tutorial-trail-card.tsx";
 import { QueuePoller } from "./atendimento/_components/queue-poller.tsx";
+import { PendingDeletionsBanner } from "./autorizacoes/pending-banner.tsx";
 
 export const metadata = { title: "Painel" };
 
@@ -361,6 +362,7 @@ export default async function AdminHome() {
       />
       <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <PendingDeletionsBanner />
         <ProtocolReminder />
         <ActionShortcuts shortcuts={shortcuts} />
         {/* The open requests by stage, across the whole width, on top (the

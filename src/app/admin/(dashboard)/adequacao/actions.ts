@@ -279,6 +279,8 @@ export async function withdrawComplianceDoneAction(
   _previous: DoneState,
   _formData: FormData,
 ): Promise<DoneState> {
+  const why = justify(_formData);
+  if (why) return { status: "error", message: why };
   const auth = await authorize();
   if (!auth) return { status: "error", message: NO_PERMISSION };
   try {

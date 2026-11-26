@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { can, type Permission } from "@/core/auth/roles.ts";
+import {
+  decidesDeletions,
+  type OfficialKind,
+} from "@/core/deletion/official.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
 import {
   isoDate,
@@ -20,6 +24,7 @@ import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { requestDeletionWith } from "@/lib/deletion-requests.ts";
 import {
   type ActPartyInput,
   addAnnotationWith,
@@ -140,6 +145,45 @@ async function access(permission: Permission) {
   return { session, tenant, actor: { id: session.user.id } };
 }
 
+/**
+ * An official document is deleted only by the Tabelião: anyone else sends
+ * the request, with the reason, for the holder to decide (decision of
+ * 26/11/2026). Returns the state to answer with, or null to go on.
+ */
+async function askTabeliao(
+  ok: NonNullable<Awaited<ReturnType<typeof access>>>,
+  kind: OfficialKind,
+  targetId: string,
+  label: string,
+  formData: FormData,
+): Promise<RiState | null> {
+  if (decidesDeletions(ok.session.user.role ?? "")) return null;
+  try {
+    await requestDeletionWith(
+      db,
+      ok.tenant.slug,
+      {
+        kind,
+        targetId,
+        label,
+        reason: String(formData.get("justificativa") ?? ""),
+      },
+      ok.actor,
+    );
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Não deu para pedir.",
+    };
+  }
+  revalidatePath("/admin", "layout");
+  return {
+    status: "success",
+    message:
+      "Pedido de exclusão enviado ao Tabelião, com o seu motivo. O documento só sai depois que ele aprovar.",
+  };
+}
+
 const text = (formData: FormData, key: string) =>
   String(formData.get(key) ?? "");
 
@@ -214,6 +258,16 @@ export async function setPropertyDeletedAction(
   if (!ok) return denied("ri.edit");
   const id = text(formData, "id");
   const deleted = text(formData, "op") !== "restore";
+  if (deleted) {
+    const asked = await askTabeliao(
+      ok,
+      "ri-property",
+      id,
+      `Matrícula ${text(formData, "label") || id}`,
+      formData,
+    );
+    if (asked) return asked;
+  }
   try {
     await setPropertyDeletedWith(db, ok.tenant.slug, id, deleted, ok.actor);
   } catch (error) {
@@ -307,6 +361,10 @@ export async function savePgvCredentialAction(
   const ok = await access("ri.export");
   if (!ok) return denied("ri.export");
   const clear = text(formData, "op") === "clear";
+  if (clear) {
+    const why = justify(formData);
+    if (why) return { status: "error", message: why };
+  }
   try {
     await savePgvCredentialWith(
       db,
@@ -503,6 +561,16 @@ export async function setActDeletedAction(
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   const deleted = text(formData, "op") !== "restore";
+  if (deleted) {
+    const asked = await askTabeliao(
+      ok,
+      "ri-act",
+      text(formData, "actId"),
+      `Ato ${text(formData, "label") || text(formData, "actId")}`,
+      formData,
+    );
+    if (asked) return asked;
+  }
   try {
     await setActDeletedWith(
       db,
@@ -1277,6 +1345,16 @@ export async function setProtocolVoidedAction(
   if (!ok) return denied("ri.edit");
   const id = text(formData, "id");
   const voided = text(formData, "op") !== "restore";
+  if (voided) {
+    const asked = await askTabeliao(
+      ok,
+      "ri-protocol",
+      id,
+      `Protocolo ${text(formData, "label") || id}`,
+      formData,
+    );
+    if (asked) return asked;
+  }
   try {
     await setProtocolVoidedWith(
       db,
@@ -1537,6 +1615,16 @@ export async function setBookDeletedAction(
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
   const deleted = text(formData, "op") !== "restore";
+  if (deleted) {
+    const asked = await askTabeliao(
+      ok,
+      "ri-book",
+      text(formData, "id"),
+      `Livro ${text(formData, "label") || text(formData, "id")}`,
+      formData,
+    );
+    if (asked) return asked;
+  }
   try {
     await setBookDeletedWith(
       db,
@@ -1718,6 +1806,16 @@ export async function setOnrImageDeletedAction(
   const op = text(formData, "op");
   const deleted = op !== "restore";
   const reason = String(formData.get("justificativa") ?? "").trim();
+  if (op !== "hide" && deleted) {
+    const asked = await askTabeliao(
+      ok,
+      "ri-onr-image",
+      text(formData, "id"),
+      `Imagem da matrícula ${text(formData, "label") || ""}`.trim(),
+      formData,
+    );
+    if (asked) return asked;
+  }
   try {
     if (op === "hide") {
       await hideOnrImageFromListWith(

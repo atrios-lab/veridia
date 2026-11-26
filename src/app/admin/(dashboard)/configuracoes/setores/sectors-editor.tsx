@@ -125,7 +125,6 @@ function SectorLine({ sector }: { sector: SectorRow }) {
             consequence="Ele sai das escolhas de direcionamento. Os pedidos que já passaram por ele continuam mostrando o nome, e dá para trazer de volta."
             confirmLabel="Apagar o setor"
             pendingLabel="Apagando…"
-            justify={false}
           >
             <input type="hidden" name="op" value="hide" />
             <input type="hidden" name="id" value={sector.id} />

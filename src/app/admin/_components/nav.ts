@@ -549,6 +549,23 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     icon: "clipboard",
   },
   {
+    // Requests to delete official documents (decision of 26/11/2026): the
+    // Tabelião decides; anyone else sees their own requests.
+    group: "Serventia",
+    label: "Autorizações de exclusão",
+    href: "/admin/autorizacoes",
+    icon: "gavel",
+  },
+  {
+    // The Átrios master account: recovers anything deleted, removed or
+    // changed in the office (decision of 26/11/2026).
+    group: "Átrios",
+    label: "Recuperar",
+    href: "/admin/atrios/recuperar",
+    icon: "files",
+    permission: "access.release",
+  },
+  {
     // The Átrios master account only (a platform permission): turning the
     // two-step access off or on for any office (lib/access-policy.ts).
     group: "Átrios",

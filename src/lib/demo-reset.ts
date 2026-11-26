@@ -28,6 +28,7 @@ import {
   dailyBookEntries,
   dailyBookImports,
   dailyBookReports,
+  deletionRequests,
   demoOutbox,
   dpoConversations,
   dpoMessages,
@@ -215,6 +216,10 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   {
     table: riBooks,
     reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: deletionRequests,
+    reason: "Pedidos de exclusão ao Tabelião: limpeza ainda não revisada",
   },
   {
     table: riPendencyMarks,

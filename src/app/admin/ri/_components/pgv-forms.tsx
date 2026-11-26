@@ -90,6 +90,7 @@ export function PgvCredentialForm({
           {state.message}
         </p>
       )}
+      <input type="hidden" name="justificativa" defaultValue="" />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Salvando…" : hasHash ? "Alterar credencial" : "Salvar"}
@@ -103,13 +104,17 @@ export function PgvCredentialForm({
             value="clear"
             disabled={pending}
             onClick={(e) => {
-              if (
-                !window.confirm(
-                  "Apagar a credencial do PGV-CNM? O cartório pode gerar outra no PGV quando quiser.",
-                )
-              ) {
+              const why = window.prompt(
+                "Por que apagar a credencial do PGV-CNM? (vai para a auditoria)",
+              );
+              if (!why || why.trim().length < 3) {
                 e.preventDefault();
+                return;
               }
+              const input = e.currentTarget.form?.elements.namedItem(
+                "justificativa",
+              ) as HTMLInputElement | null;
+              if (input) input.value = why.trim();
             }}
           >
             Apagar
