@@ -427,3 +427,34 @@ export async function pdfToOnrTiff(
     .toBuffer();
   return { tiff, pages: count, text: texts.join("\n"), signed, noRoom };
 }
+
+/**
+ * The TIFF of a signed ficha back as a PDF, page by page, A4: the same
+ * image the ONR receives, to look at, print or put in the book.
+ */
+export async function tiffToPdf(tiff: Uint8Array): Promise<Uint8Array> {
+  const { PDFDocument } = await import("pdf-lib");
+  const pdf = await PDFDocument.create();
+  const pages = (await sharp(tiff).metadata()).pages ?? 1;
+  for (let i = 0; i < pages; i++) {
+    const png = await sharp(tiff, { page: i }).png().toBuffer();
+    const image = await pdf.embedPng(png);
+    const page = pdf.addPage([595.28, 841.89]);
+    page.drawImage(image, { x: 0, y: 0, width: 595.28, height: 841.89 });
+  }
+  return pdf.save();
+}
+
+/** Several PDFs, one after the other, as one. */
+export async function joinPdfs(
+  parts: readonly Uint8Array[],
+): Promise<Uint8Array> {
+  const { PDFDocument } = await import("pdf-lib");
+  const out = await PDFDocument.create();
+  for (const part of parts) {
+    const doc = await PDFDocument.load(part);
+    const pages = await out.copyPages(doc, doc.getPageIndices());
+    for (const page of pages) out.addPage(page);
+  }
+  return out.save();
+}

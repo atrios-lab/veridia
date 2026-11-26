@@ -6,7 +6,13 @@ import { Button } from "../../_ui/button.tsx";
 import { Input } from "../../_ui/input.tsx";
 import { Label } from "../../_ui/label.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
-import { type OnrImageState, prepareOnrImageAction } from "../actions.ts";
+import {
+  applyOnrReadingAction,
+  type OnrImageState,
+  openLivro2Action,
+  prepareOnrImageAction,
+} from "../actions.ts";
+import { ActionButton, useRiToast } from "./client.tsx";
 
 type Item = {
   key: string;
@@ -166,12 +172,25 @@ export function OnrImageForm({
                 </p>
               )}
               {it.state.status === "saved" && (
-                <p className="mt-1 text-xs font-medium text-success-text">
-                  Pronta: matrícula nº {it.state.number.toLocaleString("pt-BR")}{" "}
-                  na fila.
-                  {it.state.issues.length > 0 &&
-                    " (gerada com os apontamentos conferidos)"}
-                </p>
+                <div className="mt-1 flex flex-col gap-2">
+                  <p className="text-xs font-medium text-success-text">
+                    Pronta: matrícula nº{" "}
+                    {it.state.number.toLocaleString("pt-BR")} na fila.
+                    {it.state.issues.length > 0 &&
+                      " (gerada com os apontamentos conferidos)"}
+                  </p>
+                  <FichaChanges
+                    id={it.state.id}
+                    read={it.state.read}
+                    changes={it.state.changes}
+                  />
+                  {it.state.book && (
+                    <OpenBook
+                      suggestion={it.state.book}
+                      onDone={() => router.refresh()}
+                    />
+                  )}
+                </div>
               )}
               {it.state.status === "error" && (
                 <p
@@ -231,6 +250,171 @@ export function OnrImageForm({
             : items.length > 1
               ? `Assinar e gerar ${items.length} imagens para a ONR`
               : "Assinar e gerar a imagem para a ONR"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+const KIND_LABELS: Record<string, string> = {
+  "nova-matricula": "Matrícula nova no acervo",
+  "novo-registro": "Novo registro",
+  "nova-averbacao": "Nova averbação",
+  retificacao: "Retificação de ato já lançado",
+};
+
+/** What the ficha changes in the acervo, and the button to apply it. */
+export function FichaChanges({
+  id,
+  read,
+  changes,
+  applied,
+}: {
+  id: string;
+  read: boolean;
+  changes: { kind: string; label: string; before?: string; after?: string }[];
+  applied?: boolean;
+}) {
+  if (!read) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        O assistente virtual não leu esta ficha (desligado ou indisponível):
+        lance os atos na matrícula pelo acervo.
+      </p>
+    );
+  }
+  if (changes.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Nada muda no acervo: a ficha confere com a matrícula lançada.
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-md border bg-muted/40 px-3 py-2">
+      <p className="text-xs font-medium text-foreground">
+        O que esta ficha muda no acervo:
+      </p>
+      <ul className="flex flex-col gap-1 text-xs text-foreground">
+        {changes.map((c) => (
+          <li key={`${c.kind}-${c.label}`}>
+            <span className="font-medium">
+              {KIND_LABELS[c.kind] ?? c.kind}:
+            </span>{" "}
+            {c.label}
+            {c.kind === "retificacao" && c.before && (
+              <span className="block text-muted-foreground">
+                Antes: {c.before.slice(0, 200)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+      {applied ? (
+        <p className="text-xs font-medium text-success-text">
+          Já aplicado ao acervo.
+        </p>
+      ) : (
+        <div>
+          <ActionButton
+            action={applyOnrReadingAction}
+            fields={{ id }}
+            label="Aplicar ao acervo"
+            pendingLabel="Aplicando…"
+            variant="default"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * No Livro 2 open yet: open it with the termo de abertura on the date of
+ * the averbação de transporte, confirmed by the office.
+ */
+function OpenBook({
+  suggestion,
+  onDone,
+}: {
+  suggestion: {
+    date: string | null;
+    fromTransport: boolean;
+    volume: string;
+    firstItem: number;
+  };
+  onDone: () => void;
+}) {
+  const [date, setDate] = useState(suggestion.date ?? "");
+  const [transport, setTransport] = useState(false);
+  const [state, setState] = useState<
+    { status: "idle" } | { status: "success" | "error"; message: string }
+  >({ status: "idle" });
+  const [pending, setPending] = useState(false);
+  useRiToast(state);
+  if (state.status === "success") {
+    return (
+      <p className="text-xs font-medium text-success-text">{state.message}</p>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2">
+      <p className="text-xs font-medium text-foreground">
+        Não há Livro 2 aberto. Abrir o Livro {suggestion.volume} a partir da
+        matrícula nº {suggestion.firstItem.toLocaleString("pt-BR")}, com o termo
+        de abertura na data do transporte?
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {suggestion.fromTransport
+          ? "A data veio da averbação de transporte lida na ficha."
+          : "A ficha não trouxe averbação de transporte: confira a data."}{" "}
+        O livro é aberto e encerrado pelo oficial (Lei nº 6.015/1973, art. 4º);
+        o número se conserva com letras (art. 6º); as matrículas passam para
+        fichas com a mesma numeração (art. 173, parágrafo único; CNN, art. 336).
+      </p>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-col gap-1">
+          <Label
+            htmlFor={`open-date-${suggestion.firstItem}`}
+            className="text-xs"
+          >
+            Data do termo de abertura
+          </Label>
+          <Input
+            id={`open-date-${suggestion.firstItem}`}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="h-8 bg-background"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="size-4"
+            checked={transport}
+            onChange={(e) => setTransport(e.target.checked)}
+          />
+          É esta mesma a data do 1º ato de transporte
+        </label>
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending || !date || !transport}
+          onClick={async () => {
+            setPending(true);
+            const form = new FormData();
+            form.set("data", date);
+            form.set("transporte", transport ? "1" : "0");
+            form.set("volume", suggestion.volume);
+            form.set("firstItem", String(suggestion.firstItem));
+            const result = await openLivro2Action(form);
+            setPending(false);
+            if (result.status !== "idle") setState(result);
+            if (result.status === "success") onDone();
+          }}
+        >
+          {pending ? "Abrindo…" : "Abrir o Livro 2"}
         </Button>
       </div>
     </div>

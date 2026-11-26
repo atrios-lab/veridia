@@ -6,7 +6,10 @@ import { signatureSettingsWith } from "@/lib/ri-files.ts";
 import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { ActionButton, ConfirmButton } from "../../_components/client.tsx";
-import { OnrImageForm } from "../../_components/onr-image-form.tsx";
+import {
+  FichaChanges,
+  OnrImageForm,
+} from "../../_components/onr-image-form.tsx";
 import { Panel, RiPage } from "../../_components/page.tsx";
 import { requireRi, stamp } from "../../_lib.ts";
 import { setOnrCopiedAction, setOnrImageDeletedAction } from "../../actions.ts";
@@ -107,6 +110,20 @@ export default async function OnrImagesPage({
                           ? ` · copiada para a pasta em ${stamp(r.copiedAt)}`
                           : ""}
                       </p>
+                      <div className="mt-1">
+                        <FichaChanges
+                          id={r.id}
+                          read={Boolean(r.reading)}
+                          changes={
+                            (r.changes as {
+                              kind: string;
+                              label: string;
+                              before?: string;
+                            }[]) ?? []
+                          }
+                          applied={Boolean(r.appliedAt)}
+                        />
+                      </div>
                       {(r.issues as string[]).length > 0 && (
                         <p className="text-xs text-warning-text">
                           Gerada com apontamentos conferidos:{" "}
@@ -116,13 +133,24 @@ export default async function OnrImagesPage({
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <a
+                        href={`/admin/ri/onr/imagens/baixar?id=${r.id}&formato=pdf`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={buttonVariants({
+                          size: "sm",
+                          variant: "outline",
+                        })}
+                      >
+                        Ver em PDF
+                      </a>
+                      <a
                         href={`/admin/ri/onr/imagens/baixar?id=${r.id}`}
                         className={buttonVariants({
                           size: "sm",
                           variant: "outline",
                         })}
                       >
-                        Baixar
+                        Baixar TIF
                       </a>
                       <ActionButton
                         action={setOnrCopiedAction}

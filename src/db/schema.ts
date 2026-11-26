@@ -3729,6 +3729,13 @@ export const riOnrImages = pgTable(
     signed: boolean("signed").notNull().default(false),
     /** What the conferência pointed out and the office confirmed. */
     issues: jsonb("issues").notNull().default(sql`'[]'::jsonb`),
+    /** What the assistente virtual read from the ficha (MatriculaReading). */
+    reading: jsonb("reading"),
+    /** What it changes in the acervo (core/ri/ficha-changes FichaChange[]). */
+    changes: jsonb("changes").notNull().default(sql`'[]'::jsonb`),
+    /** When the reading went into the acervo, and by whom. */
+    appliedAt: timestamp("applied_at", { withTimezone: true }),
+    appliedBy: text("applied_by"),
     copiedAt: timestamp("copied_at", { withTimezone: true }),
     copiedBy: text("copied_by"),
     history: jsonb("history").notNull().default(sql`'[]'::jsonb`),

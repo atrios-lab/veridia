@@ -454,6 +454,8 @@ const EXACT: Record<string, string> = {
   "ri.book-delete": "Apagou um livro do Registro de Imóveis lançado por engano",
   "ri.book-restore": "Restaurou um livro do Registro de Imóveis apagado",
   "ri.onr-image-add": "Gerou a imagem de uma matrícula para a ONR (TIFF)",
+  "ri.onr-image-apply":
+    "Levou ao acervo o que a ficha assinada trouxe (atos novos e retificações)",
   "ri.onr-image-copied":
     "Marcou imagens de matrícula como copiadas para a pasta da ONR",
   "ri.onr-image-not-copied":

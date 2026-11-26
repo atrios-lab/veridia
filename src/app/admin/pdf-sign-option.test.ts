@@ -43,6 +43,10 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
 /** Not a document the office signs, and why. */
 const NOT_SIGNED_BY_THE_OFFICE: Record<string, string> = {
   "(dashboard)/utilitarios/assinador/[id]/arquivo": "já é o PDF assinado",
+  "ri/arquivo/[id]":
+    "anexo da matrícula guardado em texto, mostrado de volta em PDF: é cópia de consulta, não documento novo",
+  "ri/onr/imagens/baixar":
+    "a imagem da ficha já assinada com a imagem da assinatura, vista em PDF",
   "(dashboard)/utilitarios/assinador/[id]/manifesto":
     "manifesto de um documento já assinado",
   "(dashboard)/pedidos/[protocolo]/imprimir":

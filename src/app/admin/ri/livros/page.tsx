@@ -161,6 +161,16 @@ export default async function BooksPage({
                 Quem assina vem de Configurações do RI.
               </li>
               <li>
+                Livro 2 digital: ao assinar a ficha da matrícula nº 1 em Imagens
+                do Livro 2 (ONR), o sistema propõe abrir o Livro 2 na data da
+                averbação de transporte dela e pergunta se é mesmo a data do 1º
+                ato de transporte. As matrículas passam para fichas com a mesma
+                numeração e remissão na matrícula de origem (Código Nacional de
+                Normas, art. 336; Lei nº 6.015/1973, art. 173, parágrafo único).
+                Cada ficha assinada vira a página do livro; o mesmo arquivo
+                serve para imprimir.
+              </li>
+              <li>
                 Encerre o Protocolo todo dia, no fim do expediente (art. 184).
                 Os títulos só para exame e cálculo não entram no Protocolo (art.
                 12, parágrafo único).

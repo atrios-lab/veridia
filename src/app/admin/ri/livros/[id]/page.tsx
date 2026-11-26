@@ -13,6 +13,7 @@ import {
   historyOf,
   MAX_FICHAS,
 } from "@/lib/ri-books.ts";
+import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
 import {
   SignOrPrint,
   signBatchHref,
@@ -41,6 +42,17 @@ export default async function BookPage({
   const info = BOOKS[row.book as BookNumber];
   const canManage = riCan(session, "ri.books");
   const fichas = await bookFichasWith(db, tenant.slug, row);
+  // The Livro 2 is one digital book: the signed fichas are its pages, and
+  // a ficha signed again replaces the page; the old one goes to
+  // "Alterações".
+  const images = row.book === 2 ? await listOnrImagesWith(db, tenant.slug) : [];
+  const inBook = (n: number) =>
+    n >= (row.firstItem ?? 1) && n <= (row.lastItem ?? Number.MAX_SAFE_INTEGER);
+  const pagesNow = currentOf(images).filter((r) => inBook(r.number));
+  const replaced = images.filter(
+    (r) =>
+      !r.deletedAt && inBook(r.number) && !pagesNow.some((c) => c.id === r.id),
+  );
   const lots = batches(fichas, 20);
   const base = `/admin/ri/livros/${row.id}`;
   const history = historyOf(row);
@@ -175,6 +187,53 @@ export default async function BookPage({
           />
         </div>
       </Panel>
+
+      {row.book === 2 && (
+        <Panel
+          title={`Páginas assinadas (${pagesNow.length})`}
+          description="As fichas assinadas em Imagens do Livro 2 (ONR) entram no livro como páginas, a mesma imagem enviada à ONR. Assinar de novo a mesma matrícula substitui a página; a anterior fica em Alterações."
+        >
+          {pagesNow.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma ficha assinada neste livro ainda.
+            </p>
+          ) : (
+            <p className="text-sm text-foreground">
+              Matrículas:{" "}
+              {pagesNow.map((r) => r.number.toLocaleString("pt-BR")).join(", ")}
+              .
+            </p>
+          )}
+          {replaced.length > 0 && (
+            <details className="mt-3">
+              <summary className="cursor-pointer text-sm font-medium text-primary">
+                Alterações: {replaced.length}{" "}
+                {replaced.length === 1
+                  ? "página substituída"
+                  : "páginas substituídas"}
+              </summary>
+              <ul className="mt-2 flex flex-col gap-1 text-sm">
+                {replaced.map((r) => (
+                  <li key={r.id} className="flex flex-wrap items-center gap-2">
+                    <span>
+                      Matrícula nº {r.number.toLocaleString("pt-BR")}, página de{" "}
+                      {stamp(r.createdAt)}
+                    </span>
+                    <a
+                      href={`/admin/ri/onr/imagens/baixar?id=${r.id}&formato=pdf`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline underline-offset-4"
+                    >
+                      Ver em PDF
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
+        </Panel>
+      )}
 
       {itemRange && (
         <Panel

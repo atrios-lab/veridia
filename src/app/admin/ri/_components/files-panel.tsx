@@ -70,7 +70,9 @@ export function FilesPanel({
                   {KIND_LABELS[f.kind] ?? f.kind} · {size(f.size)} ·{" "}
                   {stamp(f.createdAt)}
                   {f.reading ? " · lido" : ""}
-                  {f.path ? "" : " · só o texto (o arquivo foi descartado)"}
+                  {f.path
+                    ? ""
+                    : " · guardado em texto, abre em PDF (o original foi descartado)"}
                 </p>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -81,8 +83,32 @@ export function FilesPanel({
                   className={buttonVariants({ size: "sm", variant: "outline" })}
                 >
                   <Download className="size-4" />{" "}
-                  {f.path ? "Abrir" : "Abrir o texto (.md)"}
+                  {f.path ? "Abrir" : "Ver em PDF"}
                 </a>
+                {!f.path && (
+                  <>
+                    <a
+                      href={`/admin/ri/arquivo/${f.id}?baixar=1`}
+                      className={buttonVariants({
+                        size: "sm",
+                        variant: "outline",
+                      })}
+                    >
+                      Baixar PDF
+                    </a>
+                    <a
+                      href={`/admin/ri/arquivo/${f.id}?formato=md`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonVariants({
+                        size: "sm",
+                        variant: "ghost",
+                      })}
+                    >
+                      Texto (.md)
+                    </a>
+                  </>
+                )}
                 {f.mime.startsWith("image/") && (
                   <a
                     href={`/admin/ri/arquivo/${f.id}?formato=tiff`}

@@ -69,6 +69,7 @@ import {
   setGeometryDeletedWith,
 } from "@/lib/ri-geo.ts";
 import {
+  applyOnrReadingWith,
   prepareOnrImageWith,
   setCopiedWith,
   setOnrImageDeletedWith,
@@ -1333,7 +1334,25 @@ export async function setBookDeletedAction(
 
 export type OnrImageState =
   | { status: "idle" }
-  | { status: "saved"; number: number; issues: string[] }
+  | {
+      status: "saved";
+      id: string;
+      number: number;
+      issues: string[];
+      changes: {
+        kind: string;
+        label: string;
+        before?: string;
+        after?: string;
+      }[];
+      read: boolean;
+      book?: {
+        date: string | null;
+        fromTransport: boolean;
+        volume: string;
+        firstItem: number;
+      };
+    }
   | { status: "check"; number: number | null; issues: string[] }
   | { status: "error"; message: string };
 
@@ -1369,7 +1388,15 @@ export async function prepareOnrImageAction(
     );
     if (result.id && result.number) {
       revalidatePath("/admin/ri/onr/imagens");
-      return { status: "saved", number: result.number, issues: result.issues };
+      return {
+        status: "saved",
+        id: result.id,
+        number: result.number,
+        issues: result.issues,
+        changes: result.changes ?? [],
+        read: result.changes !== undefined,
+        ...(result.book ? { book: result.book } : {}),
+      };
     }
     return { status: "check", number: result.number, issues: result.issues };
   } catch (error) {
@@ -1430,5 +1457,67 @@ export async function setOnrImageDeletedAction(
   return {
     status: "success",
     message: deleted ? "Imagem apagada (fica guardada)." : "Imagem restaurada.",
+  };
+}
+
+/** What the signed ficha brought goes into the acervo (and the indicadores). */
+export async function applyOnrReadingAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  try {
+    const { added, retified } = await applyOnrReadingWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      ok.actor,
+    );
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message: `Acervo atualizado: ${added} ${added === 1 ? "ato novo" : "atos novos"}${retified ? ` e ${retified} ${retified === 1 ? "retificação" : "retificações"}` : ""}. Os indicadores real e pessoal já contam com eles.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.onr-image.apply");
+  }
+}
+
+/**
+ * Opens the Livro 2 from the first signed ficha: the termo de abertura on
+ * the date the office confirmed (the averbação de transporte), from that
+ * matrícula on, in fichas (Lei nº 6.015/1973, arts. 4º, 6º and 173,
+ * parágrafo único; CNN, art. 336). No redirect: the queue stays on screen.
+ */
+export async function openLivro2Action(formData: FormData): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  if (text(formData, "transporte") !== "1") {
+    return {
+      status: "error",
+      message:
+        "Confirme que esta é a data do 1º ato de transporte, ou abra o livro com outra data em Livros e assinatura.",
+    };
+  }
+  try {
+    const input = readBookInput({
+      book: "2",
+      volume: text(formData, "volume") || "2",
+      form: "fichas",
+      firstItem: text(formData, "firstItem"),
+      openedOn: text(formData, "data"),
+      openingNotes:
+        "Livro aberto com a averbação de transporte das matrículas para o sistema de fichas, com a mesma numeração e remissão na matrícula de origem (Código Nacional de Normas, art. 336).",
+    });
+    await openBookWith(db, ok.tenant.slug, input, ok.actor);
+  } catch (error) {
+    return failure(error, "ri.book.open-from-ficha");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message:
+      "Livro 2 aberto. Assine o termo de abertura em Livros e assinatura.",
   };
 }

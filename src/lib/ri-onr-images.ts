@@ -2,6 +2,13 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import JSZip from "jszip";
 import sharp from "sharp";
+import { nextVolume } from "@/core/ri/books.ts";
+import {
+  compareFicha,
+  type FichaChange,
+  transportDate,
+} from "@/core/ri/ficha-changes.ts";
+import type { MatriculaReading } from "@/core/ri/matricula-text.ts";
 import {
   confer,
   numberInText,
@@ -11,11 +18,13 @@ import {
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
-import { riOnrImages, riProperties } from "@/db/schema.ts";
+import { riActs, riOnrImages, riProperties } from "@/db/schema.ts";
 import { aiBlockedWith, readRegistryDocuments } from "./ai.ts";
 import { recordAuditWith } from "./audit.ts";
 import { type Actor, RiError } from "./ri.ts";
+import { listBooksWith } from "./ri-books.ts";
 import { riSignerFor } from "./ri-docs.ts";
+import { applyReadingWith, readMatriculaFilesWith } from "./ri-files.ts";
 import { fichaTiff, pdfToOnrTiff } from "./ri-tiff.ts";
 import { docxText } from "./titularidade-reading.ts";
 
@@ -40,11 +49,23 @@ export interface OnrHistoryEntry {
   what: string;
 }
 
+export interface BookSuggestion {
+  /** The date the termo de abertura takes (the averbação de transporte). */
+  date: string | null;
+  fromTransport: boolean;
+  volume: string;
+  firstItem: number;
+}
+
 export interface PrepareResult {
   /** Saved: the id in the queue. */
   id?: string;
   number: number | null;
   issues: string[];
+  /** What the ficha changes in the acervo, read by the assistente. */
+  changes?: FichaChange[];
+  /** No Livro 2 open: the opening the system proposes. */
+  book?: BookSuggestion;
 }
 
 async function acervoOf(database: Database, tenantSlug: string, n: number) {
@@ -232,7 +253,213 @@ export async function prepareOnrImageWith(
     targetType: "ri-onr-image",
     targetId: row?.id,
   });
-  return { id: row?.id, number, issues };
+  const read = row?.id
+    ? await readIntoQueue(
+        database,
+        tenant.slug,
+        row.id,
+        number,
+        own?.id ?? null,
+        {
+          name: input.name,
+          mime: isPdf
+            ? "application/pdf"
+            : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          bytes: input.bytes,
+        },
+      )
+    : null;
+  const book = await bookSuggestion(
+    database,
+    tenant.slug,
+    number,
+    read?.reading ?? null,
+  );
+  return {
+    id: row?.id,
+    number,
+    issues,
+    changes: read?.changes,
+    ...(book ? { book } : {}),
+  };
+}
+
+/**
+ * The assistente virtual reads the signed ficha (only the conferência of
+ * the matrícula: what it is and what changed), and the queue keeps the
+ * reading and the changes until the office applies them.
+ */
+async function readIntoQueue(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  number: number,
+  propertyId: string | null,
+  file: { name: string; mime: string; bytes: Uint8Array },
+): Promise<{ reading: MatriculaReading; changes: FichaChange[] } | null> {
+  let reading: MatriculaReading;
+  try {
+    const result = await readMatriculaFilesWith(database, tenantSlug, [file], {
+      book: 2,
+    });
+    reading = { ...result.reading, number };
+  } catch {
+    return null;
+  }
+  const known = propertyId
+    ? await database
+        .select({
+          seq: riActs.seq,
+          kind: riActs.kind,
+          nature: riActs.nature,
+          summary: riActs.summary,
+          registeredOn: riActs.registeredOn,
+          deletedAt: riActs.deletedAt,
+        })
+        .from(riActs)
+        .where(eq(riActs.propertyId, propertyId))
+    : [];
+  const changes = compareFicha({
+    exists: Boolean(propertyId),
+    number,
+    known: known.filter((a) => !a.deletedAt && a.kind !== "M"),
+    read: reading.acts,
+  });
+  await database
+    .update(riOnrImages)
+    .set({ reading, changes })
+    .where(eq(riOnrImages.id, id));
+  return { reading, changes };
+}
+
+/**
+ * The ficha of the matrícula nº 1 and no Livro 2 open: the system
+ * proposes opening it, the termo de abertura on the date of the averbação
+ * de transporte of that ficha (CNN, art. 336), from the matrícula 1 on.
+ * The office confirms the date and that it is the 1º ato de transporte.
+ */
+export async function bookSuggestion(
+  database: Database,
+  tenantSlug: string,
+  number: number,
+  reading: MatriculaReading | null,
+): Promise<BookSuggestion | null> {
+  // The Livro 2 in fichas starts at the matrícula nº 1 and goes on.
+  if (number !== 1) return null;
+  const books = await listBooksWith(database, tenantSlug);
+  const live = books.filter((b) => b.book === 2 && !b.deletedAt);
+  if (live.some((b) => !b.closedOn)) return null;
+  const when = reading
+    ? transportDate(reading)
+    : { date: null, fromTransport: false };
+  return {
+    ...when,
+    volume: nextVolume(
+      2,
+      live.map((b) => b.volume),
+    ),
+    firstItem: number,
+  };
+}
+
+/**
+ * Puts what the ficha brought into the acervo: the matrícula when it is
+ * new, the new registros and averbações, and the text of the atos the
+ * ficha retificou (the old text stays in the history of the ato). The
+ * indicadores real and pessoal come from the acervo, so they follow.
+ */
+export async function applyOnrReadingWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actor: Actor,
+): Promise<{ added: number; retified: number }> {
+  const row = await own(database, tenantSlug, id);
+  if (row.appliedAt) return { added: 0, retified: 0 };
+  const reading = row.reading as MatriculaReading | null;
+  if (!reading) {
+    throw new RiError(
+      "Esta ficha não foi lida pelo assistente virtual: lance os atos na matrícula.",
+    );
+  }
+  const changes = (row.changes as FichaChange[] | null) ?? [];
+  const current = await acervoOf(database, tenantSlug, row.number);
+  const newSeqs = current
+    ? changes
+        .filter(
+          (c) => c.kind === "novo-registro" || c.kind === "nova-averbacao",
+        )
+        .map((c) => c.seq as number)
+    : reading.acts.map((a) => a.seq);
+  const applied = await applyReadingWith(
+    database,
+    tenantSlug,
+    { ...reading, number: row.number },
+    { propertyId: current?.id ?? null, seqs: newSeqs },
+    actor,
+  );
+  let retified = 0;
+  if (current) {
+    for (const change of changes) {
+      if (change.kind !== "retificacao" || change.seq === null) continue;
+      const read = reading.acts.find((a) => a.seq === change.seq);
+      const [act] = await database
+        .select()
+        .from(riActs)
+        .where(
+          and(eq(riActs.propertyId, current.id), eq(riActs.seq, change.seq)),
+        )
+        .limit(1);
+      if (!read || !act) continue;
+      await database
+        .update(riActs)
+        .set({
+          summary: read.summary,
+          updatedAt: new Date(),
+          history: [
+            ...((act.history as unknown[]) ?? []),
+            {
+              at: new Date().toISOString(),
+              by: actor.id,
+              changes: [
+                {
+                  field: "summary",
+                  before: act.summary,
+                  after: read.summary,
+                },
+              ],
+              reason: "retificação lida da ficha assinada",
+            },
+          ],
+        })
+        .where(eq(riActs.id, act.id));
+      retified++;
+    }
+  }
+  await database
+    .update(riOnrImages)
+    .set({
+      appliedAt: new Date(),
+      appliedBy: actor.id,
+      propertyId: applied.propertyId,
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `aplicou ao acervo: ${applied.acts} ${applied.acts === 1 ? "ato novo" : "atos novos"}${retified ? `, ${retified} ${retified === 1 ? "retificação" : "retificações"}` : ""}`,
+        },
+      ],
+    })
+    .where(eq(riOnrImages.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.onr-image-apply",
+    targetType: "ri-property",
+    targetId: applied.propertyId,
+  });
+  return { added: applied.acts, retified };
 }
 
 export async function listOnrImagesWith(
@@ -251,6 +478,10 @@ export async function listOnrImagesWith(
       pages: riOnrImages.pages,
       signed: riOnrImages.signed,
       issues: riOnrImages.issues,
+      reading: riOnrImages.reading,
+      changes: riOnrImages.changes,
+      appliedAt: riOnrImages.appliedAt,
+      appliedBy: riOnrImages.appliedBy,
       copiedAt: riOnrImages.copiedAt,
       copiedBy: riOnrImages.copiedBy,
       history: riOnrImages.history,
