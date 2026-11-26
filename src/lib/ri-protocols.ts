@@ -15,7 +15,12 @@ import type { OfficeHolidays } from "@/core/scheduling/calendar.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { Database } from "@/db/index.ts";
-import { riActs, riProperties, riProtocols } from "@/db/schema.ts";
+import {
+  riActs,
+  riProperties,
+  riProtocolDays,
+  riProtocols,
+} from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { type Actor, RiError } from "./ri.ts";
 
@@ -170,6 +175,35 @@ function deadlinesOf(input: ProtocolInput, holidays: OfficeHolidays) {
 }
 
 /** Lança the título in the Livro 1 with the next order number. */
+/**
+ * A day of the Protocolo already closed takes no prenotação (art. 184):
+ * reopen it, with the reason, in Protocolo › Encerramento dos dias.
+ */
+async function assertDayOpen(
+  database: Database,
+  tenantSlug: string,
+  input: Pick<ProtocolInput, "kind" | "presentedOn">,
+) {
+  if (input.kind !== "prenotacao") return;
+  const [closed] = await database
+    .select({ id: riProtocolDays.id })
+    .from(riProtocolDays)
+    .where(
+      and(
+        eq(riProtocolDays.tenantSlug, tenantSlug),
+        eq(riProtocolDays.day, input.presentedOn),
+        isNull(riProtocolDays.reopenedAt),
+      ),
+    )
+    .limit(1);
+  if (closed) {
+    const d = input.presentedOn;
+    throw new RiError(
+      `O Protocolo do dia ${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)} já foi encerrado. Para prenotar nele, reabra o dia em Protocolo › Encerramento dos dias, com a justificativa.`,
+    );
+  }
+}
+
 export async function createProtocolWith(
   database: Database,
   tenantSlug: string,
@@ -177,6 +211,7 @@ export async function createProtocolWith(
   holidays: OfficeHolidays,
   actor: Actor,
 ): Promise<{ id: string; number: number; missing: string[] }> {
+  await assertDayOpen(database, tenantSlug, input);
   const { ids, missing } = await propertyIdsFor(
     database,
     tenantSlug,
@@ -313,6 +348,9 @@ export async function updateProtocolWith(
     throw new RiError(
       "Prenotação e exame e cálculo têm numeração própria: lance um novo protocolo.",
     );
+  }
+  if (input.presentedOn !== row.presentedOn) {
+    await assertDayOpen(database, tenantSlug, input);
   }
   const { ids, missing } = await propertyIdsFor(
     database,

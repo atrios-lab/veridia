@@ -22,6 +22,7 @@ import {
   RECORD_KINDS,
   STREET_KINDS,
 } from "@/core/ri/codes.ts";
+import { plainValue } from "@/core/ri/history-text.ts";
 import {
   brDate,
   CONDO_LABELS,
@@ -41,16 +42,18 @@ import {
   geometriesOfWith,
   overlapsOf,
 } from "@/lib/ri-geo.ts";
+import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { AuxPanel } from "../../_components/aux-panel.tsx";
-import { ConfirmButton } from "../../_components/client.tsx";
+import { ActionButton, ConfirmButton } from "../../_components/client.tsx";
 import { FilesPanel } from "../../_components/files-panel.tsx";
 import { GeoPanel } from "../../_components/geo-panel.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
 import { PrintPanel } from "../../_components/print-panel.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
+  exportMatriculaToOnrAction,
   setActDeletedAction,
   setPropertyDeletedAction,
 } from "../../actions.ts";
@@ -89,6 +92,19 @@ const FIELD_NAMES: Record<string, string> = {
   notes: "Observações",
 };
 
+/** One change of the history, said the way the office says it. */
+function changeText(c: { field: string; before: unknown; after: unknown }) {
+  if (c.field === "leitura") {
+    return "Leitura do documento anexado: o sistema completou os campos que estavam vazios. Nada que já estava preenchido foi trocado.";
+  }
+  const name = FIELD_NAMES[c.field] ?? c.field;
+  const before = plainValue(c.before);
+  const after = plainValue(c.after);
+  return before === "vazio"
+    ? `${name}: estava vazio, passou a ${after}.`
+    : `${name}: era ${before}, passou a ${after}.`;
+}
+
 const money = (cents: number | null) =>
   cents === null
     ? ""
@@ -121,6 +137,29 @@ export default async function PropertyPage({
     acervo.properties.map((x) => [x.id, propertyTitle(x)]),
   );
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
+  const onrImage =
+    detail.property.book === 2
+      ? currentOf(await listOnrImagesWith(db, tenant.slug)).find(
+          (r) => r.number === detail.property.number,
+        )
+      : undefined;
+  const editLink =
+    riCan(session, "ri.edit") && !detail.property.deletedAt ? (
+      <Link
+        href={`/admin/ri/matriculas/${detail.property.id}/alterar`}
+        className={buttonVariants({ size: "sm", variant: "outline" })}
+      >
+        <Pencil className="size-4" /> Editar
+      </Link>
+    ) : null;
+  const pad3 = (n: number) => String(n).padStart(3, "0");
+  // The ficha has the number of the matrícula (decision of 26/11/2026),
+  // unless the office typed another one; the folhas come from the image.
+  const fichaLabel = `${detail.property.ficha.trim() || pad3(detail.property.number)}${
+    onrImage
+      ? ` · folhas ${pad3(1)} a ${pad3(onrImage.pages)}`
+      : " · folhas: gere a imagem para a ONR para contar"
+  }`;
   const situation = situationOf(acts);
   const canEdit = riCan(session, "ri.edit") && !p.deletedAt;
   const title = propertyTitle(p);
@@ -162,6 +201,18 @@ export default async function PropertyPage({
                 <Plus className="size-4" />{" "}
                 {p.book === 3 ? "Lançar averbação" : "Lançar ato"}
               </Link>
+              {p.book === 2 && riCan(session, "ri.export") && (
+                <ActionButton
+                  action={exportMatriculaToOnrAction}
+                  fields={{ id: p.id }}
+                  label={
+                    onrImage
+                      ? "Gerar de novo a imagem para a ONR"
+                      : "Exportar para a ONR (imagem assinada)"
+                  }
+                  pendingLabel="Gerando a imagem…"
+                />
+              )}
               <Link
                 href={`/admin/ri/matriculas/${p.id}/alterar`}
                 className={buttonVariants({ size: "sm", variant: "outline" })}
@@ -471,7 +522,7 @@ export default async function PropertyPage({
               hasImage={Boolean(signing.settings.signatureImage)}
             />
           )}
-          <Panel title="Identificação">
+          <Panel title="Identificação" actions={editLink}>
             <dl className="grid gap-3">
               {p.book !== 3 && (
                 <Field label="Tipo" value={RECORD_KINDS.get(p.recordKind)} />
@@ -486,7 +537,7 @@ export default async function PropertyPage({
                 label={p.book === 3 ? "Data do registro" : "Abertura"}
                 value={brDate(p.openedOn)}
               />
-              <Field label="Ficha" value={p.ficha} />
+              <Field label="Ficha" value={fichaLabel} />
               {p.book !== 3 && (
                 <>
                   <Field label="Origem" value={p.origin} />
@@ -508,7 +559,7 @@ export default async function PropertyPage({
             </dl>
           </Panel>
           {p.book !== 3 && (
-            <Panel title="Localização (Livro 4)">
+            <Panel title="Localização (Livro 4)" actions={editLink}>
               <dl className="grid gap-3">
                 <Field label="Localização" value={LOCATIONS.get(p.location)} />
                 <Field
@@ -631,14 +682,7 @@ export default async function PropertyPage({
                   </p>
                   <ul className="mt-1 flex flex-col gap-0.5 text-muted-foreground">
                     {entry.changes.map((c) => (
-                      <li key={c.field}>
-                        {FIELD_NAMES[c.field] ?? c.field}: era{" "}
-                        <span className="text-foreground">
-                          {typeof c.before === "object"
-                            ? JSON.stringify(c.before)
-                            : String(c.before ?? "vazio") || "vazio"}
-                        </span>
-                      </li>
+                      <li key={c.field}>{changeText(c)}</li>
                     ))}
                   </ul>
                 </li>

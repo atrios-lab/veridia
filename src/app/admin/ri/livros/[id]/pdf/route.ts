@@ -1,9 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
-import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocuments, renderingFor } from "@/lib/pdf.ts";
-import { BookTooLarge, bookDocumentsFor } from "@/lib/ri-books.ts";
-import { joinPdfs, tiffToPdf } from "@/lib/ri-tiff.ts";
+import { renderingFor } from "@/lib/pdf.ts";
+import { BookTooLarge, bookPdfFor } from "@/lib/ri-books.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -11,10 +9,10 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 /**
- * The whole book in one PDF, to print or sign at once: the termo de
- * abertura, the fichas (Livros 2 and 3), the days of the Protocolo (Livro
- * 1) or the indicador (Livros 4 and 5), and the termo de encerramento.
- * `?de=&ate=` narrows it (matrículas, or dates for the Livro 1).
+ * The whole book as the models annexed to the Lei nº 6.015/1973: the
+ * termo de abertura, the columns of the model (Livros 1, 3, 4 and 5) or
+ * the fichas of the Livro 2 (the signed image where there is one), and
+ * the termo de encerramento. `?de=&ate=` narrows it.
  */
 async function handle(
   request: Request,
@@ -30,7 +28,7 @@ async function handle(
   const tenant = await getTenant();
   const query = new URL(request.url).searchParams;
   try {
-    const book = await bookDocumentsFor(
+    const book = await bookPdfFor(
       db,
       tenant,
       (await params).id,
@@ -41,26 +39,7 @@ async function handle(
       query.get("assinatura") === "imagem",
     );
     if (!book) return new Response("Não encontrado", { status: 404 });
-    const brand = await brandFor(tenant);
-    // Runs of generated documents, with the signed fichas (images) between.
-    const parts: Uint8Array[] = [];
-    let run: typeof book.documents = [];
-    const flush = async () => {
-      if (run.length) parts.push(await renderDocuments(run, brand));
-      run = [];
-    };
-    for (const [i, document] of book.documents.entries()) {
-      const image = book.images.get(i);
-      if (image) {
-        await flush();
-        parts.push(await tiffToPdf(image));
-      } else {
-        run.push(document);
-      }
-    }
-    await flush();
-    const pdf = parts.length === 1 ? parts[0] : await joinPdfs(parts);
-    return new Response(new Uint8Array(pdf), {
+    return new Response(new Uint8Array(book.bytes), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename="${book.name}.pdf"`,

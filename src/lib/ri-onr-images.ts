@@ -17,6 +17,7 @@ import {
 } from "@/core/ri/onr-images.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
+import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import type { Database } from "@/db/index.ts";
 import { riActs, riOnrImages, riProperties } from "@/db/schema.ts";
 import { aiBlockedWith, readRegistryDocuments } from "./ai.ts";
@@ -47,6 +48,61 @@ export interface OnrHistoryEntry {
   at: string;
   by: string;
   what: string;
+  /** The reason typed (apagar, restaurar, tirar da lista). */
+  why?: string;
+}
+
+/** Why the image was deleted: the reason of the last "apagou". */
+export function deleteReasonOf(row: Pick<OnrImageRow, "history">): string {
+  const h = (row.history as OnrHistoryEntry[] | null) ?? [];
+  return [...h].reverse().find((e) => e.what === "apagou a imagem")?.why ?? "";
+}
+
+/** Taken out of the Histórico list (it stays saved and in the audit). */
+export function hiddenFromListOf(row: Pick<OnrImageRow, "history">): boolean {
+  const h = (row.history as OnrHistoryEntry[] | null) ?? [];
+  const last = [...h]
+    .reverse()
+    .find(
+      (e) => e.what === "tirou da lista" || e.what === "restaurou a imagem",
+    );
+  return last?.what === "tirou da lista";
+}
+
+/** Takes a deleted image out of the Histórico list, with the reason. */
+export async function hideOnrImageFromListWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  reason: string,
+  actor: Actor,
+): Promise<void> {
+  const row = await own(database, tenantSlug, id);
+  if (!row.deletedAt) {
+    throw new RiError("Só a imagem apagada pode sair da lista.");
+  }
+  await database
+    .update(riOnrImages)
+    .set({
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: "tirou da lista",
+          why: reason.slice(0, 2000),
+        },
+      ],
+    })
+    .where(eq(riOnrImages.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.onr-image-hide",
+    targetType: "ri-onr-image",
+    targetId: id,
+    reason: reason.slice(0, 2000),
+  });
 }
 
 export interface BookSuggestion {
@@ -593,6 +649,7 @@ export async function setOnrImageDeletedWith(
   id: string,
   deleted: boolean,
   actor: Actor,
+  reason = "",
 ): Promise<void> {
   const row = await own(database, tenantSlug, id);
   if (Boolean(row.deletedAt) === deleted) return;
@@ -608,6 +665,7 @@ export async function setOnrImageDeletedWith(
           at: new Date().toISOString(),
           by: actor.id,
           what: deleted ? "apagou a imagem" : "restaurou a imagem",
+          ...(reason ? { why: reason.slice(0, 2000) } : {}),
         },
       ],
     })
@@ -618,6 +676,7 @@ export async function setOnrImageDeletedWith(
     action: deleted ? "ri.onr-image-delete" : "ri.onr-image-restore",
     targetType: "ri-onr-image",
     targetId: id,
+    reason: reason ? reason.slice(0, 2000) : undefined,
   });
 }
 
@@ -639,6 +698,32 @@ export async function onrImageFileWith(
  * The images in force (or the ones asked for) in a zip with the folders of
  * the manual, to unzip straight into the folder of the matrículas.
  */
+/** Now, as the office's wall clock, in the Date's local fields. */
+export function officeClock(now = new Date()): Date {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: OFFICE_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(now)
+      .map((p) => [p.type, Number(p.value)]),
+  );
+  return new Date(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
+}
+
 export async function onrZipWith(
   database: Database,
   tenantSlug: string,
@@ -655,8 +740,19 @@ export async function onrZipWith(
   }
   if (options.onlyNotCopied) chosen = chosen.filter((r) => !r.copiedAt);
   const zip = new JSZip();
+  // The zip keeps the clock without a time zone and the server runs in
+  // UTC: write the office's hour, or Windows shows 3 hours early.
+  const date = officeClock();
   for (const r of chosen) {
-    zip.file(onrPath(r.number, r.pattern), Buffer.from(r.tiff, "base64"));
+    const path = onrPath(r.number, r.pattern);
+    const parts = path.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      zip.file(`${parts.slice(0, i).join("/")}/`, null, { dir: true, date });
+    }
+    zip.file(path, Buffer.from(r.tiff, "base64"), {
+      date,
+      createFolders: false,
+    });
   }
   const bytes = await zip.generateAsync({
     type: "uint8array",

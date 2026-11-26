@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { actLabel, PARTY_ROLE_LABELS, situationOf } from "@/core/ri/acts.ts";
+import { plainValue } from "@/core/ri/history-text.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
@@ -141,7 +142,7 @@ export default async function PersonPage({
                       : c.field === "document"
                         ? "CPF/CNPJ"
                         : "Observações"}
-                    : era {String(c.before ?? "") || "vazio"}
+                    : era {plainValue(c.before)}
                   </p>
                 ))}
               </li>

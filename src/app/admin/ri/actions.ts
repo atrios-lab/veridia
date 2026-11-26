@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { can, type Permission } from "@/core/auth/roles.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
 import {
+  isoDate,
   matriculaNumber,
   PropertyError,
   readProperty,
@@ -18,6 +19,8 @@ import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
+import { brandFor } from "@/lib/document-brand.ts";
+import { renderDocument } from "@/lib/pdf.ts";
 import {
   type ActPartyInput,
   addAnnotationWith,
@@ -49,6 +52,7 @@ import {
   setBookDeletedWith,
   updateBookWith,
 } from "@/lib/ri-books.ts";
+import { fichaDocument, fichaFor } from "@/lib/ri-docs.ts";
 import {
   addFileWith,
   applyReadingWith,
@@ -63,6 +67,7 @@ import {
   saveSignatureImageWith,
   saveSignerWith,
   setFileDeletedWith,
+  signatureSettingsWith,
 } from "@/lib/ri-files.ts";
 import {
   addGeometryWith,
@@ -71,10 +76,13 @@ import {
 } from "@/lib/ri-geo.ts";
 import {
   applyOnrReadingWith,
+  hideOnrImageFromListWith,
   prepareOnrImageWith,
   setCopiedWith,
   setOnrImageDeletedWith,
 } from "@/lib/ri-onr-images.ts";
+import { importPgvReturnWith, savePgvCredentialWith } from "@/lib/ri-pgv.ts";
+import { closeDaysWith, reopenDayWith } from "@/lib/ri-protocol-days.ts";
 import {
   createProtocolWith,
   issueRequirementsWith,
@@ -239,6 +247,83 @@ export async function setCnmInPgvAction(
     };
   } catch (error) {
     return failure(error, "ri.cnm.pgv");
+  }
+}
+
+export async function importPgvReturnAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      status: "error",
+      message: "Escolha o arquivo baixado do PGV-CNM.",
+    };
+  }
+  if (file.size > 20 * 1024 * 1024) {
+    return { status: "error", message: "O arquivo passa de 20 MB." };
+  }
+  try {
+    const out = await importPgvReturnWith(
+      db,
+      { slug: ok.tenant.slug, cns: ok.tenant.cns },
+      await file.text(),
+      ok.actor,
+    );
+    revalidatePath("/admin/ri", "layout");
+    const parts = [
+      `${out.found} CNM lido(s) no arquivo`,
+      `${out.marked} matrícula(s) marcada(s) como já no PGV`,
+    ];
+    if (out.filled) parts.push(`${out.filled} receberam o CNM do PGV`);
+    if (out.already) parts.push(`${out.already} já estavam marcadas`);
+    if (out.differ.length) {
+      parts.push(
+        `${out.differ.length} com CNM diferente do PGV (corrija na matrícula: ${out.differ
+          .slice(0, 5)
+          .map((d) => `nº ${d.number}`)
+          .join(", ")})`,
+      );
+    }
+    if (out.missing.length) {
+      parts.push(`${out.missing.length} não estão no acervo daqui`);
+    }
+    return { status: "success", message: `${parts.join("; ")}.` };
+  } catch (error) {
+    return failure(error, "ri.pgv-import");
+  }
+}
+
+export async function savePgvCredentialAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.export");
+  if (!ok) return denied("ri.export");
+  const clear = text(formData, "op") === "clear";
+  try {
+    await savePgvCredentialWith(
+      db,
+      ok.tenant.slug,
+      {
+        clientId: text(formData, "clientId"),
+        hash: String(formData.get("hash") ?? ""),
+        clear,
+      },
+      ok.actor,
+    );
+    revalidatePath("/admin/ri/cnm");
+    return {
+      status: "success",
+      message: clear
+        ? "Credencial apagada. A auditoria guarda quem apagou."
+        : "Credencial salva. O Hash fica guardado cifrado e não aparece mais na tela.",
+    };
+  } catch (error) {
+    return failure(error, "ri.pgv-credential");
   }
 }
 
@@ -1385,6 +1470,56 @@ export type OnrImageState =
  * sends one file per call, in order. With "check", nothing was saved: the
  * office looks at what was pointed out and sends again with "conferi".
  */
+/**
+ * "Exportar para a ONR" straight from the matrícula (decision of
+ * 26/11/2026): the ficha the system keeps becomes the PDF, and the PDF the
+ * signed TIFF of the manual, with no file to attach.
+ */
+export async function exportMatriculaToOnrAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.export");
+  if (!ok) return denied("ri.export");
+  try {
+    const ficha = await fichaFor(ok.tenant, text(formData, "id"));
+    if (!ficha)
+      return { status: "error", message: "Matrícula não encontrada." };
+    const pdf = await renderDocument(
+      fichaDocument(ok.tenant, ficha.content, null),
+      await brandFor(ok.tenant),
+    );
+    const settings = await signatureSettingsWith(db, ok.tenant.slug);
+    const result = await prepareOnrImageWith(
+      db,
+      ok.tenant,
+      {
+        name: `matricula-${ficha.number}.pdf`,
+        bytes: new Uint8Array(pdf),
+        typed: ficha.number,
+        pattern: "p12",
+        sign: Boolean(settings.signatureImage),
+        rubric: Boolean(settings.rubricImage),
+        confirmed: true,
+      },
+      ok.actor,
+    );
+    if (!result.id) {
+      return {
+        status: "error",
+        message: result.issues.join(" ") || "Não deu para gerar a imagem.",
+      };
+    }
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message: `Imagem da matrícula nº ${ficha.number} gerada${settings.signatureImage ? " e assinada" : " (sem assinatura: cadastre a sua em RI › Configurações)"}. Baixe em Arquivos para a ONR › Imagens.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.onr-image.export");
+  }
+}
+
 export async function prepareOnrImageAction(
   formData: FormData,
 ): Promise<OnrImageState> {
@@ -1466,22 +1601,40 @@ export async function setOnrImageDeletedAction(
   if (why) return { status: "error", message: why };
   const ok = await access("ri.export");
   if (!ok) return denied("ri.export");
-  const deleted = text(formData, "op") !== "restore";
+  const op = text(formData, "op");
+  const deleted = op !== "restore";
+  const reason = String(formData.get("justificativa") ?? "").trim();
   try {
-    await setOnrImageDeletedWith(
-      db,
-      ok.tenant.slug,
-      text(formData, "id"),
-      deleted,
-      ok.actor,
-    );
+    if (op === "hide") {
+      await hideOnrImageFromListWith(
+        db,
+        ok.tenant.slug,
+        text(formData, "id"),
+        reason,
+        ok.actor,
+      );
+    } else {
+      await setOnrImageDeletedWith(
+        db,
+        ok.tenant.slug,
+        text(formData, "id"),
+        deleted,
+        ok.actor,
+        reason,
+      );
+    }
   } catch (error) {
     return failure(error, "ri.onr-image.delete");
   }
   revalidatePath("/admin/ri/onr/imagens");
   return {
     status: "success",
-    message: deleted ? "Imagem apagada (fica guardada)." : "Imagem restaurada.",
+    message:
+      op === "hide"
+        ? "Tirada da lista. Continua guardada e na auditoria, com o motivo."
+        : deleted
+          ? "Imagem apagada (fica guardada, com o motivo)."
+          : "Imagem restaurada.",
   };
 }
 
@@ -1544,5 +1697,65 @@ export async function openLivro2Action(formData: FormData): Promise<RiState> {
     status: "success",
     message:
       "Livro 2 aberto. Assine o termo de abertura em Livros e assinatura.",
+  };
+}
+
+/* ------------------------------------------- the daily closing (art. 184) */
+
+/** Closes the open days of a span, each with its own date. */
+export async function closeProtocolDaysAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const from = isoDate(text(formData, "de")) ?? "";
+  const to = isoDate(text(formData, "ate")) ?? from;
+  if (!from) return { status: "error", message: "Informe o dia." };
+  try {
+    const n = await closeDaysWith(
+      db,
+      ok.tenant.slug,
+      { from, to },
+      officeHolidays(ok.tenant),
+      ok.actor,
+    );
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message:
+        n === 0
+          ? "Esses dias já estavam encerrados."
+          : `${n} ${n === 1 ? "dia encerrado" : "dias encerrados"}, cada um com a sua data.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.protocol-day.close");
+  }
+}
+
+/** Reopens a closed day, with the reason. */
+export async function reopenProtocolDayAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  try {
+    await reopenDayWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "dia"),
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.protocol-day.reopen");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Dia reaberto: já aceita prenotação com a data dele.",
   };
 }

@@ -62,14 +62,22 @@ export default async function ProtocolListPage({
       title="Protocolo (Livro 1)"
       description="Todo título apresentado ganha o número de ordem, que fixa a prioridade (Lei nº 6.015/1973, arts. 174, 182 e 186). A qualificação vence em 10 dias úteis (5 nos casos do art. 188, § 1º) e a prenotação em 20 (art. 205), contados em dias úteis (art. 9º, § 1º)."
       actions={
-        riCan(session, "ri.edit") && (
+        <>
           <Link
-            href="/admin/ri/protocolo/novo"
-            className={buttonVariants({ size: "sm" })}
+            href="/admin/ri/protocolo/dias"
+            className={buttonVariants({ size: "sm", variant: "outline" })}
           >
-            <Plus className="size-4" /> Novo protocolo
+            Encerramento dos dias
           </Link>
-        )
+          {riCan(session, "ri.edit") && (
+            <Link
+              href="/admin/ri/protocolo/novo"
+              className={buttonVariants({ size: "sm" })}
+            >
+              <Plus className="size-4" /> Novo protocolo
+            </Link>
+          )}
+        </>
       }
     >
       <div className="grid gap-3 sm:grid-cols-4">

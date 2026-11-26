@@ -295,6 +295,14 @@ export function OnrImageForm({
               ? `Assinar e gerar ${items.length} imagens para a ONR`
               : "Assinar e gerar a imagem para a ONR"}
         </Button>
+        {items.length === 0 && (
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            Anexe acima o PDF ou o Word da matrícula para liberar o botão. Se a
+            matrícula já está lançada no sistema, abra a matrícula e clique em
+            &quot;Exportar para a ONR&quot;: a imagem sai assinada sem anexar
+            nada.
+          </p>
+        )}
       </div>
     </div>
   );

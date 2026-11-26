@@ -424,6 +424,11 @@ const EXACT: Record<string, string> = {
     "Apagou uma matrícula do sistema do Registro de Imóveis",
   "ri.property-restore": "Restaurou uma matrícula apagada",
   "ri.cnm-in-pgv": "Marcou o CNM de matrículas como já cadastrado no PGV-CNM",
+  "ri.onr-image-hide":
+    "Tirou uma imagem apagada da lista do histórico (continua guardada)",
+  "ri.pgv-import": "Importou o arquivo de retorno do PGV-CNM",
+  "ri.pgv-credential-save": "Salvou a credencial de integração do PGV-CNM",
+  "ri.pgv-credential-clear": "Apagou a credencial de integração do PGV-CNM",
   "ri.cnm-not-in-pgv":
     "Desmarcou o CNM de matrículas como cadastrado no PGV-CNM",
   "ri.act-create": "Lançou um ato (R ou AV) numa matrícula",
@@ -447,6 +452,8 @@ const EXACT: Record<string, string> = {
   "ri.geometry-delete": "Apagou o perímetro georreferenciado de uma matrícula",
   "ri.geometry-restore": "Restaurou um perímetro georreferenciado apagado",
   "ri.book-open": "Abriu um livro do Registro de Imóveis (termo de abertura)",
+  "ri.protocol-day-close": "Encerrou dias do Protocolo (Livro 1)",
+  "ri.protocol-day-reopen": "Reabriu um dia encerrado do Protocolo (Livro 1)",
   "ri.book-edit": "Alterou os dados de um livro do Registro de Imóveis",
   "ri.book-close":
     "Encerrou um livro do Registro de Imóveis (termo de encerramento)",

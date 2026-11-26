@@ -5,6 +5,7 @@ import { FeeTableReminder } from "@/app/admin/_components/fee-table-reminder.tsx
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { can } from "@/core/auth/roles.ts";
 import { situationOf } from "@/core/ri/acts.ts";
+import { PROTOCOL_FIELD_NAMES, plainValue } from "@/core/ri/history-text.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { type Requirement, registryChecks } from "@/core/ri/protocol.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
@@ -472,9 +473,9 @@ export default async function ProtocolPage({
                   </p>
                   {h.changes?.map((c) => (
                     <p key={c.field} className="text-muted-foreground">
-                      {c.field}:{" "}
-                      {String(JSON.stringify(c.before)).slice(0, 120)} →{" "}
-                      {String(JSON.stringify(c.after)).slice(0, 120)}
+                      {PROTOCOL_FIELD_NAMES[c.field] ?? c.field}: era{" "}
+                      {plainValue(c.before).slice(0, 120)}, passou a{" "}
+                      {plainValue(c.after).slice(0, 120)}
                     </p>
                   ))}
                 </li>
