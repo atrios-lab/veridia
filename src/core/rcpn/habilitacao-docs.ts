@@ -2,6 +2,7 @@ import type {
   RequerimentoDocument,
   RequerimentoSection,
 } from "../request/requerimento.ts";
+import { custasNoteFor } from "../ri/closing-notes.ts";
 import { writtenDate } from "../scheduling/attendance.ts";
 import { officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
@@ -176,6 +177,9 @@ function base(
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(h.today)}.`,
     signature: [],
     footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+    closingNotes: custasNoteFor(tenant.location.state)
+      ? [{ text: custasNoteFor(tenant.location.state) as string }]
+      : undefined,
   };
 }
 

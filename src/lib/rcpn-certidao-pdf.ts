@@ -6,6 +6,7 @@ import {
   certidaoModel,
 } from "@/core/rcpn/certidao.ts";
 import type { RcpnKind } from "@/core/rcpn/record.ts";
+import { custasNoteFor } from "@/core/ri/closing-notes.ts";
 import { writtenDate } from "@/core/scheduling/attendance.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
@@ -480,6 +481,17 @@ export async function renderCertidao(
       y += 10;
     });
     pdf.y = sealTop + sealBoxHeight + 6;
+  }
+
+  // The custas of the selo digital, in every paid document (decision of
+  // 26/11/2026; Portaria Conjunta nº 10/2022, TJRN).
+  const custas = custasNoteFor(tenant.location.state);
+  if (custas) {
+    pdf
+      .font("Helvetica")
+      .fontSize(6.5)
+      .fillColor(NEUTRALS.text)
+      .text(custas, left, pdf.y + 2, { width, align: "center" });
   }
 
   pdf.end();
