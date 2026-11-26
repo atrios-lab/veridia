@@ -85,6 +85,31 @@ export default async function RiSettingsPage() {
             </p>
           )}
         </Panel>
+        <div className="mt-5">
+          <Panel
+            title="Imagem da rubrica"
+            description="Vai no canto superior direito de todas as folhas das imagens do Livro 2 para a ONR, como a rubrica nas folhas do livro físico."
+          >
+            {riCan(session, "certificates.manage") ? (
+              <SignatureImageForm
+                kind="rubrica"
+                preview={
+                  signing.settings.rubricImage
+                    ? `data:image/png;base64,${Buffer.from(signing.settings.rubricImage).toString("base64")}`
+                    : null
+                }
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {signing.settings.rubricImage
+                  ? "Cadastrada."
+                  : "Não cadastrada."}{" "}
+                Só quem cuida dos certificados digitais da serventia cadastra ou
+                troca.
+              </p>
+            )}
+          </Panel>
+        </div>
       </section>
       <Panel
         title="Integração com o PGV-CNM e com a ONR"

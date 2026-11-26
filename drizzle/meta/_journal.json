@@ -645,6 +645,13 @@
       "when": 1795661321844,
       "tag": "0091_ri_imagens_acervo",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1795695076053,
+      "tag": "0092_ri_rubrica",
+      "breakpoints": true
     }
   ]
 }

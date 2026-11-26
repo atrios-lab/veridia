@@ -45,7 +45,11 @@ export function OnrImageForm({
   const choose = (list: FileList | null) => {
     setItems(
       Array.from(list ?? [])
-        .slice(0, 50)
+        // In the order of the names: 001, 002, 003…
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, "pt-BR", { numeric: true }),
+        )
+        .slice(0, 100)
         .map((file, i) => ({
           key: `${i}-${file.name}`,
           file,
@@ -92,7 +96,7 @@ export function OnrImageForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 rounded-lg border border-dashed p-2">
           <Label htmlFor="onr-files">Matrículas em PDF ou Word</Label>
           <Input
             ref={input}
@@ -104,8 +108,10 @@ export function OnrImageForm({
             className="bg-background"
           />
           <p className="text-xs text-muted-foreground">
-            Recomendado: o Word salvo como PDF (Arquivo › Salvar como › PDF). A
-            imagem sai igual à página. Até 4 MB cada.
+            Várias de uma vez: na janela de escolher, segure Ctrl e clique em
+            cada uma (ou Ctrl+A para todas da pasta), ou arraste os arquivos
+            para cá. Até 100 por vez, 4 MB cada. Recomendado: o Word salvo como
+            PDF (Arquivo › Salvar como › PDF).
           </p>
         </div>
         <div className="flex flex-col gap-1.5">

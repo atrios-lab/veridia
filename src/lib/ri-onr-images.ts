@@ -154,7 +154,11 @@ export async function prepareOnrImageWith(
   let pdf: Awaited<ReturnType<typeof pdfToOnrTiff>> | null = null;
   if (isPdf) {
     try {
-      pdf = await pdfToOnrTiff(input.bytes, signature);
+      pdf = await pdfToOnrTiff(
+        input.bytes,
+        signature,
+        input.sign ? settings.rubricImage : null,
+      );
     } catch {
       throw new RiError(
         "Não consegui abrir este PDF. Salve de novo pelo Word.",
