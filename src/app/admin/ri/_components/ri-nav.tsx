@@ -58,6 +58,11 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
         icon: Files,
       },
       { label: "Pessoas", href: "/admin/ri/pessoas", icon: Users },
+      {
+        label: "Livros e assinatura",
+        href: "/admin/ri/livros",
+        icon: Library,
+      },
     ],
   },
   {
@@ -91,17 +96,6 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
       },
       { label: "CNM", href: "/admin/ri/cnm", icon: ScanBarcode },
       { label: "Arquivos para a ONR", href: "/admin/ri/onr", icon: Send },
-    ],
-  },
-  {
-    title: "Próximas fases",
-    entries: [
-      {
-        label: "Livros e assinatura",
-        href: "#livros",
-        icon: Library,
-        soon: true,
-      },
     ],
   },
   {

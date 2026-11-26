@@ -42,6 +42,14 @@ import {
   withdrawExportWith,
 } from "@/lib/ri.ts";
 import {
+  closeBookWith,
+  openBookWith,
+  readBookInput,
+  reopenBookWith,
+  setBookDeletedWith,
+  updateBookWith,
+} from "@/lib/ri-books.ts";
+import {
   addFileWith,
   applyReadingWith,
   fileWith,
@@ -97,6 +105,8 @@ const NO_PERMISSION: Partial<Record<Permission, string>> = {
   "ri.import":
     "Você não tem permissão para importar matrículas, atos e indicadores.",
   "ri.export": "Você não tem permissão para gerar os arquivos para a ONR.",
+  "ri.books":
+    "Você não tem permissão para abrir, alterar ou encerrar os livros do Registro de Imóveis.",
 };
 
 async function access(permission: Permission) {
@@ -1199,5 +1209,117 @@ export async function setGeometryDeletedAction(
     message: deleted
       ? "Perímetro apagado (fica guardado)."
       : "Perímetro restaurado.",
+  };
+}
+
+/* ------------------------------------------------------------- the books */
+
+const bookPath = (id: string) => `/admin/ri/livros/${id}`;
+
+/** Opens a volume, or changes its data (the old values go to the history). */
+export async function saveBookAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const id = text(formData, "id");
+  let target = id;
+  try {
+    const input = readBookInput(rawOf(formData));
+    if (id) {
+      await updateBookWith(db, ok.tenant.slug, id, input, ok.actor);
+    } else {
+      target = await openBookWith(db, ok.tenant.slug, input, ok.actor);
+    }
+  } catch (error) {
+    return failure(error, "ri.book.save");
+  }
+  revalidatePath("/admin/ri", "layout");
+  if (!id) redirect(bookPath(target));
+  return {
+    status: "success",
+    message: "Livro alterado. Os dados anteriores ficaram no histórico.",
+  };
+}
+
+/** Closes the volume: date, last folha, and the termo de encerramento. */
+export async function closeBookAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const toNumber = (key: string) => {
+    const digits = text(formData, key).replace(/\D/g, "");
+    return digits ? Number(digits) : null;
+  };
+  try {
+    await closeBookWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      {
+        closedOn: text(formData, "closedOn"),
+        lastSheet: toNumber("lastSheet"),
+        lastItem: toNumber("lastItem"),
+        notes: text(formData, "notes"),
+      },
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.book.close");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Livro encerrado: assine o termo de encerramento.",
+  };
+}
+
+export async function reopenBookAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  try {
+    await reopenBookWith(db, ok.tenant.slug, text(formData, "id"), ok.actor);
+  } catch (error) {
+    return failure(error, "ri.book.reopen");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Encerramento desfeito. Ele ficou no histórico do livro.",
+  };
+}
+
+export async function setBookDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setBookDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      deleted,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.book.delete");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: deleted ? "Livro apagado (fica guardado)." : "Livro restaurado.",
   };
 }

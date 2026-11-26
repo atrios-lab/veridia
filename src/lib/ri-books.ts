@@ -1,0 +1,709 @@
+import "server-only";
+import { and, eq } from "drizzle-orm";
+import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
+import {
+  BOOKS,
+  type BookForm,
+  type BookNumber,
+  type BookRecord,
+  closingTerm,
+  isBookNumber,
+  openingTerm,
+  type ProtocolLine,
+  protocolDay,
+  readItem,
+  shortDate,
+  type TermOffice,
+  type TermText,
+} from "@/core/ri/books.ts";
+import { fichaContent } from "@/core/ri/ficha.ts";
+import { addressLine, isoDate, propertyTitle } from "@/core/ri/property.ts";
+import { formatTaxId } from "@/core/tax-id.ts";
+import { officialName } from "@/core/tenant/identification.ts";
+import type { Tenant } from "@/core/tenant/schema.ts";
+import type { Database } from "@/db/index.ts";
+import { riBooks, riProtocols } from "@/db/schema.ts";
+import { recordAuditWith } from "./audit.ts";
+import { type Actor, loadAcervoWith, RiError } from "./ri.ts";
+import { riSignerFor } from "./ri-docs.ts";
+import { officeToday } from "./ri-protocols.ts";
+
+/**
+ * The books of the Registro de Imóveis (change registro-de-imoveis-livros):
+ * each volume opened and closed with its termo (Lei nº 6.015/1973, art.
+ * 4º), the whole book as one PDF to print or sign, and the Protocolo of
+ * each day closed (art. 184). Nothing is deleted: "apagar" hides the
+ * volume, every change keeps the previous values in the history.
+ */
+
+export type BookRow = typeof riBooks.$inferSelect;
+
+const UUID = /^[0-9a-f-]{36}$/i;
+const FORMS: readonly BookForm[] = ["fichas", "folhas", "eletronico"];
+
+export interface BookHistoryEntry {
+  at: string;
+  by: string;
+  what: string;
+  before: Partial<BookInput>;
+}
+
+export interface BookInput {
+  book: BookNumber;
+  volume: string;
+  form: BookForm;
+  sheetCount: number;
+  firstItem: number | null;
+  lastItem: number | null;
+  openedOn: string;
+  openingNotes: string;
+}
+
+const clean = (value: unknown, max = 2000) =>
+  String(value ?? "")
+    .trim()
+    .slice(0, max);
+
+/** The form, checked. Throws RiError with what the screen shows. */
+export function readBookInput(
+  raw: Record<string, unknown>,
+  today = officeToday(),
+): BookInput {
+  const book = Number(raw.book);
+  if (!isBookNumber(book)) throw new RiError("Escolha o livro (1 a 5).");
+  const volume = clean(raw.volume, 20).toUpperCase().replace(/\s+/g, "");
+  if (
+    !/^[1-5](-[A-Z0-9]{1,4})?$/.test(volume) ||
+    !volume.startsWith(String(book))
+  ) {
+    throw new RiError(
+      `O número do livro deve ser ${book}, ${book}-A, ${book}-B e assim por diante (Lei nº 6.015/1973, art. 6º).`,
+    );
+  }
+  const form = FORMS.includes(raw.form as BookForm)
+    ? (raw.form as BookForm)
+    : "fichas";
+  const sheetCount = readItem(clean(raw.sheetCount, 10)) ?? 0;
+  if (sheetCount > 100_000) {
+    throw new RiError("O número de folhas ou fichas passa do limite.");
+  }
+  const firstItem = readItem(clean(raw.firstItem, 12));
+  const lastItem = readItem(clean(raw.lastItem, 12));
+  if (firstItem !== null && lastItem !== null && lastItem < firstItem) {
+    throw new RiError("O último número não pode ser menor que o primeiro.");
+  }
+  const openedRaw = clean(raw.openedOn, 20);
+  const openedOn = openedRaw ? isoDate(openedRaw) : today;
+  if (!openedOn) throw new RiError("A data de abertura não é uma data válida.");
+  if (openedOn > today) {
+    throw new RiError("A data de abertura não pode ser depois de hoje.");
+  }
+  return {
+    book,
+    volume,
+    form,
+    sheetCount,
+    firstItem,
+    lastItem,
+    openedOn,
+    openingNotes: clean(raw.openingNotes),
+  };
+}
+
+export async function listBooksWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<BookRow[]> {
+  const rows = await database
+    .select()
+    .from(riBooks)
+    .where(eq(riBooks.tenantSlug, tenantSlug));
+  return rows.sort(
+    (a, b) =>
+      a.book - b.book ||
+      a.openedOn.localeCompare(b.openedOn) ||
+      a.volume.localeCompare(b.volume, "pt-BR", { numeric: true }),
+  );
+}
+
+export async function bookWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+): Promise<BookRow | null> {
+  if (!UUID.test(id)) return null;
+  const [row] = await database
+    .select()
+    .from(riBooks)
+    .where(and(eq(riBooks.tenantSlug, tenantSlug), eq(riBooks.id, id)))
+    .limit(1);
+  return row ?? null;
+}
+
+async function ownBook(database: Database, tenantSlug: string, id: string) {
+  const row = await bookWith(database, tenantSlug, id);
+  if (!row) throw new RiError("Livro não encontrado.");
+  return row;
+}
+
+async function volumeTaken(
+  database: Database,
+  tenantSlug: string,
+  input: Pick<BookInput, "book" | "volume">,
+  except?: string,
+) {
+  const rows = await listBooksWith(database, tenantSlug);
+  return rows.some(
+    (r) =>
+      !r.deletedAt &&
+      r.id !== except &&
+      r.book === input.book &&
+      r.volume.toUpperCase() === input.volume,
+  );
+}
+
+export const historyOf = (row: Pick<BookRow, "history">) =>
+  (row.history as BookHistoryEntry[] | null) ?? [];
+
+/** Opens a volume (art. 4º): the termo de abertura comes from it. */
+export async function openBookWith(
+  database: Database,
+  tenantSlug: string,
+  input: BookInput,
+  actor: Actor,
+): Promise<string> {
+  if (await volumeTaken(database, tenantSlug, input)) {
+    throw new RiError(`O livro ${input.volume} já está aberto aqui.`);
+  }
+  const [row] = await database
+    .insert(riBooks)
+    .values({ tenantSlug, ...input, createdBy: actor.id })
+    .returning({ id: riBooks.id });
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-open",
+    targetType: "ri-book",
+    targetId: row?.id,
+  });
+  return row?.id ?? "";
+}
+
+const snapshot = (row: BookRow): Partial<BookInput> => ({
+  volume: row.volume,
+  form: row.form as BookForm,
+  sheetCount: row.sheetCount,
+  firstItem: row.firstItem,
+  lastItem: row.lastItem,
+  openedOn: row.openedOn,
+  openingNotes: row.openingNotes,
+});
+
+/** Changes the data of the volume, keeping what it had in the history. */
+export async function updateBookWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  input: BookInput,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (input.book !== row.book) {
+    throw new RiError("O número do livro (1 a 5) não muda depois de aberto.");
+  }
+  if (await volumeTaken(database, tenantSlug, input, id)) {
+    throw new RiError(`O livro ${input.volume} já está aberto aqui.`);
+  }
+  await database
+    .update(riBooks)
+    .set({
+      volume: input.volume,
+      form: input.form,
+      sheetCount: input.sheetCount,
+      firstItem: input.firstItem,
+      lastItem: input.lastItem,
+      openedOn: input.openedOn,
+      openingNotes: input.openingNotes,
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: "alterou os dados do livro",
+          before: snapshot(row),
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-edit",
+    targetType: "ri-book",
+    targetId: id,
+  });
+}
+
+/** Closes the volume (art. 4º): the termo de encerramento comes from it. */
+export async function closeBookWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  input: {
+    closedOn: string;
+    lastSheet: number | null;
+    lastItem: number | null;
+    notes: string;
+  },
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (row.deletedAt) throw new RiError("Restaure o livro antes de encerrar.");
+  const closedOn = isoDate(input.closedOn) ?? officeToday();
+  if (closedOn < row.openedOn) {
+    throw new RiError("O livro não pode ser encerrado antes de aberto.");
+  }
+  if (closedOn > officeToday()) {
+    throw new RiError("A data de encerramento não pode ser depois de hoje.");
+  }
+  if (row.sheetCount && input.lastSheet && input.lastSheet > row.sheetCount) {
+    throw new RiError(
+      `A última folha (${input.lastSheet}) passa do número de folhas do livro (${row.sheetCount}).`,
+    );
+  }
+  await database
+    .update(riBooks)
+    .set({
+      closedOn,
+      lastSheet: input.lastSheet,
+      lastItem: input.lastItem ?? row.lastItem,
+      closingNotes: clean(input.notes),
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: row.closedOn
+            ? "alterou o encerramento do livro"
+            : "encerrou o livro",
+          before: { lastItem: row.lastItem },
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-close",
+    targetType: "ri-book",
+    targetId: id,
+  });
+}
+
+/** Undoes the closing: the termo de encerramento stays in the history. */
+export async function reopenBookWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (!row.closedOn) return;
+  await database
+    .update(riBooks)
+    .set({
+      closedOn: null,
+      lastSheet: null,
+      closingNotes: "",
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `desfez o encerramento de ${shortDate(row.closedOn)}${row.lastSheet ? ` (até a folha ${row.lastSheet})` : ""}${row.closingNotes ? `: ${row.closingNotes}` : ""}`,
+          before: {},
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-reopen",
+    targetType: "ri-book",
+    targetId: id,
+  });
+}
+
+/** "Apagar" hides the volume (lançado por engano); it can come back. */
+export async function setBookDeletedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  deleted: boolean,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (Boolean(row.deletedAt) === deleted) return;
+  if (
+    !deleted &&
+    (await volumeTaken(
+      database,
+      tenantSlug,
+      {
+        book: row.book as BookNumber,
+        volume: row.volume.toUpperCase(),
+      },
+      id,
+    ))
+  ) {
+    throw new RiError(
+      `Já há outro livro ${row.volume} aberto: altere o número de um deles antes.`,
+    );
+  }
+  await database
+    .update(riBooks)
+    .set(
+      deleted
+        ? { deletedAt: new Date(), deletedBy: actor.id }
+        : { deletedAt: null, deletedBy: null },
+    )
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: deleted ? "ri.book-delete" : "ri.book-restore",
+    targetType: "ri-book",
+    targetId: id,
+  });
+}
+
+export function recordOf(row: BookRow): BookRecord {
+  return {
+    book: row.book as BookNumber,
+    volume: row.volume,
+    form: row.form as BookForm,
+    sheetCount: row.sheetCount,
+    firstItem: row.firstItem,
+    lastItem: row.lastItem,
+    openedOn: row.openedOn,
+    closedOn: row.closedOn,
+    lastSheet: row.lastSheet,
+    openingNotes: row.openingNotes,
+    closingNotes: row.closingNotes,
+  };
+}
+
+/* ------------------------------------------------------------ documents */
+
+export function termOffice(tenant: Tenant): TermOffice {
+  return {
+    name: officialName(tenant),
+    cns: tenant.cns,
+    city: tenant.location.city,
+    state: tenant.location.state,
+  };
+}
+
+async function signerLines(tenant: Tenant, withImage: boolean) {
+  const { signer, settings } = await riSignerFor(tenant);
+  return {
+    signee: signer?.name,
+    signature: signer ? [signer.title] : [],
+    signatureImage: withImage
+      ? (settings.signatureImage ?? undefined)
+      : undefined,
+  };
+}
+
+function termDocument(
+  tenant: Tenant,
+  term: TermText,
+  signer: Awaited<ReturnType<typeof signerLines>>,
+): RequerimentoDocument {
+  return {
+    eyebrow: term.eyebrow,
+    title: term.title,
+    subtitle: term.subtitle,
+    office: [officialName(tenant), tenant.subtitle],
+    sections: term.sections,
+    dateLine: term.dateLine,
+    ...signer,
+    footer: `${officialName(tenant)} · ${term.subtitle} · ${term.title} · ${tenant.legalFooter}`,
+  };
+}
+
+/** The termo de abertura or de encerramento of a volume, signed. */
+export async function termDocumentFor(
+  database: Database,
+  tenant: Tenant,
+  id: string,
+  kind: "abertura" | "encerramento",
+  withImage: boolean,
+): Promise<{ document: RequerimentoDocument; name: string } | null> {
+  const row = await bookWith(database, tenant.slug, id);
+  if (!row) return null;
+  if (kind === "encerramento" && !row.closedOn) return null;
+  const record = recordOf(row);
+  const term =
+    kind === "abertura"
+      ? openingTerm(record, termOffice(tenant))
+      : closingTerm(record, termOffice(tenant));
+  return {
+    document: termDocument(tenant, term, await signerLines(tenant, withImage)),
+    name: `livro-${row.volume.toLowerCase()}-termo-de-${kind}`,
+  };
+}
+
+/** The most fichas or entries one PDF carries; past it, a smaller range. */
+export const MAX_FICHAS = 300;
+export const MAX_PROTOCOL_LINES = 2000;
+
+function protocolLineOf(row: typeof riProtocols.$inferSelect): ProtocolLine {
+  return {
+    number: row.number,
+    presentedOn: row.presentedOn,
+    presenter: row.presenterName,
+    titleKind: row.titleKind,
+    acts: row.actsSummary,
+    voided: Boolean(row.voidedAt),
+  };
+}
+
+/** The prenotações of a span of days, grouped by day (art. 12, p. único). */
+export async function protocolDaysWith(
+  database: Database,
+  tenantSlug: string,
+  from: string,
+  to: string,
+): Promise<Map<string, ProtocolLine[]>> {
+  const rows = await database
+    .select()
+    .from(riProtocols)
+    .where(
+      and(
+        eq(riProtocols.tenantSlug, tenantSlug),
+        eq(riProtocols.kind, "prenotacao"),
+      ),
+    );
+  const days = new Map<string, ProtocolLine[]>();
+  for (const row of rows) {
+    if (row.presentedOn < from || row.presentedOn > to) continue;
+    const list = days.get(row.presentedOn) ?? [];
+    list.push(protocolLineOf(row));
+    days.set(row.presentedOn, list);
+  }
+  return new Map([...days.entries()].sort(([a], [b]) => a.localeCompare(b)));
+}
+
+/** The Protocolo of one day, closed (art. 184), signed by the oficial. */
+export async function protocolDayDocumentFor(
+  database: Database,
+  tenant: Tenant,
+  day: string,
+  withImage: boolean,
+): Promise<RequerimentoDocument> {
+  const days = await protocolDaysWith(database, tenant.slug, day, day);
+  return {
+    eyebrow: "Registro de Imóveis · Livro nº 1 · Protocolo",
+    title: `Protocolo do dia ${shortDate(day)}`,
+    subtitle: "Encerramento diário (Lei nº 6.015/1973, art. 184)",
+    office: [officialName(tenant), tenant.subtitle],
+    sections: protocolDay(day, days.get(day) ?? []),
+    dateLine: `${tenant.location.city}/${tenant.location.state}, ${shortDate(day)}.`,
+    ...(await signerLines(tenant, withImage)),
+    footer: `${officialName(tenant)} · Livro nº 1 · Protocolo de ${shortDate(day)} · ${tenant.legalFooter}`,
+  };
+}
+
+export interface BookRange {
+  /** Matrículas or registros (Livros 2 and 3); dates (Livro 1). */
+  from?: string;
+  to?: string;
+}
+
+export class BookTooLarge extends Error {}
+
+/**
+ * The whole volume as one PDF: the termo de abertura, the content, and the
+ * termo de encerramento when it is closed. Livros 2 and 3 are their
+ * fichas; the Livro 1, its days, each closed; the Livros 4 and 5, the
+ * indicadores from the acervo.
+ */
+export async function bookDocumentsFor(
+  database: Database,
+  tenant: Tenant,
+  id: string,
+  range: BookRange,
+  withImage: boolean,
+): Promise<{ documents: RequerimentoDocument[]; name: string } | null> {
+  const row = await bookWith(database, tenant.slug, id);
+  if (!row) return null;
+  const record = recordOf(row);
+  const office = termOffice(tenant);
+  const signer = await signerLines(tenant, withImage);
+  const documents: RequerimentoDocument[] = [
+    termDocument(tenant, openingTerm(record, office), signer),
+  ];
+  const info = BOOKS[record.book];
+  const footer = `${officialName(tenant)} · ${info.name} · ${row.volume} · ${tenant.legalFooter}`;
+  if (record.book === 1) {
+    const from = isoDate(range.from ?? "") ?? row.openedOn;
+    const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
+    const days = await protocolDaysWith(database, tenant.slug, from, to);
+    const total = [...days.values()].reduce((n, l) => n + l.length, 0);
+    if (total > MAX_PROTOCOL_LINES) {
+      throw new BookTooLarge(
+        `São ${total} títulos nesse período; escolha um período com até ${MAX_PROTOCOL_LINES}.`,
+      );
+    }
+    for (const [day, lines] of days) {
+      documents.push({
+        eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
+        title: `Protocolo do dia ${shortDate(day)}`,
+        subtitle: "Lei nº 6.015/1973, arts. 175 e 184",
+        office: [officialName(tenant), tenant.subtitle],
+        sections: protocolDay(day, lines),
+        ...signer,
+        footer,
+      });
+    }
+  } else {
+    const acervo = await loadAcervoWith(database, tenant.slug);
+    if (record.book === 2 || record.book === 3) {
+      const from = readItem(range.from ?? "") ?? record.firstItem ?? 1;
+      const to =
+        readItem(range.to ?? "") ?? record.lastItem ?? Number.MAX_SAFE_INTEGER;
+      const items = acervo.properties.filter(
+        (p) =>
+          !p.deletedAt &&
+          p.book === record.book &&
+          p.number >= from &&
+          p.number <= to,
+      );
+      if (items.length > MAX_FICHAS) {
+        throw new BookTooLarge(
+          `São ${items.length} fichas nesse intervalo; escolha um intervalo com até ${MAX_FICHAS}.`,
+        );
+      }
+      const { signer: who } = await riSignerFor(tenant);
+      for (const p of items) {
+        const content = fichaContent({
+          office: {
+            name: officialName(tenant),
+            city: tenant.location.city,
+            state: tenant.location.state,
+          },
+          property: p,
+          acts: acervo.acts.get(p.id) ?? [],
+          signer: who,
+        });
+        documents.push({
+          eyebrow: `Registro de Imóveis · ${content.book} · ${row.volume}`,
+          title: content.title,
+          subtitle: content.cnm ? `CNM ${content.cnm}` : "CNM não lançado",
+          office: [content.office, tenant.subtitle],
+          sections: content.blocks.map((block) => ({
+            heading: block.meta
+              ? `${block.label} · ${block.meta}`
+              : block.label,
+            paragraphs: block.text.split("\n").filter(Boolean),
+          })),
+          ...signer,
+          footer,
+        });
+      }
+    } else if (record.book === 4) {
+      const rows = acervo.properties
+        .filter((p) => !p.deletedAt && p.book === 2 && p.status !== 4)
+        .sort((a, b) => addressLine(a).localeCompare(addressLine(b), "pt-BR"))
+        .map((p) => ({
+          label: propertyTitle(p),
+          value:
+            [
+              addressLine(p),
+              p.rural.denominacao,
+              p.rural.ccir && `CCIR ${p.rural.ccir}`,
+              p.rural.nirf && `NIRF ${p.rural.nirf}`,
+              p.rural.car && `CAR ${p.rural.car}`,
+              p.rural.incra && `Incra ${p.rural.incra}`,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "sem identificação lançada",
+        }));
+      documents.push({
+        eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
+        title: "Indicador Real",
+        subtitle: `${rows.length} ${rows.length === 1 ? "imóvel" : "imóveis"} (Lei nº 6.015/1973, art. 179)`,
+        office: [officialName(tenant), tenant.subtitle],
+        sections: [{ heading: "Imóveis pela localização", rows }],
+        ...signer,
+        footer,
+      });
+    } else {
+      const people = new Map<string, { name: string; refs: Set<string> }>();
+      const add = (name: string, document: string, ref: string) => {
+        const key = document || name.toUpperCase();
+        const entry = people.get(key) ?? {
+          name: document ? `${name}, ${formatTaxId(document)}` : name,
+          refs: new Set<string>(),
+        };
+        entry.refs.add(ref);
+        people.set(key, entry);
+      };
+      for (const p of acervo.properties) {
+        if (p.deletedAt) continue;
+        const ref = `${p.book === 3 ? "Livro 3 nº" : "Mat."} ${p.number.toLocaleString("pt-BR")}`;
+        if (p.book === 3) {
+          for (const party of p.aux.parties)
+            add(party.name, party.document, ref);
+        }
+        for (const act of acervo.acts.get(p.id) ?? []) {
+          for (const party of act.parties) {
+            add(party.name, party.document, ref);
+          }
+        }
+      }
+      const rows = [...people.values()]
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+        .map((e) => ({ label: e.name, value: [...e.refs].join("; ") }));
+      documents.push({
+        eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
+        title: "Indicador Pessoal",
+        subtitle: `${rows.length} ${rows.length === 1 ? "nome" : "nomes"}, em ordem alfabética (Lei nº 6.015/1973, art. 180)`,
+        office: [officialName(tenant), tenant.subtitle],
+        sections: [{ heading: "Nomes e onde figuram", rows }],
+        ...signer,
+        footer,
+      });
+    }
+  }
+  if (row.closedOn) {
+    documents.push(termDocument(tenant, closingTerm(record, office), signer));
+  }
+  return { documents, name: `livro-${row.volume.toLowerCase()}` };
+}
+
+/** The fichas a volume of the Livro 2 or 3 holds now, for signing in lots. */
+export async function bookFichasWith(
+  database: Database,
+  tenantSlug: string,
+  row: BookRow,
+): Promise<{ id: string; number: number; title: string }[]> {
+  if (row.book !== 2 && row.book !== 3) return [];
+  const acervo = await loadAcervoWith(database, tenantSlug);
+  const from = row.firstItem ?? 1;
+  const to = row.lastItem ?? Number.MAX_SAFE_INTEGER;
+  return acervo.properties
+    .filter(
+      (p) =>
+        !p.deletedAt &&
+        p.book === row.book &&
+        p.number >= from &&
+        p.number <= to,
+    )
+    .map((p) => ({ id: p.id, number: p.number, title: propertyTitle(p) }));
+}

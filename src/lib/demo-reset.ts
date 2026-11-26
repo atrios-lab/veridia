@@ -62,6 +62,7 @@ import {
   rcpnRecords,
   riActParties,
   riActs,
+  riBooks,
   riExports,
   riFiles,
   riGeometries,
@@ -205,6 +206,10 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   },
   {
     table: riProtocols,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riBooks,
     reason: "Registro de Imóveis: limpeza ainda não revisada",
   },
   {
