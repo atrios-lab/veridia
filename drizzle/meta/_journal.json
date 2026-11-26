@@ -652,6 +652,20 @@
       "when": 1795695076053,
       "tag": "0092_ri_rubrica",
       "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1795697282743,
+      "tag": "0093_ri_protocolo_dias",
+      "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1795698239488,
+      "tag": "0094_ri_pgv_credencial",
+      "breakpoints": true
     }
   ]
 }

@@ -102,3 +102,24 @@ export const CNM_PROBLEM_LABELS: Record<CnmProblem, string> = {
   livro: "o livro não é o da matrícula",
   numero: "o número não é o da matrícula",
 };
+
+/**
+ * The CNMs of this office found in a file the PGV-CNM gives back (CSV,
+ * planilha salva como texto, XML or JSON): any 16 digits in the CNM shape,
+ * of this CNS, Livro 2 or 3, with a check that confers.
+ */
+export function cnmsInText(text: string, cns: string): ParsedCnm[] {
+  const office = cnsDigits(cns);
+  if (!office) return [];
+  const found = new Map<string, ParsedCnm>();
+  const shape = /\d{6}[.\s]?[23][.\s]?\d{7}[-\s]?\d{2}/g;
+  for (const match of text.matchAll(shape)) {
+    const parsed = parseCnm(match[0]);
+    if (!parsed || parsed.cns !== office) continue;
+    if (cnmCheckDigits(cns, parsed.book, parsed.number) !== parsed.check) {
+      continue;
+    }
+    found.set(`${parsed.book}.${parsed.number}`, parsed);
+  }
+  return [...found.values()];
+}

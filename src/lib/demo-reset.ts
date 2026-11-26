@@ -69,6 +69,7 @@ import {
   riOnrImages,
   riPeople,
   riProperties,
+  riProtocolDays,
   riProtocols,
   riSettings,
   securityPaperLots,
@@ -211,6 +212,10 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   },
   {
     table: riBooks,
+    reason: "Registro de Imóveis: limpeza ainda não revisada",
+  },
+  {
+    table: riProtocolDays,
     reason: "Registro de Imóveis: limpeza ainda não revisada",
   },
   {

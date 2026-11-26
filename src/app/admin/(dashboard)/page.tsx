@@ -32,6 +32,7 @@ import { countByStatus } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, OFFICE_TIME_ZONE, officeNow, today } from "@/lib/tenant.ts";
 import { listPanelTutorials, listWatchedIds } from "@/lib/tutorials.ts";
+import { ProtocolReminder } from "../ri/_components/protocol-reminder.tsx";
 import type { ActionShortcut } from "./_components/action-shortcuts.tsx";
 import { ActionShortcuts } from "./_components/action-shortcuts.tsx";
 import type { ChannelStatusRow } from "./_components/channel-status.tsx";
@@ -360,6 +361,7 @@ export default async function AdminHome() {
       />
       <QueuePoller version={queueVersion} />
       <main className="flex flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
+        <ProtocolReminder />
         <ActionShortcuts shortcuts={shortcuts} />
         {/* The open requests by stage, across the whole width, on top (the
             approved prototype): every stage in view at once, in the order of

@@ -351,6 +351,8 @@ export interface ProtocolLine {
 export function protocolDay(
   day: string,
   lines: readonly ProtocolLine[],
+  /** The closing as it was recorded (sem movimento, feriado…). */
+  recorded?: string,
 ): RequerimentoSection[] {
   const sorted = [...lines].sort((a, b) => a.number - b.number);
   const valid = sorted.filter((l) => !l.voided);
@@ -378,7 +380,7 @@ export function protocolDay(
     {
       heading: "Encerramento do dia",
       paragraphs: [
-        closing,
+        recorded ?? closing,
         "Lei nº 6.015/1973, art. 184: o Protocolo será encerrado diariamente.",
       ],
     },

@@ -5,6 +5,7 @@ import { can } from "@/core/auth/roles.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { ProtocolReminder } from "./_components/protocol-reminder.tsx";
 import { RiMobileNav, RiSideNav } from "./_components/ri-nav.tsx";
 
 export const metadata = { title: "Registro de Imóveis" };
@@ -80,7 +81,12 @@ export default async function RiLayout({
       </header>
       <div className="flex flex-1">
         <RiSideNav />
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1">
+          <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-8 empty:hidden">
+            <ProtocolReminder />
+          </div>
+          {children}
+        </div>
       </div>
     </div>
   );

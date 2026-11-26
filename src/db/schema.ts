@@ -3320,6 +3320,15 @@ export const riSettings = pgTable("ri_settings", {
   rubricImage: text("rubric_image").notNull().default(""),
   rubricUpdatedBy: text("rubric_updated_by"),
   rubricUpdatedAt: timestamp("rubric_updated_at", { withTimezone: true }),
+  /**
+   * The credential of the PGV-CNM API (pgv.cnm › Integrações › Acesso à
+   * API): the Client ID as is, the Hash sealed (AES-256-GCM), never shown
+   * back. Empty: not set.
+   */
+  pgvClientId: text("pgv_client_id").notNull().default(""),
+  pgvHashSealed: text("pgv_hash_sealed").notNull().default(""),
+  pgvUpdatedBy: text("pgv_updated_by"),
+  pgvUpdatedAt: timestamp("pgv_updated_at", { withTimezone: true }),
   updatedBy: text("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -3754,4 +3763,33 @@ export const riOnrImages = pgTable(
     deletedBy: text("deleted_by"),
   },
   (t) => [index("ri_onr_images_tenant").on(t.tenantSlug, t.number)],
+);
+
+/**
+ * The days of the Protocolo closed (Lei nº 6.015/1973, art. 184), each
+ * with its own date even when closed later (decision of 26/11/2026). A day
+ * reopened keeps its row with the reason; closing again adds a new one.
+ */
+export const riProtocolDays = pgTable(
+  "ri_protocol_days",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    day: date("day").notNull(),
+    /** core/ri/protocol-days ClosingKind. */
+    kind: text("kind").notNull(),
+    /** "feriado de Natal", "fim de semana (sábado)". */
+    why: text("why").notNull().default(""),
+    count: integer("count").notNull().default(0),
+    firstNumber: integer("first_number"),
+    lastNumber: integer("last_number"),
+    closedAt: timestamp("closed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    closedBy: text("closed_by"),
+    reopenedAt: timestamp("reopened_at", { withTimezone: true }),
+    reopenedBy: text("reopened_by"),
+    reopenReason: text("reopen_reason"),
+  },
+  (t) => [index("ri_protocol_days_tenant").on(t.tenantSlug, t.day)],
 );

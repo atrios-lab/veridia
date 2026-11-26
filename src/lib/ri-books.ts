@@ -1,6 +1,8 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
+import { actLabel, matriculaPeople, situationOf } from "@/core/ri/acts.ts";
+import { AUX_ROLE_LABELS, auxText, notesOf } from "@/core/ri/auxiliary.ts";
 import {
   BOOKS,
   type BookForm,
@@ -16,18 +18,30 @@ import {
   type TermOffice,
   type TermText,
 } from "@/core/ri/books.ts";
+import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { addressLine, isoDate, propertyTitle } from "@/core/ri/property.ts";
+import { type ClosingKind, closingText } from "@/core/ri/protocol-days.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
 import { riBooks, riOnrImages, riProtocols } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
+import { brandFor } from "./document-brand.ts";
+import { renderDocument } from "./pdf.ts";
 import { type Actor, loadAcervoWith, RiError } from "./ri.ts";
+import {
+  drawFichas,
+  drawTableBook,
+  type FichaPage,
+  type TableRow,
+} from "./ri-book-model.ts";
 import { riSignerFor } from "./ri-docs.ts";
 import { currentOf } from "./ri-onr-images.ts";
+import { closedDaysWith, type ProtocolDayRow } from "./ri-protocol-days.ts";
 import { officeToday } from "./ri-protocols.ts";
+import { joinPdfs, tiffToPdf } from "./ri-tiff.ts";
 
 /**
  * The books of the Registro de Imóveis (change registro-de-imoveis-livros):
@@ -508,16 +522,27 @@ export async function protocolDayDocumentFor(
   withImage: boolean,
 ): Promise<RequerimentoDocument> {
   const days = await protocolDaysWith(database, tenant.slug, day, day);
+  const closed = (await closedDaysWith(database, tenant.slug)).get(day);
   return {
     eyebrow: "Registro de Imóveis · Livro nº 1 · Protocolo",
     title: `Protocolo do dia ${shortDate(day)}`,
     subtitle: "Encerramento diário (Lei nº 6.015/1973, art. 184)",
     office: [officialName(tenant), tenant.subtitle],
-    sections: protocolDay(day, days.get(day) ?? []),
+    sections: protocolDay(day, days.get(day) ?? [], recordedText(closed)),
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${shortDate(day)}.`,
     ...(await signerLines(tenant, withImage)),
     footer: `${officialName(tenant)} · Livro nº 1 · Protocolo de ${shortDate(day)} · ${tenant.legalFooter}`,
   };
+}
+
+/** The closing as recorded for the day, in the words of the Livro 1. */
+function recordedText(row: ProtocolDayRow | undefined): string | undefined {
+  if (!row) return undefined;
+  return closingText(
+    row.day,
+    { kind: row.kind as ClosingKind, why: row.why },
+    { count: row.count, first: row.firstNumber, last: row.lastNumber },
+  );
 }
 
 export interface BookRange {
@@ -567,13 +592,19 @@ export async function bookDocumentsFor(
         `São ${total} títulos nesse período; escolha um período com até ${MAX_PROTOCOL_LINES}.`,
       );
     }
-    for (const [day, lines] of days) {
+    // The closed days without títulos go in the book too, on their date.
+    const closed = await closedDaysWith(database, tenant.slug);
+    for (const [day] of closed) {
+      if (day >= from && day <= to && !days.has(day)) days.set(day, []);
+    }
+    const ordered = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
+    for (const [day, lines] of ordered) {
       documents.push({
         eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
         title: `Protocolo do dia ${shortDate(day)}`,
         subtitle: "Lei nº 6.015/1973, arts. 175 e 184",
         office: [officialName(tenant), tenant.subtitle],
-        sections: protocolDay(day, lines),
+        sections: protocolDay(day, lines, recordedText(closed.get(day))),
         ...signer,
         footer,
       });
@@ -734,4 +765,311 @@ export async function bookFichasWith(
         p.number <= to,
     )
     .map((p) => ({ id: p.id, number: p.number, title: propertyTitle(p) }));
+}
+
+/* ------------------------------------- the books in the model of the law */
+
+const brDay = (iso: string | null | undefined) =>
+  iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : "";
+
+/**
+ * The whole volume as the models annexed to the Lei nº 6.015/1973: the
+ * termo de abertura, the body in the columns of the model (or the fichas,
+ * with the signed image where there is one) and the termo de encerramento.
+ */
+export async function bookPdfFor(
+  database: Database,
+  tenant: Tenant,
+  id: string,
+  range: BookRange,
+  withImage: boolean,
+): Promise<{ bytes: Uint8Array; name: string } | null> {
+  const row = await bookWith(database, tenant.slug, id);
+  if (!row) return null;
+  const record = recordOf(row);
+  const office = termOffice(tenant);
+  const signer = await signerLines(tenant, withImage);
+  const brand = await brandFor(tenant);
+  const parts: Uint8Array[] = [
+    await renderDocument(
+      termDocument(tenant, openingTerm(record, office), signer),
+      brand,
+    ),
+  ];
+  const footer = `${officialName(tenant)} · Livro nº ${row.volume}`;
+  const year = `ANO: ${(row.closedOn ?? officeToday()).slice(0, 4)}`;
+  if (record.book === 1) {
+    const from = isoDate(range.from ?? "") ?? row.openedOn;
+    const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
+    const days = await protocolDaysWith(database, tenant.slug, from, to);
+    const closed = await closedDaysWith(database, tenant.slug);
+    for (const [day] of closed) {
+      if (day >= from && day <= to && !days.has(day)) days.set(day, []);
+    }
+    const total = [...days.values()].reduce((n, l) => n + l.length, 0);
+    if (total > MAX_PROTOCOL_LINES) {
+      throw new BookTooLarge(
+        `São ${total} títulos nesse período; escolha um período com até ${MAX_PROTOCOL_LINES}.`,
+      );
+    }
+    const rows: TableRow[] = [];
+    for (const [day, lines] of [...days.entries()].sort(([a], [b]) =>
+      a.localeCompare(b),
+    )) {
+      for (const l of [...lines].sort((a, b) => a.number - b.number)) {
+        rows.push({
+          cells: [
+            l.number.toLocaleString("pt-BR"),
+            brDay(l.presentedOn),
+            l.presenter,
+            l.titleKind,
+            [l.acts, l.voided ? "Lançado por engano, sem efeito." : ""]
+              .filter(Boolean)
+              .join(" "),
+          ],
+        });
+      }
+      const text = recordedText(closed.get(day));
+      rows.push({
+        across:
+          text ??
+          `Protocolo do dia ${brDay(day)} ainda não encerrado (art. 184).`,
+        bold: Boolean(text),
+      });
+    }
+    parts.push(
+      await drawTableBook({
+        title: "PROTOCOLO",
+        book: 1,
+        volume: row.volume,
+        year,
+        columns: [
+          { label: "Nº de ordem", width: 0.1 },
+          { label: "Data", width: 0.11 },
+          { label: "Nome do apresentante", width: 0.27 },
+          { label: "Natureza formal do título", width: 0.22 },
+          { label: "Anotações", width: 0.3 },
+        ],
+        rows,
+        footer,
+      }),
+    );
+  } else {
+    const acervo = await loadAcervoWith(database, tenant.slug);
+    if (record.book === 2) {
+      const from = readItem(range.from ?? "") ?? record.firstItem ?? 1;
+      const to =
+        readItem(range.to ?? "") ?? record.lastItem ?? Number.MAX_SAFE_INTEGER;
+      const items = acervo.properties.filter(
+        (p) =>
+          !p.deletedAt && p.book === 2 && p.number >= from && p.number <= to,
+      );
+      if (items.length > MAX_FICHAS) {
+        throw new BookTooLarge(
+          `São ${items.length} fichas nesse intervalo; escolha um intervalo com até ${MAX_FICHAS}.`,
+        );
+      }
+      const signed = new Map(
+        currentOf(
+          await database
+            .select({
+              id: riOnrImages.id,
+              number: riOnrImages.number,
+              tiff: riOnrImages.tiff,
+              createdAt: riOnrImages.createdAt,
+              deletedAt: riOnrImages.deletedAt,
+            })
+            .from(riOnrImages)
+            .where(eq(riOnrImages.tenantSlug, tenant.slug)),
+        ).map((r) => [r.number, r.tiff]),
+      );
+      let run: FichaPage[] = [];
+      const flush = async () => {
+        if (run.length) parts.push(await drawFichas(run));
+        run = [];
+      };
+      for (const [index, p] of items.entries()) {
+        const image = signed.get(p.number);
+        if (image) {
+          // The Livro 2 digital: the signed ficha is the page.
+          await flush();
+          parts.push(await tiffToPdf(Buffer.from(image, "base64")));
+          continue;
+        }
+        const acts = acervo.acts.get(p.id) ?? [];
+        const owners = situationOf(acts).owners;
+        run.push({
+          volume: row.volume,
+          sheet: Number(p.ficha) || index + 1,
+          matricula: p.number,
+          date: brDay(p.openedOn),
+          identification: p.description || propertyTitle(p),
+          owner: owners
+            .map((o) =>
+              o.document ? `${o.name}, ${formatTaxId(o.document)}` : o.name,
+            )
+            .join("; "),
+          previous: p.origin,
+          acts: acts
+            .filter((a) => a.kind !== "M")
+            .map((a) => ({
+              label: `${actLabel(a, p.number)}${a.registeredOn ? ` · ${brDay(a.registeredOn)}` : ""} ·`,
+              text: [a.nature, a.summary].filter(Boolean).join(". "),
+            })),
+          cnm: p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
+          footer,
+        });
+      }
+      await flush();
+    } else if (record.book === 3) {
+      const items = acervo.properties
+        .filter(
+          (p) =>
+            !p.deletedAt &&
+            p.book === 3 &&
+            p.number >= (record.firstItem ?? 1) &&
+            p.number <= (record.lastItem ?? Number.MAX_SAFE_INTEGER),
+        )
+        .sort((a, b) => a.number - b.number);
+      parts.push(
+        await drawTableBook({
+          title: "REGISTRO AUXILIAR",
+          book: 3,
+          volume: row.volume,
+          year,
+          columns: [
+            { label: "Nº de ordem", width: 0.09 },
+            { label: "Data", width: 0.1 },
+            { label: "Registro", width: 0.43 },
+            { label: "Ref. aos demais livros", width: 0.14 },
+            { label: "Averbações", width: 0.24 },
+          ],
+          rows: items.map((p) => ({
+            cells: [
+              p.number.toLocaleString("pt-BR"),
+              brDay(p.openedOn),
+              [p.auxKind, ...auxText(p.auxKind, p.aux, "")]
+                .filter(Boolean)
+                .join(" "),
+              p.linkedNumbers ? `Mat. ${p.linkedNumbers}` : "",
+              [
+                ...(acervo.acts.get(p.id) ?? [])
+                  .filter((a) => a.kind === "AV")
+                  .map((a) => `${actLabel(a)} ${a.nature} ${a.summary}`),
+                ...notesOf(p.aux.annotations)
+                  .filter((n) => !n.deletedAt)
+                  .map((n) => `${brDay(n.on)} ${n.text}`),
+              ]
+                .join(" · ")
+                .trim(),
+            ],
+          })),
+          footer,
+        }),
+      );
+    } else if (record.book === 4) {
+      const items = acervo.properties
+        .filter((p) => !p.deletedAt && p.book === 2 && p.status !== 4)
+        .sort((a, b) => addressLine(a).localeCompare(addressLine(b), "pt-BR"));
+      parts.push(
+        await drawTableBook({
+          title: "INDICADOR REAL",
+          book: 4,
+          volume: row.volume,
+          year,
+          columns: [
+            { label: "Nº de ordem", width: 0.1 },
+            { label: "Identificação do imóvel", width: 0.5 },
+            { label: "Referência aos demais livros", width: 0.2 },
+            { label: "Anotações", width: 0.2 },
+          ],
+          rows: items.map((p, i) => ({
+            cells: [
+              String(i + 1),
+              [
+                addressLine(p),
+                p.rural.denominacao,
+                p.rural.ccir && `CCIR ${p.rural.ccir}`,
+                p.rural.car && `CAR ${p.rural.car}`,
+              ]
+                .filter(Boolean)
+                .join(" · ") || propertyTitle(p),
+              `Livro 2, matrícula ${p.number.toLocaleString("pt-BR")}`,
+              p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
+            ],
+          })),
+          footer,
+        }),
+      );
+    } else {
+      const people = new Map<
+        string,
+        { name: string; refs: Set<string>; roles: Set<string> }
+      >();
+      for (const p of acervo.properties) {
+        if (p.deletedAt) continue;
+        const ref =
+          p.book === 3
+            ? `L3 nº ${p.number.toLocaleString("pt-BR")}`
+            : `Mat. ${p.number.toLocaleString("pt-BR")}`;
+        const add = (name: string, document: string, role: string) => {
+          const key = document || name.toUpperCase();
+          const entry = people.get(key) ?? {
+            name: document ? `${name}, ${formatTaxId(document)}` : name,
+            refs: new Set<string>(),
+            roles: new Set<string>(),
+          };
+          entry.refs.add(ref);
+          if (role) entry.roles.add(role);
+          people.set(key, entry);
+        };
+        if (p.book === 3) {
+          for (const party of p.aux.parties) {
+            add(party.name, party.document, AUX_ROLE_LABELS[party.role] ?? "");
+          }
+        }
+        for (const person of matriculaPeople(acervo.acts.get(p.id) ?? [])) {
+          add(person.name, person.document, person.situation.join(", "));
+        }
+      }
+      const rows = [...people.values()].sort((a, b) =>
+        a.name.localeCompare(b.name, "pt-BR"),
+      );
+      parts.push(
+        await drawTableBook({
+          title: "INDICADOR PESSOAL",
+          book: 5,
+          volume: row.volume,
+          year,
+          columns: [
+            { label: "Nº de ordem", width: 0.1 },
+            { label: "Pessoas", width: 0.42 },
+            { label: "Referência aos demais livros", width: 0.26 },
+            { label: "Anotações", width: 0.22 },
+          ],
+          rows: rows.map((e, i) => ({
+            cells: [
+              String(i + 1),
+              e.name,
+              [...e.refs].join("; "),
+              [...e.roles].join(", "),
+            ],
+          })),
+          footer,
+        }),
+      );
+    }
+  }
+  if (row.closedOn) {
+    parts.push(
+      await renderDocument(
+        termDocument(tenant, closingTerm(record, office), signer),
+        brand,
+      ),
+    );
+  }
+  return {
+    bytes: await joinPdfs(parts),
+    name: `livro-${row.volume.toLowerCase()}`,
+  };
 }
