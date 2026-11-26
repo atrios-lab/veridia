@@ -268,6 +268,26 @@
     outline-color: color-mix(in srgb, var(--color-ring) 50%, transparent);
   }
 
+  /* Every "anexar" shows a real button (decision of 26/11/2026: bare
+     "Escolher arquivo" text did not look clickable). */
+  input[type="file"] {
+    font-size: 0.875rem;
+    color: var(--color-muted-foreground);
+  }
+  input[type="file"]::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius);
+    background: var(--color-primary);
+    color: var(--color-primary-foreground);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  input[type="file"]:hover::file-selector-button {
+    opacity: 0.9;
+  }
+
   body {
     font-family: var(--font-sans);
     background: var(--color-background);

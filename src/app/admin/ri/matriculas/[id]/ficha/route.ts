@@ -1,7 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
-import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument, renderingFor } from "@/lib/pdf.ts";
-import { fichaDocument, fichaFor } from "@/lib/ri-docs.ts";
+import { db } from "@/db/index.ts";
+import { renderingFor } from "@/lib/pdf.ts";
+import { fichaLegalPdfWith } from "@/lib/ri-books.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -26,18 +26,15 @@ async function handle(
     return new Response("Não autorizado", { status: 403 });
   }
   const tenant = await getTenant();
-  const ficha = await fichaFor(tenant, (await params).id);
+  const mode = new URL(request.url).searchParams.get("assinatura");
+  // The ficha as the model annexed to the Lei nº 6.015/1973 (decision of
+  // 26/11/2026). For the assinador, no rule to sign by hand.
+  const ficha = await fichaLegalPdfWith(db, tenant, (await params).id, {
+    signer: mode !== "digital",
+    withImage: mode === "imagem",
+  });
   if (!ficha) return new Response("Não encontrado", { status: 404 });
-  const withImage =
-    new URL(request.url).searchParams.get("assinatura") === "imagem";
-  const pdf = await renderDocument(
-    fichaDocument(
-      tenant,
-      ficha.content,
-      withImage ? ficha.signatureImage : null,
-    ),
-    await brandFor(tenant),
-  );
+  const pdf = ficha.bytes;
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

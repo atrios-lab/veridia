@@ -55,13 +55,15 @@ test("ônus: livre e desembaraçado quando não há ônus", () => {
   const text = certidaoSections({ ...base, kind: "onus", situation: free })
     .flatMap((s) => s.paragraphs)
     .join(" ");
-  assert.match(text, /livre e desembaraçado/);
+  assert.match(text, /livre e desembaraçada/);
   assert.match(text, /dou fé/);
 });
 
 test("inteiro teor reproduz todos os atos", () => {
-  const sections = certidaoSections({ ...base, kind: "inteiro-teor" });
-  assert.ok(sections.some((s) => s.heading?.startsWith("R-2")));
+  const text = certidaoSections({ ...base, kind: "inteiro-teor" })
+    .flatMap((s) => s.paragraphs)
+    .join(" ");
+  assert.match(text, /R-2/);
 });
 
 test("quesitos são respondidos pelo que consta na matrícula", () => {

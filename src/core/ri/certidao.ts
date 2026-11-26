@@ -25,9 +25,9 @@ export type CertidaoKind =
 
 export const CERTIDAO_LABELS: Record<CertidaoKind, string> = {
   "inteiro-teor": "Certidão de inteiro teor",
-  onus: "Certidão de ônus reais",
-  resumo: "Certidão em resumo (extrato)",
-  quesitos: "Certidão em relatório, conforme quesitos",
+  onus: "Certidão de registro/ônus",
+  resumo: "Certidão em resumo",
+  quesitos: "Certidão em relatório",
   negativa: "Certidão negativa de propriedade",
 };
 
@@ -63,7 +63,30 @@ export interface CertidaoInput {
   searched?: { name: string; document: string };
   /** Who asked, when said (otherwise "a pedido verbal da parte"). */
   requester?: string;
+  /** "2-I" and the ficha, as the opening of the model cites them. */
+  book?: { volume: string; ficha: string };
+  /** "MATRÍCULA Nº 1.693 - Data: 09/09/2024 - CNM: ...", centred. */
+  headline?: string;
 }
+
+/** The ficha in the text of the certidão: each ato with its label in bold. */
+function fichaParagraphs(ficha: FichaContent | undefined): string[] {
+  return (ficha?.blocks ?? []).flatMap((b) => {
+    const lines = b.text.split("\n").filter(Boolean);
+    const label = b.meta ? `${b.label} - ${b.meta}` : b.label;
+    return lines.length
+      ? [
+          `**${label.toLocaleUpperCase("pt-BR")}:** ${lines[0]}`,
+          ...lines.slice(1),
+        ]
+      : [`**${label}**`];
+  });
+}
+
+const where = (input: CertidaoInput, ref: string) =>
+  input.book
+    ? `que revendo o livro de Registro de Imóveis nº “${input.book.volume}”, da ficha ${input.book.ficha}, consta o registro de teor seguinte:`
+    : `que revendo os livros deste Registro de Imóveis, dele consta ${ref}, cujo teor é o seguinte:`;
 
 const lower = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
@@ -127,20 +150,9 @@ export function certidaoSections(input: CertidaoInput): CertidaoSection[] {
     case "inteiro-teor": {
       out.push({
         paragraphs: [
-          opening(
-            input,
-            `que revendo os livros deste Registro de Imóveis, dele consta ${ref}, cujo inteiro teor é o seguinte:`,
-          ),
-        ],
-      });
-      for (const b of input.ficha?.blocks ?? []) {
-        out.push({
-          heading: b.meta ? `${b.label} · ${b.meta}` : b.label,
-          paragraphs: b.text.split("\n").filter(Boolean),
-        });
-      }
-      out.push({
-        paragraphs: [
+          opening(input, where(input, ref)),
+          ...(input.headline ? [`**${input.headline}**`] : []),
+          ...fichaParagraphs(input.ficha),
           "Nada mais consta. As alterações posteriores ao ato, quando existentes, estão mencionadas acima (Lei nº 6.015/1973, art. 21).",
         ],
       });
@@ -149,31 +161,17 @@ export function certidaoSections(input: CertidaoInput): CertidaoSection[] {
     case "onus": {
       out.push({
         paragraphs: [
-          opening(
-            input,
-            `que revendo os livros deste Registro de Imóveis, verifiquei que o imóvel objeto de ${ref}${
-              owners.length
-                ? `, de propriedade de ${owners.map((o) => `${o.name}${o.document ? ` (${o.document})` : ""}`).join(", ")}`
-                : ""
-            }, ${
-              burdens.length
-                ? "encontra-se gravado com o(s) seguinte(s) ônus real(is), em vigor:"
-                : "encontra-se livre e desembaraçado de ônus reais, até a presente data."
-            }`,
-          ),
-          ...burdens.map(
-            (b) =>
-              `${b.label}${b.nature ? `: ${b.nature}` : ""}${b.registeredOn ? `, registrado em ${b.registeredOn}` : ""}${
-                b.parties.length
-                  ? `; partes: ${b.parties.map((p) => p.name).join(", ")}`
-                  : ""
-              }.`,
-          ),
-        ],
-      });
-      out.push({
-        paragraphs: [
-          "Não constam citações de ações reais ou pessoais reipersecutórias além das acima mencionadas.",
+          opening(input, where(input, ref)),
+          ...(input.headline ? [`**${input.headline}**`] : []),
+          ...fichaParagraphs(input.ficha),
+          burdens.length
+            ? `**Certifico**, ainda, que sobre o imóvel da matrícula acima referida pesa(m) o(s) seguinte(s) ônus real(is), em vigor: ${burdens
+                .map(
+                  (b) =>
+                    `${b.label}${b.nature ? ` (${b.nature})` : ""}${b.registeredOn ? `, registrado em ${b.registeredOn}` : ""}`,
+                )
+                .join("; ")}.`
+            : "**Certifico**, ainda, que a matrícula acima referida encontra-se livre e desembaraçada de quaisquer ônus reais, judiciais ou extrajudiciais que possam restringir ou limitar a livre disposição do imóvel.",
         ],
       });
       break;
@@ -252,11 +250,6 @@ export function certidaoSections(input: CertidaoInput): CertidaoSection[] {
       break;
     }
   }
-  out.push({
-    paragraphs: [
-      "O referido é verdade e dou fé.",
-      `${input.place}, ${input.dateText}.`,
-    ],
-  });
+  out.push({ paragraphs: ["O referido é verdade e dou fé."] });
   return out;
 }

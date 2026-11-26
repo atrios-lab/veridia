@@ -1104,3 +1104,107 @@ export async function bookPdfFor(
   }
   return { bytes: await joinPdfs(parts), name };
 }
+
+/**
+ * One matrícula as the ficha of the Livro 2 annexed to the Lei nº
+ * 6.015/1973 (decision of 26/11/2026: "todos têm que seguir os modelos da
+ * lei"): for the PDF of the matrícula, the image for the ONR and the
+ * printing. With `signer`, the place, date and who signs close the ficha;
+ * the image of the signature only with `withImage`. A registro of the
+ * Livro 3 comes out as its row of the model of the Livro 3.
+ */
+export async function fichaLegalPdfWith(
+  database: Database,
+  tenant: Tenant,
+  propertyId: string,
+  options: { signer?: boolean; withImage?: boolean } = {},
+): Promise<{ bytes: Buffer; number: number } | null> {
+  const acervo = await loadAcervoWith(database, tenant.slug);
+  const p = acervo.properties.find((x) => x.id === propertyId);
+  if (!p || p.deletedAt) return null;
+  const acts = acervo.acts.get(p.id) ?? [];
+  const footer = officialName(tenant);
+  const openBook = (await listBooksWith(database, tenant.slug)).find(
+    (b) => b.book === p.book && !b.deletedAt && !b.closedOn,
+  );
+  const volume = openBook?.volume ?? String(p.book);
+  if (p.book === 3) {
+    const bytes = await drawTableBook({
+      title: "REGISTRO AUXILIAR",
+      book: 3,
+      volume,
+      year: `ANO: ${(p.openedOn ?? officeToday()).slice(0, 4)}`,
+      columns: [
+        { label: "Nº de ordem", width: 0.09 },
+        { label: "Data", width: 0.1 },
+        { label: "Registro", width: 0.43 },
+        { label: "Ref. aos demais livros", width: 0.14 },
+        { label: "Averbações", width: 0.24 },
+      ],
+      rows: [
+        {
+          cells: [
+            p.number.toLocaleString("pt-BR"),
+            brDay(p.openedOn),
+            [p.auxKind, ...auxText(p.auxKind, p.aux, "")]
+              .filter(Boolean)
+              .join(" "),
+            p.linkedNumbers ? `Mat. ${p.linkedNumbers}` : "",
+            acts
+              .filter((a) => a.kind === "AV")
+              .map((a) => `${actLabel(a)} ${a.nature} ${a.summary}`)
+              .join(" · "),
+          ],
+        },
+      ],
+      footer,
+    });
+    return { bytes, number: p.number };
+  }
+  const owners = situationOf(acts).owners;
+  const { signer, settings } = await riSignerFor(tenant);
+  const today = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Fortaleza",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+  const bytes = await drawFichas(
+    [
+      {
+        volume,
+        sheet: Number(p.ficha) || p.number,
+        matricula: p.number,
+        date: brDay(p.openedOn),
+        identification: p.description || propertyTitle(p),
+        owner: owners
+          .map((o) =>
+            o.document ? `${o.name}, ${formatTaxId(o.document)}` : o.name,
+          )
+          .join("; "),
+        previous: p.origin,
+        acts: acts
+          .filter((a) => a.kind !== "M")
+          .map((a) => ({
+            label: `${actLabel(a, p.number)}${a.registeredOn ? ` · ${brDay(a.registeredOn)}` : ""} ·`,
+            text: [a.nature, a.summary].filter(Boolean).join(". "),
+            seal: a.seal || undefined,
+          })),
+        cnm: p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
+        footer,
+      },
+    ],
+    options.signer && signer
+      ? {
+          name: signer.name,
+          title: signer.title,
+          place: `${tenant.location.city}/${tenant.location.state}, ${today}.`,
+          image:
+            options.withImage && settings.signatureImage
+              ? settings.signatureImage
+              : undefined,
+        }
+      : null,
+  );
+  return { bytes, number: p.number };
+}

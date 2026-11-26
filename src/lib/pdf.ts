@@ -127,7 +127,7 @@ function drawDigitalSignatureNote(pdf: Pdf, brand: DocumentBrand): void {
   pdf.moveDown(1.6);
   if (pdf.y + height + 16 > bottom(pdf)) pdf.addPage();
   const top = pdf.y;
-  pdf.rect(MARGIN + 30, top, width, 0.6).fill(brand.palette.border);
+  pdf.rect(MARGIN + 20, top, width, 0.6).fill(brand.palette.border);
   pdf
     .font("Times-Italic")
     .fontSize(10)
@@ -553,15 +553,17 @@ function drawDocumentBody(
   const width = contentWidth(pdf);
   // The kind of document, set large enough to read at a glance (decision
   // of 12/11/2026: at 10.5 pt it was lost above the title).
-  pdf
-    .font("Times-Bold")
-    .fontSize(13)
-    .fillColor(NEUTRALS.text)
-    .text(document.eyebrow.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y, {
-      width,
-      align: "center",
-      characterSpacing: 1.1,
-    });
+  if (document.eyebrow) {
+    pdf
+      .font("Times-Bold")
+      .fontSize(13)
+      .fillColor(NEUTRALS.text)
+      .text(document.eyebrow.toLocaleUpperCase("pt-BR"), MARGIN, pdf.y, {
+        width,
+        align: "center",
+        characterSpacing: 1.1,
+      });
+  }
   pdf
     .font("Times-Bold")
     .fontSize(17)
@@ -570,11 +572,13 @@ function drawDocumentBody(
       width,
       align: "center",
     });
-  pdf
-    .font("Times-Roman")
-    .fontSize(11)
-    .fillColor(NEUTRALS.textSoft)
-    .text(document.subtitle, MARGIN, pdf.y + 4, { width, align: "center" });
+  if (document.subtitle) {
+    pdf
+      .font("Times-Roman")
+      .fontSize(11)
+      .fillColor(NEUTRALS.textSoft)
+      .text(document.subtitle, MARGIN, pdf.y + 4, { width, align: "center" });
+  }
 
   for (const section of document.sections) drawSection(pdf, section, brand);
 
@@ -629,22 +633,23 @@ function drawDocumentBody(
     if (pdf.y + boxH + 12 > bottom(pdf)) pdf.addPage();
     pdf.moveDown(0.6);
     const top = pdf.y;
+    // Centred, as the selo digital goes on the office's certidões.
     if (document.seal.image) {
-      pdf.image(Buffer.from(document.seal.image), MARGIN, top, {
-        fit: [160, 70],
-      });
-    }
-    if (document.seal.number) {
+      pdf.image(
+        Buffer.from(document.seal.image),
+        MARGIN + (contentWidth(pdf) - 200) / 2,
+        top,
+        { fit: [200, 70], align: "center" },
+      );
+    } else if (document.seal.number) {
       pdf
         .font("Times-Bold")
-        .fontSize(10)
+        .fontSize(11)
         .fillColor(NEUTRALS.text)
-        .text(
-          `Selo de fiscalização: ${document.seal.number}`,
-          document.seal.image ? MARGIN + 172 : MARGIN,
-          top + (document.seal.image ? 28 : 0),
-          { width: contentWidth(pdf) - (document.seal.image ? 172 : 0) },
-        );
+        .text(`Selo de fiscalização: ${document.seal.number}`, MARGIN, top, {
+          width: contentWidth(pdf),
+          align: "center",
+        });
     }
     pdf.x = MARGIN;
     pdf.y = top + boxH;
