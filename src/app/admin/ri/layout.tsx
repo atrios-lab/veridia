@@ -1,10 +1,19 @@
 import { ArrowLeft, Search } from "lucide-react";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
+import { BackgroundPicker } from "../_components/background-picker.tsx";
+import {
+  BACKGROUND_COOKIE,
+  DARK,
+  parseBackground,
+  THEME_COOKIE,
+} from "../_components/theme.ts";
+import { ThemeToggle } from "../_components/theme-toggle.tsx";
 import { ProtocolReminder } from "./_components/protocol-reminder.tsx";
 import { RiMobileNav, RiSideNav } from "./_components/ri-nav.tsx";
 
@@ -35,6 +44,8 @@ export default async function RiLayout({
     redirect("/admin/atribuicoes");
   }
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
+  const jar = await cookies();
+  const background = parseBackground(jar.get(BACKGROUND_COOKIE)?.value);
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-3 md:px-5">
@@ -67,12 +78,19 @@ export default async function RiLayout({
             className="h-9 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           />
         </form>
-        <span className="ml-auto hidden truncate text-xs text-muted-foreground lg:ml-0 lg:block">
+        <div className="ml-auto flex flex-none items-center gap-1 md:ml-0">
+          <ThemeToggle initialDark={jar.get(THEME_COOKIE)?.value === DARK} />
+          <BackgroundPicker
+            initialTint={background.tint}
+            initialIntensity={background.intensity}
+          />
+        </div>
+        <span className="hidden truncate text-xs text-muted-foreground lg:block">
           {session.user.name}
         </span>
         <Link
           href="/admin"
-          className="ml-auto inline-flex h-9 flex-none items-center gap-1.5 rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs hover:bg-muted md:ml-0"
+          className="inline-flex h-9 flex-none items-center gap-1.5 rounded-md border bg-background px-2.5 text-sm font-medium shadow-xs hover:bg-muted"
         >
           <ArrowLeft aria-hidden className="size-4" />
           <span className="hidden sm:inline">Voltar ao painel</span>

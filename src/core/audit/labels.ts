@@ -426,6 +426,7 @@ const EXACT: Record<string, string> = {
   "ri.cnm-in-pgv": "Marcou o CNM de matrículas como já cadastrado no PGV-CNM",
   "ri.onr-image-hide":
     "Tirou uma imagem apagada da lista do histórico (continua guardada)",
+  "ri.certidao-issue": "Emitiu uma certidão do Registro de Imóveis",
   "ri.pgv-import": "Importou o arquivo de retorno do PGV-CNM",
   "ri.pgv-credential-save": "Salvou a credencial de integração do PGV-CNM",
   "ri.pgv-credential-clear": "Apagou a credencial de integração do PGV-CNM",

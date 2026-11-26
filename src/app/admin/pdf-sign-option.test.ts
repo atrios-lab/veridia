@@ -38,6 +38,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "ri/livros/protocolo-do-dia",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
+  "ri/certidoes/emitir",
 ]);
 
 /** Not a document the office signs, and why. */

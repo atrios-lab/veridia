@@ -624,6 +624,32 @@ function drawDocumentBody(
       });
   }
 
+  if (document.seal && (document.seal.number || document.seal.image)) {
+    const boxH = document.seal.image ? 78 : 24;
+    if (pdf.y + boxH + 12 > bottom(pdf)) pdf.addPage();
+    pdf.moveDown(0.6);
+    const top = pdf.y;
+    if (document.seal.image) {
+      pdf.image(Buffer.from(document.seal.image), MARGIN, top, {
+        fit: [160, 70],
+      });
+    }
+    if (document.seal.number) {
+      pdf
+        .font("Times-Bold")
+        .fontSize(10)
+        .fillColor(NEUTRALS.text)
+        .text(
+          `Selo de fiscalização: ${document.seal.number}`,
+          document.seal.image ? MARGIN + 172 : MARGIN,
+          top + (document.seal.image ? 28 : 0),
+          { width: contentWidth(pdf) - (document.seal.image ? 172 : 0) },
+        );
+    }
+    pdf.x = MARGIN;
+    pdf.y = top + boxH;
+  }
+
   if (document.signatures?.length) {
     drawPartySignatures(pdf, document.signatures, brand);
   }

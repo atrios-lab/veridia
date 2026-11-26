@@ -64,6 +64,7 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
         href: "/admin/ri/livros",
         icon: Library,
       },
+      { label: "Certidões", href: "/admin/ri/certidoes", icon: Files },
     ],
   },
   {

@@ -5,10 +5,16 @@ import { readChatAvailability } from "@/lib/chat.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { Separator } from "../_ui/separator.tsx";
 import { SidebarTrigger } from "../_ui/sidebar.tsx";
+import { BackgroundPicker } from "./background-picker.tsx";
 import { SearchTriggerButton } from "./global-search.tsx";
 import { ROLE_LABELS } from "./role-labels.ts";
 import { initials } from "./sidebar.tsx";
-import { DARK, THEME_COOKIE } from "./theme.ts";
+import {
+  BACKGROUND_COOKIE,
+  DARK,
+  parseBackground,
+  THEME_COOKIE,
+} from "./theme.ts";
 import { ThemeToggle } from "./theme-toggle.tsx";
 import { UserMenu } from "./user-menu.tsx";
 
@@ -32,6 +38,8 @@ export async function AdminTopBar({
     permissions?: readonly string[];
   };
 }) {
+  const cookieJar = await cookies();
+  const background = parseBackground(cookieJar.get(BACKGROUND_COOKIE)?.value);
   const tenant = await getTenant();
   const availability = await readChatAvailability(tenant.slug);
   const open = isChatOpen(availability, tenant, new Date());
@@ -49,6 +57,10 @@ export async function AdminTopBar({
       <div className="ml-auto flex flex-none items-center gap-3">
         <ThemeToggle
           initialDark={(await cookies()).get(THEME_COOKIE)?.value === DARK}
+        />
+        <BackgroundPicker
+          initialTint={background.tint}
+          initialIntensity={background.intensity}
         />
         {/* Only for someone who answers the chat: a course learner has no
           citizen writing to them. */}

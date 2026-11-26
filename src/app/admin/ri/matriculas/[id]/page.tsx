@@ -201,6 +201,12 @@ export default async function PropertyPage({
                 <Plus className="size-4" />{" "}
                 {p.book === 3 ? "Lançar averbação" : "Lançar ato"}
               </Link>
+              <Link
+                href={`/admin/ri/certidoes?matricula=${p.id}`}
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Emitir certidão
+              </Link>
               {p.book === 2 && riCan(session, "ri.export") && (
                 <ActionButton
                   action={exportMatriculaToOnrAction}
