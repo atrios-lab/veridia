@@ -265,15 +265,26 @@ export function OnrImageForm({
                     />
                     Conferi: está certo, pode gerar assim
                   </label>
+                  <p className="text-xs font-medium text-warning-text">
+                    A imagem ainda não foi gerada. Marque a conferência e clique
+                    no botão abaixo.
+                  </p>
                   <div>
                     <Button
                       type="button"
                       size="sm"
-                      variant="outline"
+                      variant={it.confirm ? "default" : "outline"}
                       disabled={running}
                       onClick={() => run(it.key)}
+                      className={
+                        it.confirm
+                          ? "motion-safe:animate-attention-pulse"
+                          : "border-warning text-warning-text motion-safe:animate-attention-pulse-light"
+                      }
                     >
-                      Gerar de novo
+                      {it.confirm
+                        ? "Gerar agora (falta clicar aqui)"
+                        : "Gerar de novo"}
                     </Button>
                   </div>
                 </div>
