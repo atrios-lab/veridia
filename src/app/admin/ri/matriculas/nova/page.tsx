@@ -29,20 +29,24 @@ export default async function NewPropertyPage({
           : { href: "/admin/ri/matriculas", label: "Matrículas" }
       }
     >
-      {!livro3 && (
-        <Panel
-          title="Ler de um arquivo"
-          description="Anexe a matrícula em Word, PDF ou foto. O Assistente Virtual lê a abertura e os atos; você confere antes de salvar."
-        >
-          <UploadForm
-            propertyId=""
-            kind="ficha"
-            read
-            direct={blobUploadEnabled()}
-            folder={riFolder(tenant.slug)}
-          />
-        </Panel>
-      )}
+      <Panel
+        title="Ler de um arquivo"
+        description={
+          livro3
+            ? "Anexe o registro do Livro 3 (ou o título: cédula, pacto, convenção) em Word, PDF ou foto. O Assistente Virtual lê a natureza, o título, as partes, o valor, as garantias e as averbações; você confere antes de salvar."
+            : "Anexe a matrícula em Word, PDF ou foto. O Assistente Virtual lê a abertura e os atos; você confere antes de salvar."
+        }
+      >
+        <UploadForm
+          propertyId=""
+          kind="ficha"
+          read
+          direct={blobUploadEnabled()}
+          folder={riFolder(tenant.slug)}
+          book={livro3 ? 3 : undefined}
+          markdownDefault={livro3}
+        />
+      </Panel>
       <PropertyForm
         cns={cnsDigits(tenant.cns) ?? tenant.cns}
         defaultBook={livro3 ? 3 : 2}

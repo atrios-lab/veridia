@@ -4,6 +4,7 @@ import {
   type PartyRole,
   ROLES_BY_EFFECT,
 } from "./acts.ts";
+import { type AuxData, auxOf } from "./auxiliary.ts";
 import { isoDate, matriculaNumber } from "./property.ts";
 
 /**
@@ -52,6 +53,10 @@ export interface MatriculaReading {
   owners: ReadParty[];
   acts: ReadAct[];
   notes: string[];
+  /** Livro 3: natureza, matrículas relacionadas and the registro's fields. */
+  auxKind?: string;
+  linkedNumbers?: string;
+  aux?: AuxData;
 }
 
 const MONTHS = [
@@ -378,5 +383,12 @@ export function coerceReading(raw: unknown): MatriculaReading {
       .map((n) => str(n, 500))
       .filter(Boolean)
       .slice(0, 10),
+    ...(Number(r.book) === 3
+      ? {
+          auxKind: str(r.auxKind, 200),
+          linkedNumbers: str(r.linkedNumbers, 300),
+          aux: auxOf(r.aux),
+        }
+      : {}),
   };
 }

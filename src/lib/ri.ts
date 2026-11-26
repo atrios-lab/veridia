@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNull, max } from "drizzle-orm";
 import {
   type Act,
@@ -11,7 +11,7 @@ import {
   ROLES_BY_EFFECT,
   situationOf,
 } from "@/core/ri/acts.ts";
-import { auxOf } from "@/core/ri/auxiliary.ts";
+import { type AuxNote, auxOf } from "@/core/ri/auxiliary.ts";
 import { cnsDigits } from "@/core/ri/cnm.ts";
 import {
   cnmBatch,
@@ -459,6 +459,147 @@ export async function createPropertyWith(
   });
 }
 
+// ------------------------------------------------- anotações (Livro 3)
+
+async function saveNotes(
+  database: Database,
+  tenantSlug: string,
+  row: PropertyRow,
+  annotations: AuxNote[],
+  action: string,
+  actor: Actor,
+  reason?: string,
+) {
+  const current = toProperty(row);
+  await database
+    .update(riProperties)
+    .set({
+      aux: { ...current.aux, annotations },
+      updatedAt: new Date(),
+    })
+    .where(eq(riProperties.id, row.id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action,
+    targetType: "ri-property",
+    targetId: row.id,
+    reason,
+  });
+}
+
+/** A new anotação on a registro of the Livro 3. */
+export async function addAnnotationWith(
+  database: Database,
+  tenantSlug: string,
+  propertyId: string,
+  note: { on: string; text: string },
+  actor: Actor,
+): Promise<string> {
+  const row = await ownProperty(database, tenantSlug, propertyId);
+  if (row.deletedAt) throw new RiError("Este registro está apagado.");
+  const text = note.text.replace(/\r\n?/g, "\n").trim().slice(0, 5000);
+  if (text.length < 3) throw new RiError("Escreva a anotação.");
+  const on = note.on.trim() ? isoDate(note.on) : null;
+  if (note.on.trim() && !on) throw new RiError("A data não é uma data válida.");
+  const id = randomUUID();
+  const current = toProperty(row).aux.annotations;
+  await saveNotes(
+    database,
+    tenantSlug,
+    row,
+    [
+      ...current,
+      {
+        id,
+        on,
+        text,
+        at: new Date().toISOString(),
+        by: actor.id,
+        deletedAt: null,
+        history: [],
+      },
+    ],
+    "ri.annotation-add",
+    actor,
+  );
+  return id;
+}
+
+/** Changes an anotação, keeping the text it had. */
+export async function editAnnotationWith(
+  database: Database,
+  tenantSlug: string,
+  propertyId: string,
+  noteId: string,
+  note: { on: string; text: string },
+  actor: Actor,
+): Promise<boolean> {
+  const row = await ownProperty(database, tenantSlug, propertyId);
+  const current = toProperty(row).aux.annotations;
+  const found = current.find((n) => n.id === noteId);
+  if (!found || found.deletedAt) throw new RiError("Anotação não encontrada.");
+  const text = note.text.replace(/\r\n?/g, "\n").trim().slice(0, 5000);
+  if (text.length < 3) throw new RiError("Escreva a anotação.");
+  const on = note.on.trim() ? isoDate(note.on) : null;
+  if (note.on.trim() && !on) throw new RiError("A data não é uma data válida.");
+  if (text === found.text && on === found.on) return false;
+  await saveNotes(
+    database,
+    tenantSlug,
+    row,
+    current.map((n) =>
+      n.id === noteId
+        ? {
+            ...n,
+            text,
+            on,
+            history: [
+              ...n.history,
+              {
+                at: new Date().toISOString(),
+                by: actor.id,
+                text: n.text,
+                on: n.on,
+              },
+            ],
+          }
+        : n,
+    ),
+    "ri.annotation-edit",
+    actor,
+  );
+  return true;
+}
+
+/** "Apagar" an anotação: it is hidden, never taken out. */
+export async function setAnnotationDeletedWith(
+  database: Database,
+  tenantSlug: string,
+  propertyId: string,
+  noteId: string,
+  deleted: boolean,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownProperty(database, tenantSlug, propertyId);
+  const current = toProperty(row).aux.annotations;
+  const found = current.find((n) => n.id === noteId);
+  if (!found) throw new RiError("Anotação não encontrada.");
+  if (Boolean(found.deletedAt) === deleted) return;
+  await saveNotes(
+    database,
+    tenantSlug,
+    row,
+    current.map((n) =>
+      n.id === noteId
+        ? { ...n, deletedAt: deleted ? new Date().toISOString() : null }
+        : n,
+    ),
+    deleted ? "ri.annotation-delete" : "ri.annotation-restore",
+    actor,
+  );
+}
+
 /**
  * The parties of a registro of the Livro 3 go to the cadastro of people,
  * so the Indicador Pessoal has them (Lei nº 6.015/1973, art. 180: the
@@ -486,8 +627,13 @@ export async function updatePropertyWith(
 ): Promise<number> {
   const row = await ownProperty(database, tenantSlug, id);
   if (row.deletedAt) throw new RiError("Esta matrícula está apagada.");
-  const before = columnsOf(toProperty(row));
-  const after = columnsOf(input);
+  const stored = toProperty(row);
+  const before = columnsOf(stored);
+  // The anotações are kept on the registro's page, never by its form.
+  const after = columnsOf({
+    ...input,
+    aux: { ...input.aux, annotations: stored.aux.annotations },
+  });
   const changes = changesBetween(before, after);
   if (changes.length === 0) return 0;
   const history = [

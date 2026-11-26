@@ -69,6 +69,37 @@ export const ROLES_BY_EFFECT: Record<ActEffect, PartyRole[]> = {
  * The natures the office writes most, with the kind and effect suggested.
  * A suggestion only: the registrador decides the kind of each lançamento.
  */
+/**
+ * The averbações at the margin of a registro of the Livro 3 (a cédula, a
+ * penhor, a pacto): what changes the título, who holds the crédito, and
+ * its baixa (Lei nº 6.015/1973, art. 250).
+ */
+export const AUX_ACT_NATURES: readonly {
+  name: string;
+  kind: ActKind;
+  effect: ActEffect;
+}[] = [
+  { name: "Aditivo (aditamento) do título", kind: "AV", effect: "outro" },
+  { name: "Endosso ou cessão do crédito", kind: "AV", effect: "outro" },
+  { name: "Prorrogação do vencimento", kind: "AV", effect: "outro" },
+  { name: "Substituição ou reforço de garantia", kind: "AV", effect: "outro" },
+  {
+    name: "Alteração de nome ou estado civil das partes",
+    kind: "AV",
+    effect: "outro",
+  },
+  {
+    name: "Quitação e cancelamento (baixa) do registro",
+    kind: "AV",
+    effect: "encerramento",
+  },
+  {
+    name: "Cancelamento por ordem judicial",
+    kind: "AV",
+    effect: "encerramento",
+  },
+];
+
 export const ACT_NATURES: readonly {
   name: string;
   kind: ActKind;

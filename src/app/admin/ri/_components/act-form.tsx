@@ -6,6 +6,7 @@ import {
   ACT_EFFECT_LABELS,
   ACT_NATURES,
   type ActEffect,
+  AUX_ACT_NATURES,
   PARTY_ROLE_LABELS,
   type PartyRole,
   ROLES_BY_EFFECT,
@@ -59,6 +60,7 @@ export function ActForm({
   burdens,
   people,
   fromProtocol,
+  auxiliary = false,
 }: {
   propertyId: string;
   /** "R-8 / AV-8": the number this one takes when saved. */
@@ -68,26 +70,40 @@ export function ActForm({
   people: { name: string; document: string }[];
   /** A new ato from a protocolo: its number and the natureza asked. */
   fromProtocol?: { number: string; nature: string };
+  /** A registro of the Livro 3: only averbações, with its own natures. */
+  auxiliary?: boolean;
 }) {
   const [state, action, pending] = useActionState(saveActAction, IDLE);
   const migration = act?.kind === "M";
   const [kind, setKind] = useState<"R" | "AV">(
-    act && act.kind !== "M" ? act.kind : "R",
+    act && act.kind !== "M" ? act.kind : auxiliary ? "AV" : "R",
   );
-  const [effect, setEffect] = useState<ActEffect>(act?.effect ?? "transmissao");
+  const [effect, setEffect] = useState<ActEffect>(
+    act?.effect ?? (auxiliary ? "outro" : "transmissao"),
+  );
   const [nature, setNature] = useState(
-    act?.nature ?? (fromProtocol?.nature || "Compra e venda"),
+    act?.nature ??
+      (fromProtocol?.nature ||
+        (auxiliary ? "Aditivo (aditamento) do título" : "Compra e venda")),
   );
   const [parties, setParties] = useState<PartyRow[]>(
     act?.parties.length
       ? act.parties.map((p) => ({ ...p, key: next++ }))
-      : [blank(ROLES_BY_EFFECT[act?.effect ?? "transmissao"][0] ?? "outro")],
+      : [
+          blank(
+            auxiliary
+              ? "outro"
+              : (ROLES_BY_EFFECT[act?.effect ?? "transmissao"][0] ?? "outro"),
+          ),
+        ],
   );
   const roles = ROLES_BY_EFFECT[effect];
 
   function pickNature(value: string) {
     setNature(value);
-    const known = ACT_NATURES.find((n) => n.name === value);
+    const known = (auxiliary ? AUX_ACT_NATURES : ACT_NATURES).find(
+      (n) => n.name === value,
+    );
     if (known && !act) {
       setKind(known.kind === "M" ? "AV" : known.kind);
       changeEffect(known.effect);
@@ -153,34 +169,42 @@ export function ActForm({
                   className="bg-background"
                 />
                 <datalist id="ri-natures">
-                  {ACT_NATURES.filter((n) => n.kind !== "M").map((n) => (
-                    <option key={n.name} value={n.name} />
-                  ))}
+                  {(auxiliary ? AUX_ACT_NATURES : ACT_NATURES)
+                    .filter((n) => n.kind !== "M")
+                    .map((n) => (
+                      <option key={n.name} value={n.name} />
+                    ))}
                 </datalist>
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium">Lançamento</span>
                 <div className="flex gap-2">
-                  {(["R", "AV"] as const).map((k) => (
-                    <label
-                      key={k}
-                      className={`flex h-9 flex-1 cursor-pointer items-center justify-center rounded-md border text-sm font-medium ${kind === k ? "border-primary bg-primary text-primary-foreground" : "bg-background"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="kind-choice"
-                        value={k}
-                        checked={kind === k}
-                        onChange={() => setKind(k)}
-                        className="sr-only"
-                      />
-                      {k === "R" ? "Registro (R)" : "Averbação (AV)"}
-                    </label>
-                  ))}
+                  {(auxiliary ? (["AV"] as const) : (["R", "AV"] as const)).map(
+                    (k) => (
+                      <label
+                        key={k}
+                        className={`flex h-9 flex-1 cursor-pointer items-center justify-center rounded-md border text-sm font-medium ${kind === k ? "border-primary bg-primary text-primary-foreground" : "bg-background"}`}
+                      >
+                        <input
+                          type="radio"
+                          name="kind-choice"
+                          value={k}
+                          checked={kind === k}
+                          onChange={() => setKind(k)}
+                          className="sr-only"
+                        />
+                        {k === "R" ? "Registro (R)" : "Averbação (AV)"}
+                      </label>
+                    ),
+                  )}
                 </div>
               </div>
               <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <Label htmlFor="a-effect">O que o ato faz na matrícula</Label>
+                <Label htmlFor="a-effect">
+                  {auxiliary
+                    ? "O que a averbação faz no registro"
+                    : "O que o ato faz na matrícula"}
+                </Label>
                 <NativeSelect
                   id="a-effect"
                   value={effect}

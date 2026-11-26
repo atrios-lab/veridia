@@ -12,6 +12,7 @@ import {
   addFileWith,
   applyReadingWith,
   listFilesWith,
+  readMatriculaFilesWith,
   saveSignatureImageWith,
   setFileDeletedWith,
   signatureSettingsWith,
@@ -155,4 +156,42 @@ test("TIFF da matrícula: preto e branco, 1 bit, G4, 300 dpi, várias páginas",
   const bw = await sharp(await imageToBwTiff(new Uint8Array(scan))).metadata();
   assert.equal(bw.format, "tiff");
   assert.equal(bw.channels, 1);
+});
+
+test("Livro 3: a leitura do texto preenche o registro auxiliar, sem imóvel", async () => {
+  const text = `REGISTRO AUXILIAR Nº 71
+TÍTULO: CÉDULA DE CRÉDITO INDUSTRIAL Nº 5/2026, emitida em 02/08/2026.
+EMITENTE: INDÚSTRIA FICTÍCIA LTDA, CNPJ nº 11.444.777/0001-61.
+CREDOR: BANCO EXEMPLO S.A., CNPJ nº 11.222.333/0001-81.
+VALOR: R$ 80.000,00.
+GARANTIAS: penhor de uma prensa hidráulica fictícia.`;
+  const result = await readMatriculaFilesWith(
+    db,
+    TENANT,
+    [
+      {
+        name: "registro-71.txt",
+        mime: "text/plain",
+        bytes: new TextEncoder().encode(text),
+      },
+    ],
+    { book: 3 },
+  );
+  assert.equal(result.reading.book, 3);
+  assert.equal(result.reading.auxKind, "Cédula de crédito industrial");
+  assert.match(result.markdown ?? "", /\*\*CREDOR:\*\*/);
+  const { propertyId } = await applyReadingWith(
+    db,
+    TENANT,
+    result.reading,
+    { propertyId: null, seqs: [] },
+    ACTOR,
+  );
+  const detail = await propertyDetailWith(db, TENANT, propertyId);
+  assert.equal(detail?.property.book, 3);
+  assert.equal(detail?.property.number, 71);
+  assert.equal(detail?.property.location, 0);
+  assert.equal(detail?.property.propertyKind, null);
+  assert.equal(detail?.property.aux.valueCents, 8000000);
+  assert.equal(detail?.property.aux.parties.length, 2);
 });

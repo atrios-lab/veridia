@@ -40,8 +40,16 @@ export default async function NewActPage({
     .map((person) => ({ name: person.name, document: person.document }));
   return (
     <RiPage
-      title={`Lançar ato na ${propertyTitle(p)}`}
-      description={`O número será o ${seq}: ${actLabel({ kind: "R", seq }, p.number)} ou ${actLabel({ kind: "AV", seq }, p.number)}.`}
+      title={
+        p.book === 3
+          ? `Lançar averbação no ${propertyTitle(p)}`
+          : `Lançar ato na ${propertyTitle(p)}`
+      }
+      description={
+        p.book === 3
+          ? `Averbação à margem do registro: ${actLabel({ kind: "AV", seq }, p.number)}. Aditivo, endosso ou cessão, prorrogação, troca de garantia e a baixa (Lei nº 6.015/1973, art. 250).`
+          : `O número será o ${seq}: ${actLabel({ kind: "R", seq }, p.number)} ou ${actLabel({ kind: "AV", seq }, p.number)}.`
+      }
       back={
         fromProtocol && /^[0-9a-f-]{36}$/i.test(query.de ?? "")
           ? {
@@ -53,13 +61,14 @@ export default async function NewActPage({
     >
       <ActForm
         propertyId={id}
-        nextLabel={`R-${seq} ou AV-${seq}`}
+        nextLabel={p.book === 3 ? `AV-${seq}` : `R-${seq} ou AV-${seq}`}
         burdens={situationOf(detail.acts).burdens.map((b) => ({
           actId: b.actId,
           label: `${b.label} ${b.nature}`,
         }))}
         people={people}
         fromProtocol={fromProtocol}
+        auxiliary={p.book === 3}
       />
     </RiPage>
   );

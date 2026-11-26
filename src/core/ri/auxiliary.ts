@@ -45,6 +45,21 @@ export interface AuxParty {
   role: AuxRole;
 }
 
+/**
+ * An anotação on the registro (a remissão, a note that the same título is
+ * also in the RTD, an observação of the oficial). Editing keeps the old
+ * text; "apagar" only hides it (decision of 20/11/2026).
+ */
+export interface AuxNote {
+  id: string;
+  on: string | null;
+  text: string;
+  at: string;
+  by: string;
+  deletedAt: string | null;
+  history: { at: string; by: string; text: string; on: string | null }[];
+}
+
 export interface AuxData {
   /** "Cédula de crédito industrial nº 123", "Escritura de pacto antenupcial". */
   title: string;
@@ -67,6 +82,8 @@ export interface AuxData {
   protocolNumber: string;
   protocolOn: string | null;
   parties: AuxParty[];
+  /** Anotações: managed on the registro's page, never by its form. */
+  annotations: AuxNote[];
 }
 
 export const EMPTY_AUX: AuxData = {
@@ -85,6 +102,7 @@ export const EMPTY_AUX: AuxData = {
   protocolNumber: "",
   protocolOn: null,
   parties: [],
+  annotations: [],
 };
 
 export interface HowToStep {
@@ -358,7 +376,44 @@ export function readAux(raw: Record<string, unknown>): AuxData {
     protocolNumber: clean(raw["aux.protocolNumber"], 30),
     protocolOn: isoDate(raw["aux.protocolOn"]),
     parties,
+    annotations: [],
   };
+}
+
+/** The anotações as stored, checked one by one. */
+export function notesOf(value: unknown): AuxNote[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 500).flatMap((item, i): AuxNote[] => {
+    if (!item || typeof item !== "object") return [];
+    const n = item as Record<string, unknown>;
+    const text = clean(n.text, 5000);
+    if (!text) return [];
+    const history = Array.isArray(n.history)
+      ? n.history.flatMap((h) =>
+          h && typeof h === "object"
+            ? [
+                {
+                  at: clean((h as Record<string, unknown>).at, 40),
+                  by: clean((h as Record<string, unknown>).by, 80),
+                  text: clean((h as Record<string, unknown>).text, 5000),
+                  on: isoDate((h as Record<string, unknown>).on),
+                },
+              ]
+            : [],
+        )
+      : [];
+    return [
+      {
+        id: clean(n.id, 60) || `a${i + 1}`,
+        on: isoDate(n.on),
+        text,
+        at: clean(n.at, 40),
+        by: clean(n.by, 80),
+        deletedAt: n.deletedAt ? clean(n.deletedAt, 40) : null,
+        history,
+      },
+    ];
+  });
 }
 
 /** A stored value (jsonb) back into AuxData, whatever it holds. */
@@ -367,7 +422,8 @@ export function auxOf(value: unknown): AuxData {
   const v = value as Record<string, unknown>;
   const raw: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(v)) {
-    if (key === "parties" || key === "valueCents") continue;
+    if (key === "parties" || key === "valueCents" || key === "annotations")
+      continue;
     raw[`aux.${key}`] = item;
   }
   const parties = Array.isArray(v.parties) ? v.parties : [];
@@ -379,6 +435,7 @@ export function auxOf(value: unknown): AuxData {
     raw[`aux.party.${i}.role`] = party.role;
   });
   const out = readAux(raw);
+  out.annotations = notesOf(v.annotations);
   const stored = Number(v.valueCents);
   out.valueCents =
     v.valueCents === null ||
@@ -438,10 +495,36 @@ export function auxText(kind: string, aux: AuxData, linked: string): string[] {
   if (aux.guarantees) lines.push(`GARANTIAS: ${aux.guarantees}`);
   if (aux.goodsPlace) lines.push(`LOCAL DOS BENS: ${aux.goodsPlace}`);
   if (linked) lines.push(`MATRÍCULA(S) RELACIONADA(S): ${linked}.`);
+  const live = aux.annotations.filter((n) => !n.deletedAt);
+  if (live.length > 0) {
+    lines.push(
+      `ANOTAÇÕES: ${live.map((n) => `${n.on ? `${brDate(n.on)}: ` : ""}${n.text}`).join(" ")}`,
+    );
+  }
   if (aux.protocolNumber) {
     lines.push(
       `PROTOCOLO: título apontado sob nº ${aux.protocolNumber}${aux.protocolOn ? `, em ${brDate(aux.protocolOn)}` : ""}.`,
     );
   }
   return lines;
+}
+
+/**
+ * What a reading brings to a registro already saved: only the empty
+ * fields are filled; a value the office typed is never replaced. Parties
+ * come in only when there are none.
+ */
+export function mergeAux(current: AuxData, incoming: AuxData): AuxData {
+  const out: AuxData = { ...current, parties: [...current.parties] };
+  const empty = (v: unknown) =>
+    v === null ||
+    v === undefined ||
+    v === "" ||
+    (Array.isArray(v) && v.length === 0);
+  for (const key of Object.keys(out) as (keyof AuxData)[]) {
+    if (empty(current[key]) && !empty(incoming[key])) {
+      (out as unknown as Record<string, unknown>)[key] = incoming[key];
+    }
+  }
+  return out;
 }
