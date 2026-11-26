@@ -33,6 +33,9 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   // signer's image, or digital.
   "ri/matriculas/[id]/ficha",
   "ri/protocolo/[id]/nota",
+  "ri/livros/[id]/pdf",
+  "ri/livros/[id]/termo",
+  "ri/livros/protocolo-do-dia",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",
 ]);

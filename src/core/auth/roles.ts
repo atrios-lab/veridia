@@ -394,6 +394,7 @@ export const DEMO_OPEN_PERMISSIONS = [
   "ri.view",
   "ri.edit",
   "ri.export",
+  "ri.books",
   "attributions.view",
   "lgpd.decide",
 ] as const satisfies readonly OfficePermission[];
