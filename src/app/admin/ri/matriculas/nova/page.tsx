@@ -14,7 +14,9 @@ export default async function NewPropertyPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { tenant } = await requireRi("ri.edit");
-  const livro3 = (await searchParams).livro === "3";
+  const params = await searchParams;
+  const livro3 = params.livro === "3";
+  const protocolo = (params.protocolo ?? "").replace(/\D/g, "");
   return (
     <RiPage
       title={livro3 ? "Novo registro auxiliar (Livro 3)" : "Nova matrícula"}
@@ -29,6 +31,14 @@ export default async function NewPropertyPage({
           : { href: "/admin/ri/matriculas", label: "Matrículas" }
       }
     >
+      {protocolo && (
+        <p className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          Título da prenotação nº {protocolo}. Anexe o documento abaixo: o
+          sistema lê e mostra para conferir. Se o número já tiver registro no
+          Livro 3, ele avisa que o título é averbação desse registro. Ao lançar
+          o ato, informe o protocolo nº {protocolo} e o selo.
+        </p>
+      )}
       <Panel
         title="Ler de um arquivo"
         description={
