@@ -104,7 +104,6 @@ export function ImportRowActions({
             consequence="O arquivo sai do armazenamento e deixa de ocupar espaço. Os dados já lidos continuam: dá para conferir e publicar normalmente. Fica registrado na auditoria."
             confirmLabel="Apagar o arquivo"
             pendingLabel="Apagando..."
-            justify={false}
           >
             <input type="hidden" name="id" value={id} />
           </ConfirmAction>
@@ -136,7 +135,6 @@ export function ImportRowActions({
               consequence="Só a linha sai da lista. Os registros publicados continuam no índice e nas pesquisas. Dá para restaurar em Mostrar os tirados da lista."
               confirmLabel="Tirar da lista"
               pendingLabel="Tirando..."
-              justify={false}
             >
               <input type="hidden" name="id" value={id} />
             </ConfirmAction>

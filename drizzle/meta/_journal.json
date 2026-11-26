@@ -687,6 +687,13 @@
       "when": 1795714541922,
       "tag": "0097_ri_pendencias_concluidas",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1795725464306,
+      "tag": "0098_pedidos_de_exclusao",
+      "breakpoints": true
     }
   ]
 }

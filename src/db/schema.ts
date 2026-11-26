@@ -3846,3 +3846,34 @@ export const riPendencyMarks = pgTable(
   },
   (t) => [index("ri_pendency_marks_tenant").on(t.tenantSlug, t.key)],
 );
+
+/**
+ * A request to apagar an official document, waiting for the Tabelião
+ * (decision of 26/11/2026: "se for documento oficial, que vá para
+ * autorização do tabelião, para ele aprovar e confirmar o motivo"). The
+ * deletion only happens when approved, and even then it is the usual mark
+ * (`deletedAt`, `voidedAt`), never a row removed.
+ */
+export const deletionRequests = pgTable(
+  "deletion_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** "ri-property", "ri-act", "ri-protocol", "ri-book", "ri-onr-image". */
+    kind: text("kind").notNull(),
+    targetId: text("target_id").notNull(),
+    /** "Matrícula nº 002", for the list. */
+    label: text("label").notNull(),
+    reason: text("reason").notNull(),
+    requestedBy: text("requested_by").notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    /** "pendente", "aprovado", "recusado", "cancelado". */
+    status: text("status").notNull().default("pendente"),
+    decidedBy: text("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    decisionNote: text("decision_note").notNull().default(""),
+  },
+  (t) => [index("deletion_requests_tenant").on(t.tenantSlug, t.status)],
+);

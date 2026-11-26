@@ -95,7 +95,6 @@ export function DoneCard({
             consequence="A Adequação volta a aparecer como pendente. A marcação fica no histórico e na auditoria."
             confirmLabel="Desfazer"
             pendingLabel="Desfazendo..."
-            justify={false}
           />
         </div>
       </section>

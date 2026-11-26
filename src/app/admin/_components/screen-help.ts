@@ -473,6 +473,15 @@ const ENTRIES: Record<string, ScreenHelp> = {
       ],
     },
   },
+  "/admin/autorizacoes": {
+    purpose:
+      "Os pedidos para apagar documento oficial (matrícula, ato, protocolo, livro, imagem), com o motivo de quem pediu, para o Tabelião aprovar ou recusar.",
+    steps: [
+      "Leia o documento e o motivo informado por quem pediu.",
+      "Aprove para apagar (fica recuperável) ou recuse, escrevendo a justificativa.",
+      "A decisão fica na auditoria com o nome de quem decidiu.",
+    ],
+  },
   "/admin/auditoria": {
     purpose:
       "O registro de tudo o que foi feito no painel, por quem e quando, com as faixas Urgente, Atenção e Análise.",

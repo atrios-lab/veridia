@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { justify } from "@/lib/audit-reason.ts";
 import {
   RcpnImportError,
   rcpn,
@@ -245,6 +246,8 @@ export async function hideImportAction(
   _prev: ImportMetaState,
   formData: FormData,
 ): Promise<ImportMetaState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
     await hideImportWith(db, tenantSlug, id, actorId);
     return "Arquivo tirado da lista. Os registros continuam no índice.";
@@ -266,6 +269,8 @@ export async function purgeImportFileAction(
   _prev: ImportMetaState,
   formData: FormData,
 ): Promise<ImportMetaState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
   return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
     await purgeImportFileWith(db, tenantSlug, id, actorId);
     return "Arquivo apagado. Ficaram só os dados lidos.";

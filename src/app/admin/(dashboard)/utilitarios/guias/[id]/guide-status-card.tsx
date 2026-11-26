@@ -194,7 +194,6 @@ export function GuideStatusCard({
             consequence="O comprovante deixa de aparecer na guia. O arquivo continua no histórico e na auditoria."
             confirmLabel="Tirar"
             pendingLabel="Tirando..."
-            justify={false}
           >
             <input type="hidden" name="guideId" value={guideId} />
           </ConfirmAction>
