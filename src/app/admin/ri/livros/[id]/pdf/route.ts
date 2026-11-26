@@ -3,6 +3,7 @@ import { db } from "@/db/index.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocuments, renderingFor } from "@/lib/pdf.ts";
 import { BookTooLarge, bookDocumentsFor } from "@/lib/ri-books.ts";
+import { joinPdfs, tiffToPdf } from "@/lib/ri-tiff.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -40,7 +41,25 @@ async function handle(
       query.get("assinatura") === "imagem",
     );
     if (!book) return new Response("Não encontrado", { status: 404 });
-    const pdf = await renderDocuments(book.documents, await brandFor(tenant));
+    const brand = await brandFor(tenant);
+    // Runs of generated documents, with the signed fichas (images) between.
+    const parts: Uint8Array[] = [];
+    let run: typeof book.documents = [];
+    const flush = async () => {
+      if (run.length) parts.push(await renderDocuments(run, brand));
+      run = [];
+    };
+    for (const [i, document] of book.documents.entries()) {
+      const image = book.images.get(i);
+      if (image) {
+        await flush();
+        parts.push(await tiffToPdf(image));
+      } else {
+        run.push(document);
+      }
+    }
+    await flush();
+    const pdf = parts.length === 1 ? parts[0] : await joinPdfs(parts);
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",

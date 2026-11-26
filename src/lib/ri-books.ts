@@ -22,10 +22,11 @@ import { formatTaxId } from "@/core/tax-id.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
 import type { Database } from "@/db/index.ts";
-import { riBooks, riProtocols } from "@/db/schema.ts";
+import { riBooks, riOnrImages, riProtocols } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { type Actor, loadAcervoWith, RiError } from "./ri.ts";
 import { riSignerFor } from "./ri-docs.ts";
+import { currentOf } from "./ri-onr-images.ts";
 import { officeToday } from "./ri-protocols.ts";
 
 /**
@@ -539,7 +540,12 @@ export async function bookDocumentsFor(
   id: string,
   range: BookRange,
   withImage: boolean,
-): Promise<{ documents: RequerimentoDocument[]; name: string } | null> {
+): Promise<{
+  documents: RequerimentoDocument[];
+  /** documents[i] is replaced by the signed image of the ficha. */
+  images: Map<number, Uint8Array>;
+  name: string;
+} | null> {
   const row = await bookWith(database, tenant.slug, id);
   if (!row) return null;
   const record = recordOf(row);
@@ -549,6 +555,7 @@ export async function bookDocumentsFor(
     termDocument(tenant, openingTerm(record, office), signer),
   ];
   const info = BOOKS[record.book];
+  const images = new Map<number, Uint8Array>();
   const footer = `${officialName(tenant)} · ${info.name} · ${row.volume} · ${tenant.legalFooter}`;
   if (record.book === 1) {
     const from = isoDate(range.from ?? "") ?? row.openedOn;
@@ -590,7 +597,28 @@ export async function bookDocumentsFor(
         );
       }
       const { signer: who } = await riSignerFor(tenant);
+      // The Livro 2 is one digital book, the same one printed: where the
+      // ficha was signed for the ONR, its page is that image.
+      const signed =
+        record.book === 2
+          ? new Map(
+              currentOf(
+                await database
+                  .select({
+                    id: riOnrImages.id,
+                    number: riOnrImages.number,
+                    tiff: riOnrImages.tiff,
+                    createdAt: riOnrImages.createdAt,
+                    deletedAt: riOnrImages.deletedAt,
+                  })
+                  .from(riOnrImages)
+                  .where(eq(riOnrImages.tenantSlug, tenant.slug)),
+              ).map((r) => [r.number, r.tiff]),
+            )
+          : new Map<number, string>();
       for (const p of items) {
+        const image = signed.get(p.number);
+        if (image) images.set(documents.length, Buffer.from(image, "base64"));
         const content = fichaContent({
           office: {
             name: officialName(tenant),
@@ -684,7 +712,7 @@ export async function bookDocumentsFor(
   if (row.closedOn) {
     documents.push(termDocument(tenant, closingTerm(record, office), signer));
   }
-  return { documents, name: `livro-${row.volume.toLowerCase()}` };
+  return { documents, images, name: `livro-${row.volume.toLowerCase()}` };
 }
 
 /** The fichas a volume of the Livro 2 or 3 holds now, for signing in lots. */

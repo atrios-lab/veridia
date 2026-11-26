@@ -1,5 +1,10 @@
 import { can } from "@/core/auth/roles.ts";
+import { markdownSections, originalKind } from "@/core/ri/markdown-doc.ts";
+import { officialName } from "@/core/tenant/identification.ts";
+import { formatOfficeDate } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { brandFor } from "@/lib/document-brand.ts";
+import { renderDocument } from "@/lib/pdf.ts";
 import { fileWith } from "@/lib/ri-files.ts";
 import { imageToBwTiff } from "@/lib/ri-tiff.ts";
 import { getSession } from "@/lib/session.ts";
@@ -10,7 +15,8 @@ export const runtime = "nodejs";
 
 /**
  * A file attached in the Registro de Imóveis, as it was sent (or its text
- * in Markdown, when only the text was kept); with
+ * in Markdown, when only the text was kept: shown as a PDF rebuilt from
+ * it, `?formato=md` for the Markdown itself); with
  * `?formato=tiff`, a scanned image as the ONR's black and white TIFF (G4).
  */
 export async function GET(
@@ -32,6 +38,29 @@ export async function GET(
   if (!file.path) {
     const markdown =
       (file.reading as { markdown?: string } | null)?.markdown ?? "";
+    const query = new URL(request.url).searchParams;
+    if (query.get("formato") !== "md") {
+      // Back as a PDF: the same text, the look rebuilt from the Markdown.
+      const pdf = await renderDocument(
+        {
+          eyebrow: "Registro de Imóveis · documento guardado em texto",
+          title: file.name.replace(/\.[^.]+$/, ""),
+          subtitle: `Original em ${originalKind(file.mime, file.name)}, guardado só o texto em ${formatOfficeDate(file.createdAt)} (o arquivo foi descartado para não ocupar espaço)`,
+          office: [officialName(tenant), tenant.subtitle],
+          sections: markdownSections(markdown),
+          signature: [],
+          footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
+        },
+        await brandFor(tenant),
+      );
+      return new Response(new Uint8Array(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `${query.get("baixar") === "1" ? "attachment" : "inline"}; filename="${safe.replace(/\.[^.]+$/, "")}.pdf"`,
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
     return new Response(markdown, {
       headers: {
         "Content-Type": "text/markdown; charset=utf-8",

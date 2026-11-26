@@ -141,3 +141,91 @@ test("the queue: newest in force, copied, hidden, zip with the folders", async (
   // The older one of the same number comes back into force.
   assert.ok(after.some((r) => r.id === a?.id));
 });
+
+test("applying a ficha: new matrícula, then a new averbação and a retificação", async () => {
+  const tenant = "cartorio-teste-ri-acervo";
+  const tiff = Buffer.from("tif").toString("base64");
+  const reading = {
+    book: 2,
+    number: 7,
+    cnm: "",
+    openedOn: "2024-03-10",
+    location: 0,
+    denomination: "",
+    street: "Rua Exemplo",
+    district: "Centro",
+    area: "",
+    ccir: "",
+    nirf: "",
+    car: "",
+    incra: "",
+    sigef: "",
+    origin: "",
+    description: "Imóvel urbano na Rua Exemplo.",
+    owners: [],
+    notes: [],
+    acts: [
+      {
+        kind: "AV",
+        seq: 1,
+        nature: "Transporte",
+        effect: "outro",
+        registeredOn: "2024-03-10",
+        summary: "Matrícula transportada do livro antigo.",
+        parties: [],
+        cancelsSeq: null,
+      },
+    ],
+  };
+  const { bookSuggestion, applyOnrReadingWith } = await import(
+    "./ri-onr-images.ts"
+  );
+  const [first] = await db
+    .insert(riOnrImages)
+    .values({ tenantSlug: tenant, number: 7, tiff, reading, changes: [] })
+    .returning({ id: riOnrImages.id });
+  const one = await applyOnrReadingWith(db, tenant, first?.id ?? "", ACTOR);
+  assert.equal(one.added, 1);
+  const suggestion = await bookSuggestion(db, tenant, 7, reading as never);
+  assert.deepEqual(suggestion, {
+    date: "2024-03-10",
+    fromTransport: true,
+    volume: "2",
+    firstItem: 7,
+  });
+  const second = {
+    ...reading,
+    acts: [
+      { ...reading.acts[0], summary: "Matrícula transportada do Livro 2-A." },
+      {
+        ...reading.acts[0],
+        seq: 2,
+        nature: "Construção",
+        summary: "Averba-se a construção.",
+      },
+    ],
+  };
+  const [again] = await db
+    .insert(riOnrImages)
+    .values({
+      tenantSlug: tenant,
+      number: 7,
+      tiff,
+      reading: second,
+      changes: [
+        { kind: "retificacao", seq: 1, label: "AV-1-7" },
+        { kind: "nova-averbacao", seq: 2, label: "AV-2-7" },
+      ],
+    })
+    .returning({ id: riOnrImages.id });
+  const two = await applyOnrReadingWith(db, tenant, again?.id ?? "", ACTOR);
+  assert.deepEqual(two, { added: 1, retified: 1 });
+  // Applying twice changes nothing.
+  assert.deepEqual(
+    await applyOnrReadingWith(db, tenant, again?.id ?? "", ACTOR),
+    {
+      added: 0,
+      retified: 0,
+    },
+  );
+});

@@ -1,6 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
 import { onrImageFileWith, onrZipWith } from "@/lib/ri-onr-images.ts";
+import { tiffToPdf } from "@/lib/ri-tiff.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -25,6 +26,19 @@ export async function GET(request: Request): Promise<Response> {
   if (id) {
     const file = await onrImageFileWith(db, tenant.slug, id);
     if (!file) return new Response("Não encontrada", { status: 404 });
+    if (query.get("formato") === "pdf") {
+      const pdf = await tiffToPdf(file.bytes);
+      return new Response(new Uint8Array(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="${file.path
+            .split("/")
+            .at(-1)
+            ?.replace(/\.TIF$/i, "")}.pdf"`,
+          "Cache-Control": "private, no-store",
+        },
+      });
+    }
     return new Response(new Uint8Array(file.bytes), {
       headers: {
         "Content-Type": "image/tiff",
