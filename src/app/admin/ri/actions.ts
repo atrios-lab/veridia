@@ -52,6 +52,7 @@ import {
 import {
   addFileWith,
   applyReadingWith,
+  copySignatureToRubricWith,
   fileWith,
   linkFileWith,
   type ReadingResult,
@@ -866,6 +867,14 @@ export async function saveSignatureImageAction(
   }
   const rubric = text(formData, "tipo") === "rubrica";
   try {
+    if (rubric && text(formData, "op") === "copy") {
+      await copySignatureToRubricWith(db, ok.tenant.slug, ok.actor);
+      revalidatePath("/admin/ri", "layout");
+      return {
+        status: "success",
+        message: "A rubrica agora é a mesma imagem da assinatura.",
+      };
+    }
     if (text(formData, "op") === "remove") {
       await saveSignatureImageWith(
         db,

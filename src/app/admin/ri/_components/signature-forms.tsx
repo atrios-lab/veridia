@@ -49,9 +49,12 @@ export function SignerForm({
 export function SignatureImageForm({
   preview,
   kind = "assinatura",
+  canCopySignature = false,
 }: {
   preview: string | null;
   kind?: "assinatura" | "rubrica";
+  /** Rubrica: offer "usar a mesma assinatura". */
+  canCopySignature?: boolean;
 }) {
   const [state, action, pending] = useActionState(
     saveSignatureImageAction,
@@ -81,6 +84,18 @@ export function SignatureImageForm({
             </Button>
           </form>
         </div>
+      )}
+      {kind === "rubrica" && canCopySignature && (
+        <form action={action}>
+          <input type="hidden" name="tipo" value="rubrica" />
+          <input type="hidden" name="op" value="copy" />
+          <Button type="submit" variant="outline" disabled={pending}>
+            Usar a mesma assinatura como rubrica
+          </Button>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Quando a assinatura já é a rubrica, não precisa enviar outra imagem.
+          </p>
+        </form>
       )}
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="tipo" value={kind} />

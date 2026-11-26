@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../_ui/button.tsx";
 import { Input } from "../../_ui/input.tsx";
 import { Label } from "../../_ui/label.tsx";
@@ -11,6 +11,7 @@ import {
   type OnrImageState,
   openLivro2Action,
   prepareOnrImageAction,
+  saveSignatureImageAction,
 } from "../actions.ts";
 import { ActionButton, useRiToast } from "./client.tsx";
 
@@ -43,6 +44,10 @@ export function OnrImageForm({
   const [pattern, setPattern] = useState(patterns[0]?.id ?? "p12");
   const [sign, setSign] = useState(hasSignature);
   const [rubric, setRubric] = useState(hasRubric);
+  // The rubrica just cadastrada (or copied from the signature) comes on.
+  useEffect(() => {
+    if (hasRubric) setRubric(true);
+  }, [hasRubric]);
   const [running, setRunning] = useState(false);
 
   const choose = (list: FileList | null) => {
@@ -161,8 +166,20 @@ export function OnrImageForm({
         <span>
           Pôr a minha rubrica no canto superior direito de todas as folhas
           {!hasRubric && (
-            <span className="block text-xs text-muted-foreground">
-              Cadastre a imagem da rubrica em RI › Configurações para usar.
+            <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              Cadastre a imagem da rubrica em RI › Configurações
+              {hasSignature && (
+                <>
+                  {" "}
+                  ou
+                  <ActionButton
+                    action={saveSignatureImageAction}
+                    fields={{ tipo: "rubrica", op: "copy" }}
+                    label="Usar a mesma assinatura como rubrica"
+                    pendingLabel="Salvando…"
+                  />
+                </>
+              )}
             </span>
           )}
         </span>
