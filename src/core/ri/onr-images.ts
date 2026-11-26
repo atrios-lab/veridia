@@ -93,7 +93,7 @@ export function signaturePlace(
  */
 export function numberInText(text: string): number | null {
   const m =
-    /matr[íi]cula\s*(?:n[º°o.]*|n[úu]mero)?\s*[:\-–]?\s*(\d{1,3}(?:[.\s]\d{3})+|\d{1,7})\b/i.exec(
+    /matr[íi]cula\s*(?:n[º°o.]*|n[úu]mero)?\s*[:\-\u2013]?\s*(\d{1,3}(?:[.\s]\d{3})+|\d{1,7})\b/i.exec(
       text,
     ) ?? /\bmat\.\s*(\d{1,3}(?:\.\d{3})+|\d{1,7})\b/i.exec(text);
   if (!m?.[1]) return null;
