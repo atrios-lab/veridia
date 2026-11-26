@@ -67,6 +67,8 @@ export interface CertidaoInput {
   book?: { volume: string; ficha: string };
   /** "MATRÍCULA Nº 1.693 - Data: 09/09/2024 - CNM: ...", centred. */
   headline?: string;
+  /** "IMÓVEL RURAL" or "IMÓVEL URBANO". */
+  idLabel?: string;
 }
 
 /** The ficha in the text of the certidão: each ato with its label in bold. */
@@ -159,22 +161,44 @@ export function certidaoSections(input: CertidaoInput): CertidaoSection[] {
       break;
     }
     case "onus": {
+      // Resumida, as the office's model: the matrícula, the imóvel, the
+      // atos (label and nature), the current owners and the ônus.
+      const first = input.ficha?.blocks[0];
+      const acts = (input.ficha?.blocks ?? []).slice(1);
       out.push({
         paragraphs: [
           opening(input, where(input, ref)),
           ...(input.headline ? [`**${input.headline}**`] : []),
-          ...fichaParagraphs(input.ficha),
+          ...(first
+            ? [
+                `**${(input.idLabel ?? "IMÓVEL").toLocaleUpperCase("pt-BR")}:\u00a0**${first.text.split("\n").filter(Boolean).join(" ")}`,
+              ]
+            : []),
+          ...acts.map(
+            (b) =>
+              `**${(b.meta ? `${b.label} - DATA: ${b.meta}` : b.label).toLocaleUpperCase("pt-BR")}**${b.text ? ` \u2013 ${b.text.split(/[.:]/)[0]?.trim() ?? ""}.` : ""}`,
+          ),
+          `**NOME, DOMICÍLIO E NACIONALIDADE DOS PROPRIETÁRIOS:\u00a0**${
+            owners.length
+              ? owners
+                  .map(
+                    (o) =>
+                      `**${o.name}**${o.document ? `, CPF/CNPJ nº ${o.document}` : ""}`,
+                  )
+                  .join("; ")
+              : "não consta proprietário registrado"
+          }.`,
           burdens.length
             ? `**Certifico**, ainda, que sobre o imóvel da matrícula acima referida pesa(m) o(s) seguinte(s) ônus real(is), em vigor: ${burdens
                 .map(
                   (b) =>
-                    `${b.label}${b.nature ? ` (${b.nature})` : ""}${b.registeredOn ? `, registrado em ${b.registeredOn}` : ""}`,
+                    `${b.label}${b.nature ? ` (${b.nature})` : ""}${b.registeredOn ? `, registrado em ${b.registeredOn.split("-").reverse().join("/")}` : ""}${b.parties.length ? `, figurando ${b.parties.map((p) => p.name).join(", ")}` : ""}`,
                 )
-                .join("; ")}.`
-            : "**Certifico**, ainda, que a matrícula acima referida encontra-se livre e desembaraçada de quaisquer ônus reais, judiciais ou extrajudiciais que possam restringir ou limitar a livre disposição do imóvel.",
+                .join("; ")}. O referido é verdade e dou fé.`
+            : "**Certifico**, ainda, que a matrícula acima referida encontra-se livre e desembaraçada de quaisquer ônus reais, judiciais ou extrajudiciais que possam restringir ou limitar a livre disposição do imóvel. O referido é verdade e dou fé.",
         ],
       });
-      break;
+      return out;
     }
     case "resumo": {
       const identification = input.ficha?.blocks[0];

@@ -601,33 +601,6 @@ function drawDocumentBody(
     Boolean(document.signee || document.signature.length);
   const byHand = Boolean(document.signee) && !digital;
 
-  if (document.dateLine) {
-    // Centred, as the office dates its papers, between the text and the
-    // signature.
-    pdf.font("Times-Roman").fontSize(11);
-    const dateHeight = pdf.heightOfString(document.dateLine, {
-      width: contentWidth(pdf),
-    });
-    pdf.moveDown(1.2);
-    const room = bottom(pdf) - pdf.y - dateHeight;
-    if (
-      byHand
-        ? room - blockHeight < 48
-        : room < HEADING_ORPHAN_GUARD - dateHeight
-    ) {
-      pdf.addPage();
-    }
-    // Set again: a new page draws its footer and leaves another font behind.
-    pdf
-      .font("Times-Roman")
-      .fontSize(11)
-      .fillColor(NEUTRALS.text)
-      .text(document.dateLine, MARGIN, pdf.y, {
-        width: contentWidth(pdf),
-        align: "center",
-      });
-  }
-
   if (document.seal && (document.seal.number || document.seal.image)) {
     const boxH = document.seal.image ? 78 : 24;
     if (pdf.y + boxH + 12 > bottom(pdf)) pdf.addPage();
@@ -655,12 +628,40 @@ function drawDocumentBody(
     pdf.y = top + boxH;
   }
 
+  if (document.dateLine) {
+    // Centred, as the office dates its papers, between the text and the
+    // signature.
+    pdf.font("Times-Roman").fontSize(11);
+    const dateHeight = pdf.heightOfString(document.dateLine, {
+      width: contentWidth(pdf),
+    });
+    pdf.moveDown(1.2);
+    const room = bottom(pdf) - pdf.y - dateHeight;
+    if (
+      byHand
+        ? room - blockHeight < 48
+        : room < HEADING_ORPHAN_GUARD - dateHeight
+    ) {
+      pdf.addPage();
+    }
+    // Set again: a new page draws its footer and leaves another font behind.
+    pdf
+      .font("Times-Roman")
+      .fontSize(11)
+      .fillColor(NEUTRALS.text)
+      .text(document.dateLine, MARGIN, pdf.y, {
+        width: contentWidth(pdf),
+        align: "center",
+      });
+  }
+
   if (document.signatures?.length) {
     drawPartySignatures(pdf, document.signatures, brand);
   }
 
   if (digital) {
     drawDigitalSignatureNote(pdf, brand);
+    drawClosingNotes(pdf, document);
     return;
   }
 
@@ -668,8 +669,15 @@ function drawDocumentBody(
     // The signature is anchored at the foot of the page: everything between
     // the last section and the rule is room to sign by hand, which is the
     // point. Too little of it, and the block gets a page (mostly) to itself.
-    if (bottom(pdf) - blockHeight - pdf.y < 48) pdf.addPage();
-    pdf.y = bottom(pdf) - blockHeight;
+    if (document.compactSignature) {
+      // Right under the date, as the office's certidões (decision of
+      // 26/11/2026): the notes after it stay on the same page.
+      if (bottom(pdf) - blockHeight - pdf.y < 70) pdf.addPage();
+      pdf.y += 62;
+    } else {
+      if (bottom(pdf) - blockHeight - pdf.y < 48) pdf.addPage();
+      pdf.y = bottom(pdf) - blockHeight;
+    }
 
     const ruleWidth = 280;
     const ruleLeft = MARGIN + (contentWidth(pdf) - ruleWidth) / 2;
@@ -707,6 +715,37 @@ function drawDocumentBody(
       width: contentWidth(pdf) - 80,
       align: "center",
     });
+  }
+  drawClosingNotes(pdf, document);
+}
+
+/** The custas and LGPD notes, small and centred, after the signature. */
+function drawClosingNotes(pdf: Pdf, document: RequerimentoDocument): void {
+  for (const note of document.closingNotes ?? []) {
+    pdf.moveDown(1.2);
+    pdf.font("Times-Roman").fontSize(8);
+    const h =
+      pdf.heightOfString(note.text, { width: contentWidth(pdf) }) +
+      (note.heading ? 12 : 0);
+    if (pdf.y + h > bottom(pdf)) pdf.addPage();
+    if (note.heading) {
+      pdf
+        .font("Times-Bold")
+        .fontSize(9)
+        .fillColor(NEUTRALS.text)
+        .text(note.heading, MARGIN, pdf.y, {
+          width: contentWidth(pdf),
+          align: "center",
+        });
+    }
+    pdf
+      .font("Times-Roman")
+      .fontSize(8)
+      .fillColor(NEUTRALS.text)
+      .text(note.text, MARGIN, pdf.y, {
+        width: contentWidth(pdf),
+        align: "center",
+      });
   }
 }
 

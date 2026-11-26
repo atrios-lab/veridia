@@ -307,6 +307,25 @@ export async function renderDocumentDocx(
     );
   }
 
+  for (const note of document.closingNotes ?? []) {
+    if (note.heading) {
+      body.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 240 },
+          children: [run(note.heading, { bold: true, size: 18 })],
+        }),
+      );
+    }
+    body.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: note.heading ? 0 : 240 },
+        children: [run(note.text, { size: 16 })],
+      }),
+    );
+  }
+
   const file = new Document({
     creator: document.office[0] ?? "",
     title: document.title,
