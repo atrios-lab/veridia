@@ -2,6 +2,7 @@
 
 import {
   ArrowLeft,
+  ArrowLeftRight,
   BookMarked,
   BookOpen,
   ClipboardList,
@@ -73,9 +74,14 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
     title: "Migração e ONR",
     entries: [
       {
-        label: "Pendências e importação",
+        label: "Pendências da migração",
         href: "/admin/ri/migracao",
         icon: ListChecks,
+      },
+      {
+        label: "Importar e exportar",
+        href: "/admin/ri/importar-exportar",
+        icon: ArrowLeftRight,
       },
       { label: "CNM", href: "/admin/ri/cnm", icon: ScanBarcode },
       { label: "Arquivos para a ONR", href: "/admin/ri/onr", icon: Send },

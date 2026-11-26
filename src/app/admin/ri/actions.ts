@@ -9,7 +9,11 @@ import {
   PropertyError,
   readProperty,
 } from "@/core/ri/property.ts";
-import { readSheet } from "@/core/ri/sheet.ts";
+import {
+  transferFromJson,
+  transferFromTable,
+  transferFromXml,
+} from "@/core/ri/transfer.ts";
 import { db } from "@/db/index.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
@@ -18,7 +22,6 @@ import {
   createPersonWith,
   createPropertyWith,
   generateExportWith,
-  importSheetWith,
   markExportImportedWith,
   RiError,
   readActInput,
@@ -46,7 +49,13 @@ import {
   saveSignerWith,
   setFileDeletedWith,
 } from "@/lib/ri-files.ts";
-import { SheetFileError, sheetRows } from "@/lib/ri-sheet.ts";
+import { SheetFileError, transferFile } from "@/lib/ri-sheet.ts";
+import {
+  applyTransferWith,
+  previewTransferWith,
+  type TransferPreview,
+  type TransferResult,
+} from "@/lib/ri-transfer.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { readStoredFile, storeRegistryFile } from "@/lib/uploads.ts";
@@ -59,7 +68,8 @@ export type RiState =
 const NO_PERMISSION: Partial<Record<Permission, string>> = {
   "ri.edit":
     "Você não tem permissão para alterar o acervo do Registro de Imóveis.",
-  "ri.import": "Você não tem permissão para importar a planilha do índice.",
+  "ri.import":
+    "Você não tem permissão para importar matrículas, atos e indicadores.",
   "ri.export": "Você não tem permissão para gerar os arquivos para a ONR.",
 };
 
@@ -333,85 +343,85 @@ export async function setPersonDeletedAction(
   };
 }
 
-// -------------------------------------------------------------- planilha
+// ------------------------------------------------- importar e exportar
 
-export type ImportState =
+export type TransferState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | {
-      status: "preview";
-      fileName: string;
-      columns: { header: string; field: string }[];
-      rows: {
-        line: number;
-        number: number;
-        situation: number;
-        owners: string;
-        place: string;
-        warnings: string[];
-      }[];
-      total: number;
-      errors: { line: number; message: string }[];
-    }
-  | {
-      status: "done";
-      created: number;
-      skipped: { line: number; reason: string }[];
-    };
+  | ({ status: "preview"; fileName: string } & TransferPreview)
+  | ({ status: "done" } & TransferResult);
+
+const TRANSFER_MAX_BYTES = 40 * 1024 * 1024;
+
+async function transferOf(name: string, bytes: Uint8Array) {
+  const file = await transferFile({ name, bytes });
+  if (file.type === "table") return transferFromTable(file.rows, file.label);
+  if (file.type === "json") return transferFromJson(file.value);
+  return transferFromXml(file.text);
+}
 
 /**
- * One form, two steps: "Conferir" reads the sheet and shows what would
- * come in; "Importar" sends the same file again and saves.
+ * One form, two steps: "Conferir" reads the file (planilha, JSON or XML
+ * of the ONR) and shows what would come in; "Importar" reads the same
+ * file again and saves only what is missing.
  */
-export async function importSheetAction(
-  _previous: ImportState,
+export async function transferImportAction(
+  _previous: TransferState,
   formData: FormData,
-): Promise<ImportState> {
+): Promise<TransferState> {
   const ok = await access("ri.import");
   if (!ok) {
     return { status: "error", message: NO_PERMISSION["ri.import"] ?? "" };
   }
-  const file = formData.get("planilha");
-  if (!(file instanceof File)) {
-    return { status: "error", message: "Escolha a planilha do índice." };
-  }
   try {
-    const reading = readSheet(await sheetRows(file));
-    if (reading.rows.length === 0) {
+    let name: string;
+    let bytes: Uint8Array;
+    const url = text(formData, "url");
+    if (url) {
+      if (!ownUpload(url, ok.tenant.slug)) {
+        return { status: "error", message: "Arquivo não reconhecido." };
+      }
+      name = text(formData, "nome") || "arquivo";
+      bytes = new Uint8Array(await readStoredFile(url));
+    } else {
+      const file = formData.get("arquivo");
+      if (!(file instanceof File) || file.size === 0) {
+        return { status: "error", message: "Escolha o arquivo." };
+      }
+      if (file.size > TRANSFER_MAX_BYTES) {
+        return { status: "error", message: "O arquivo passa de 40 MB." };
+      }
+      name = file.name || "arquivo";
+      bytes = new Uint8Array(await file.arrayBuffer());
+    }
+    const transfer = await transferOf(name, bytes);
+    const total =
+      transfer.properties.length +
+      transfer.acts.length +
+      transfer.people.length;
+    if (total === 0) {
       return {
         status: "error",
         message:
-          reading.errors[0]?.message ??
-          "Nenhuma linha com número de matrícula na planilha.",
+          transfer.errors[0]?.message ??
+          "Não achei nenhuma linha para importar neste arquivo.",
       };
     }
     if (text(formData, "intent") !== "import") {
-      return {
-        status: "preview",
-        fileName: file.name,
-        columns: reading.columns,
-        rows: reading.rows.slice(0, 200).map((row) => ({
-          line: row.line,
-          number: row.input.number,
-          situation: row.input.status,
-          owners: row.owners.map((o) => o.name).join("; "),
-          place: row.input.rural.denominacao || row.input.street,
-          warnings: row.warnings,
-        })),
-        total: reading.rows.length,
-        errors: reading.errors.slice(0, 100),
-      };
+      const preview = await previewTransferWith(db, ok.tenant.slug, transfer);
+      return { status: "preview", fileName: name, ...preview };
     }
-    const result = await importSheetWith(
+    const result = await applyTransferWith(
       db,
       ok.tenant.slug,
-      reading.rows,
+      transfer,
+      { complete: text(formData, "completar") === "1" },
       ok.actor,
     );
     revalidatePath("/admin/ri", "layout");
     return { status: "done", ...result };
   } catch (error) {
-    const state = failure(error, "ri.import");
+    const state = failure(error, "ri.transfer");
     return {
       status: "error",
       message: state.status === "error" ? state.message : "",

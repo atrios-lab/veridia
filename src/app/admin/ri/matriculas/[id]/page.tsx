@@ -490,7 +490,14 @@ export default async function PropertyPage({
             <ul className="flex flex-col gap-2 text-xs">
               <li className="text-muted-foreground">
                 Cadastrada em {stamp(p.createdAt)}
-                {p.source === "planilha" ? " pela planilha do índice" : ""}.
+                {p.source === "planilha"
+                  ? " pela planilha do índice"
+                  : p.source === "importacao"
+                    ? " pela importação (Importar e exportar)"
+                    : p.source === "leitura"
+                      ? " pela leitura de um documento"
+                      : ""}
+                .
               </li>
               {[...p.history].reverse().map((entry) => (
                 <li key={entry.at} className="rounded-md bg-muted px-2.5 py-2">

@@ -150,7 +150,7 @@ export default async function RiDeskPage() {
         <div className="flex flex-col gap-5 lg:col-span-2">
           <Panel
             title="Pendências por tipo"
-            description="Cada uma com o passo a passo e a regra de onde vem, em Pendências e importação."
+            description="Cada uma com o passo a passo e a regra de onde vem, em Pendências da migração."
           >
             {pendencies.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -209,10 +209,10 @@ export default async function RiDeskPage() {
             <div className="flex flex-col gap-2">
               {canImport && (
                 <Link
-                  href="/admin/ri/migracao#importar"
+                  href="/admin/ri/importar-exportar"
                   className={buttonVariants({ variant: "outline" })}
                 >
-                  <Upload className="size-4" /> Importar a planilha do índice
+                  <Upload className="size-4" /> Importar e exportar o acervo
                 </Link>
               )}
               {canExport && (

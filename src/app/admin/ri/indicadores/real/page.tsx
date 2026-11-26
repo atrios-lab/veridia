@@ -45,9 +45,17 @@ export default async function RealIndicatorPage({
       title="Indicador Real (Livro 4)"
       description="Todos os imóveis do acervo, pela localização: rua e número no urbano; denominação, CCIR, NIRF, CAR e Incra no rural (Lei nº 6.015/1973, art. 179). É o que vai no arquivo semanal para a ONR."
       actions={
-        <Link href="/admin/ri/onr" className={buttonVariants({ size: "sm" })}>
-          Gerar o arquivo para a ONR
-        </Link>
+        <>
+          <Link
+            href="/admin/ri/importar-exportar"
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+          >
+            Planilha, JSON e importação
+          </Link>
+          <Link href="/admin/ri/onr" className={buttonVariants({ size: "sm" })}>
+            Gerar o arquivo para a ONR
+          </Link>
+        </>
       }
     >
       <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">

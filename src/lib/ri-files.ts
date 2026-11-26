@@ -426,7 +426,7 @@ export async function applyReadingWith(
       const personId = await findOrCreatePersonWith(
         database,
         tenantSlug,
-        party,
+        withDocument(party),
         actor,
       );
       await database.insert(riActParties).values({
