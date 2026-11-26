@@ -633,6 +633,41 @@ export async function saveSignatureImageWith(
   });
 }
 
+/**
+ * The rubrica is the same image as the signature (decision of 26/11/2026:
+ * for many Tabeliães the signature is the rubrica).
+ */
+export async function copySignatureToRubricWith(
+  database: Database,
+  tenantSlug: string,
+  actor: Actor,
+): Promise<void> {
+  const [row] = await database
+    .select({ signatureImage: riSettings.signatureImage })
+    .from(riSettings)
+    .where(eq(riSettings.tenantSlug, tenantSlug))
+    .limit(1);
+  if (!row?.signatureImage) {
+    throw new RiError("Cadastre a imagem da assinatura antes.");
+  }
+  await database
+    .update(riSettings)
+    .set({
+      rubricImage: row.signatureImage,
+      rubricUpdatedBy: actor.id,
+      rubricUpdatedAt: new Date(),
+    })
+    .where(eq(riSettings.tenantSlug, tenantSlug));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.rubric-image",
+    targetType: "ri-settings",
+    targetId: null,
+    reason: "A rubrica passou a ser a mesma imagem da assinatura.",
+  });
+}
+
 /** The files of a matrícula still in use (for the ficha's images). */
 export async function liveFilesWith(
   database: Database,

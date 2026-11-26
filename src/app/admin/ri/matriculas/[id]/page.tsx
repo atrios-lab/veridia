@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import {
   ACT_EFFECT_LABELS,
   actLabel,
+  matriculaPeople,
   PARTY_ROLE_LABELS,
   situationOf,
 } from "@/core/ri/acts.ts";
+import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
 import {
   CNM_PROBLEM_LABELS,
   cnmOf,
@@ -548,6 +550,59 @@ export default async function PropertyPage({
               </dl>
             </Panel>
           )}
+          {(() => {
+            // Livro 5 (Indicador Pessoal, art. 180): who appears here.
+            const people =
+              p.book === 3
+                ? p.aux.parties.map((party) => ({
+                    key: `${party.name}-${party.document}`,
+                    personId: null as string | null,
+                    name: party.name,
+                    document: party.document,
+                    acts: [`Livro 3 nº ${p.number.toLocaleString("pt-BR")}`],
+                    situation: [AUX_ROLE_LABELS[party.role] ?? party.role],
+                  }))
+                : matriculaPeople(acts);
+            return (
+              <Panel
+                title="Pessoas (Livro 5)"
+                description="Quem figura nesta matrícula, em ordem alfabética, com os atos (Lei nº 6.015/1973, art. 180)."
+              >
+                {people.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma pessoa lançada nos atos ainda.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {people.map((person) => (
+                      <li key={person.key} className="text-sm">
+                        {person.personId ? (
+                          <Link
+                            href={`/admin/ri/pessoas/${person.personId}`}
+                            className="font-medium text-primary underline-offset-4 hover:underline"
+                          >
+                            {person.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{person.name}</span>
+                        )}
+                        {person.document && (
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · {formatTaxId(person.document)}
+                          </span>
+                        )}
+                        <span className="block text-xs text-muted-foreground">
+                          {person.situation.join(", ")} ·{" "}
+                          {person.acts.join(", ")}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Panel>
+            );
+          })()}
           {p.notes && (
             <Panel title="Observações internas">
               <p className="text-sm whitespace-pre-line">{p.notes}</p>

@@ -93,6 +93,7 @@ export default async function RiSettingsPage() {
             {riCan(session, "certificates.manage") ? (
               <SignatureImageForm
                 kind="rubrica"
+                canCopySignature={Boolean(image)}
                 preview={
                   signing.settings.rubricImage
                     ? `data:image/png;base64,${Buffer.from(signing.settings.rubricImage).toString("base64")}`

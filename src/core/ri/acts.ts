@@ -285,3 +285,54 @@ export function situationOf(acts: readonly Act[]): Situation {
 export function cancellable(acts: readonly Act[]): Burden[] {
   return situationOf(acts).burdens;
 }
+
+/** A person as the Livro 5 shows them on one matrícula. */
+export interface MatriculaPerson {
+  key: string;
+  personId: string | null;
+  name: string;
+  document: string;
+  /** The atos the name appears in: "R-1", "AV-3". */
+  acts: string[];
+  /** "Proprietário atual", "Proprietário anterior", "Credor"… */
+  situation: string[];
+}
+
+/**
+ * The Indicador Pessoal of one matrícula (Lei nº 6.015/1973, art. 180):
+ * everyone who appears in its atos, in alphabetical order, with the atos
+ * and what they are there: owner now, owner before, credor, devedor.
+ */
+export function matriculaPeople(acts: readonly Act[]): MatriculaPerson[] {
+  const situation = situationOf(acts);
+  const now = new Set(situation.owners.map((o) => o.personId));
+  const people = new Map<string, MatriculaPerson>();
+  for (const act of [...acts].sort((a, b) => a.seq - b.seq)) {
+    for (const party of act.parties) {
+      const key = party.personId || party.document || party.name.toUpperCase();
+      const person = people.get(key) ?? {
+        key,
+        personId: party.personId || null,
+        name: party.name,
+        document: party.document,
+        acts: [],
+        situation: [],
+      };
+      const label = actLabel(act);
+      if (!person.acts.includes(label)) person.acts.push(label);
+      const role =
+        party.role === "titular" || party.role === "adquirente"
+          ? now.has(party.personId)
+            ? "Proprietário atual"
+            : "Proprietário anterior"
+          : party.role === "transmitente"
+            ? "Proprietário anterior"
+            : PARTY_ROLE_LABELS[party.role];
+      if (!person.situation.includes(role)) person.situation.push(role);
+      people.set(key, person);
+    }
+  }
+  return [...people.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, "pt-BR"),
+  );
+}
