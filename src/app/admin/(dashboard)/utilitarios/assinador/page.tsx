@@ -71,6 +71,21 @@ export default async function SignerPage({
             holderName,
           }))}
         />
+        {tenant.attributions.includes("RI") &&
+          can(role, "ri.export", granted) && (
+            <p className="-mt-2 rounded-lg border bg-card px-4 py-3 text-sm text-foreground">
+              Matrícula do Livro 2 para a ONR? Use{" "}
+              <Link
+                href="/admin/ri/onr/imagens"
+                className="font-medium text-primary underline underline-offset-4"
+              >
+                Assinar para exportar para a ONR
+              </Link>
+              : anexe o PDF ou o Word, e o sistema põe a sua assinatura e gera o
+              TIFF preto e branco no padrão do manual, sem imprimir e
+              digitalizar.
+            </p>
+          )}
         {certificates.length === 0 &&
           can(role, "certificates.manage", granted) && (
             <p className="-mt-2 text-xs text-muted-foreground">

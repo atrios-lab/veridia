@@ -14,7 +14,7 @@ A serventia ajeita a matrícula no Word e não quer imprimir e digitalizar para 
   - baixar um arquivo ou todos num `.zip`, já com as pastas;
   - marcar como copiado para a pasta do CSL2, desfazer a marcação e apagar só ocultando, com histórico.
 - **"Como fazer"**, tirado dos manuais do CSL2 e da primeira carga: onde fica a pasta das matrículas, o horário do envio, as pastas "Processados" e "Erro", e o aviso de que cópia reprográfica não é aceita.
-- **Padrão em Configurações do RI:** o Padrão 12 vem marcado e pode ser trocado por um dos outros padrões do manual, se a serventia precisar.
+- **Padrão no formulário de envio:** o Padrão 12 vem marcado e pode ser trocado pelo Padrão 3 ou pelo 13 do manual, se a serventia precisar.
 - **O TIFF da ficha gerada pelo sistema** passa de 300 para 200 dpi, como pede o manual.
 
 ## Capabilities

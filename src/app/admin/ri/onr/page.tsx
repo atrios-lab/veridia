@@ -22,6 +22,22 @@ export default async function OnrPage() {
       description="O sistema gera os arquivos no formato do ONR e guarda cada um. O envio é da serventia: entre no Ofício Eletrônico ou no PGV-CNM com o certificado do oficial e importe. Nada sai daqui sozinho."
     >
       {canExport && (
+        <Panel
+          title="Imagens das matrículas (Livro 2)"
+          description="Anexe a matrícula em PDF ou Word: o sistema confere, põe a sua assinatura e gera o TIFF do manual da ONR, com a pasta e o nome certos, para a pasta do CSL2."
+          actions={
+            <a
+              href="/admin/ri/onr/imagens"
+              className={buttonVariants({ size: "sm" })}
+            >
+              Assinar para exportar para a ONR
+            </a>
+          }
+        >
+          <span className="sr-only">Imagens do Livro 2</span>
+        </Panel>
+      )}
+      {canExport && (
         <div className="grid gap-3 lg:grid-cols-3">
           <GenerateCard
             kind="cnm"

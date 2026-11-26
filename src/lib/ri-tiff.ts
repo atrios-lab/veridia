@@ -4,20 +4,22 @@ import { join } from "node:path";
 import * as fontkit from "fontkit";
 import sharp from "sharp";
 import type { FichaContent } from "@/core/ri/ficha.ts";
+import {
+  ONR_DPI,
+  signaturePlace,
+  type TextLine,
+} from "@/core/ri/onr-images.ts";
 
 /**
  * The image of a matrícula for the ONR (the CSL2 sends the images of the
- * Livro 2 to the SAEC): black and white, 1 bit, CCITT Group 4, 300 dpi,
- * A4, one page per folha, in a multipage TIFF. The text is drawn from the
- * outlines of the Tinos font (metrics of Times New Roman), so the image
- * never depends on fonts installed on the server.
- *
- * The ONR names "18 padrões de imagem" in the CSL2 manual; the list was not
- * in the manuals the office sent. This is the usual archival choice (TIFF
- * G4 bilevel); confirm with the ONR before the first carga.
+ * Livro 2 to the SAEC): black and white, 1 bit, CCITT Group 4, 200 × 200
+ * dpi, A4, one page per folha, in a multipage TIFF, as the manual
+ * "Matrícula Online: imagens das matrículas" (v2.0, item 1) asks. The text
+ * is drawn from the outlines of the Tinos font (metrics of Times New
+ * Roman), so the image never depends on fonts installed on the server.
  */
 
-const DPI = 300;
+const DPI = ONR_DPI;
 const MM = DPI / 25.4;
 const PAGE_W = Math.round(210 * MM);
 const PAGE_H = Math.round(297 * MM);
@@ -103,7 +105,7 @@ interface Item {
   gapBefore?: number;
 }
 
-/** The ficha as a multipage black-and-white TIFF (G4, 300 dpi). */
+/** The ficha as a multipage black-and-white TIFF (G4, 200 dpi). */
 export async function fichaTiff(
   content: FichaContent,
   signatureImage?: Uint8Array | null,
@@ -297,4 +299,131 @@ export async function cleanSignature(bytes: Uint8Array): Promise<Buffer> {
     .trim()
     .png()
     .toBuffer();
+}
+
+export interface PdfImage {
+  tiff: Buffer;
+  pages: number;
+  /** The text of the PDF, for the conferência. */
+  text: string;
+  signed: boolean;
+  /** The signature was asked for and the last page had no room for it. */
+  noRoom: boolean;
+}
+
+/**
+ * A PDF (the Word of the office saved as PDF) as the ONR's image: every
+ * page rendered at 200 dpi as it is, the signer's image right under the
+ * last line of the last page, black and white, G4, multipage. The PDF is
+ * read by mupdf (WebAssembly), with no program installed on the server.
+ */
+export async function pdfToOnrTiff(
+  bytes: Uint8Array,
+  signatureImage?: Uint8Array | null,
+): Promise<PdfImage> {
+  const mupdf = await import("mupdf");
+  const doc = mupdf.Document.openDocument(bytes, "application/pdf");
+  const count = doc.countPages();
+  if (count < 1) throw new Error("PDF sem páginas.");
+  const scale = DPI / 72;
+  const texts: string[] = [];
+  const rasters: Buffer[] = [];
+  let signed = false;
+  let noRoom = false;
+  for (let i = 0; i < count; i++) {
+    const page = doc.loadPage(i);
+    const [x0, y0, x1, y1] = page.getBounds();
+    const pageW = (x1 ?? 595) - (x0 ?? 0);
+    const pageH = (y1 ?? 842) - (y0 ?? 0);
+    const st = JSON.parse(
+      page.toStructuredText("preserve-whitespace").asJSON(),
+    ) as {
+      blocks: {
+        lines?: { text?: string; bbox: { y: number; h: number } }[];
+      }[];
+    };
+    const lines: TextLine[] = st.blocks.flatMap((b) =>
+      (b.lines ?? []).map((l) => ({
+        top: l.bbox.y - (y0 ?? 0),
+        bottom: l.bbox.y + l.bbox.h - (y0 ?? 0),
+        text: l.text ?? "",
+      })),
+    );
+    texts.push(lines.map((l) => l.text).join("\n"));
+    const pix = page.toPixmap(
+      mupdf.Matrix.scale(scale, scale),
+      mupdf.ColorSpace.DeviceGray,
+      false,
+      true,
+    );
+    const w = pix.getWidth();
+    const h = pix.getHeight();
+    let image = sharp(Buffer.from(pix.getPixels()), {
+      raw: { width: w, height: h, channels: 1 },
+    });
+    // Every page goes out as A4 at 200 dpi, whatever size the PDF has.
+    image = sharp(
+      await image
+        .resize({
+          width: PAGE_W,
+          height: PAGE_H,
+          fit: "contain",
+          background: { r: 255, g: 255, b: 255 },
+        })
+        .png()
+        .toBuffer(),
+    );
+    if (signatureImage && i === count - 1) {
+      const sigH = 56;
+      const place = signaturePlace(lines, pageH, sigH);
+      if (place) {
+        const k = PAGE_H / (pageH * scale);
+        const sig = await sharp(signatureImage)
+          .resize({
+            width: Math.round(pt(240) * k),
+            height: Math.round(pt(sigH) * k),
+            fit: "inside",
+          })
+          .png()
+          .toBuffer();
+        const meta = await sharp(sig).metadata();
+        image = sharp(await image.png().toBuffer()).composite([
+          {
+            input: sig,
+            left: Math.round((PAGE_W - (meta.width ?? 0)) / 2),
+            top: Math.round(pt(place.top) * k),
+          },
+        ]);
+        signed = true;
+      } else {
+        noRoom = true;
+      }
+    }
+    void pageW;
+    rasters.push(
+      await image
+        .flatten({ background: { r: 255, g: 255, b: 255 } })
+        .greyscale()
+        .raw()
+        .toBuffer(),
+    );
+  }
+  const tiff = await sharp(Buffer.concat(rasters), {
+    raw: {
+      width: PAGE_W,
+      height: PAGE_H * rasters.length,
+      channels: 1,
+      pageHeight: PAGE_H,
+    },
+  })
+    .threshold(160)
+    .toColourspace("b-w")
+    .tiff({
+      compression: "ccittfax4",
+      bitdepth: 1,
+      xres: DPI / 25.4,
+      yres: DPI / 25.4,
+    })
+    .toBuffer();
+  return { tiff, pages: count, text: texts.join("\n"), signed, noRoom };
 }

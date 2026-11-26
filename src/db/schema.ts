@@ -3703,3 +3703,41 @@ export const riBooks = pgTable(
   },
   (t) => [index("ri_books_tenant").on(t.tenantSlug, t.book)],
 );
+
+/**
+ * The images of the Livro 2 ready for the ONR (change
+ * registro-de-imoveis-imagens-onr): the TIFF of one matrícula, from the
+ * Word or the PDF the office attached, signed with the image of who signs
+ * and named by the manual (00000000/00000001.TIF). The newest one of a
+ * number is the one in force; "apagar" hides it, the history stays.
+ */
+export const riOnrImages = pgTable(
+  "ri_onr_images",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    number: integer("number").notNull(),
+    propertyId: uuid("property_id").references(() => riProperties.id),
+    /** The file the office attached, by name ("matricula 12.pdf"). */
+    sourceName: text("source_name").notNull().default(""),
+    /** "pdf" (the page as it is) or "word" (the ficha built from the text). */
+    source: text("source").notNull().default("pdf"),
+    pattern: text("pattern").notNull().default("p12"),
+    pages: integer("pages").notNull().default(1),
+    /** The TIFF, base64 (G4, 200 dpi: a few dozen KB a page). */
+    tiff: text("tiff").notNull(),
+    signed: boolean("signed").notNull().default(false),
+    /** What the conferência pointed out and the office confirmed. */
+    issues: jsonb("issues").notNull().default(sql`'[]'::jsonb`),
+    copiedAt: timestamp("copied_at", { withTimezone: true }),
+    copiedBy: text("copied_by"),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_onr_images_tenant").on(t.tenantSlug, t.number)],
+);

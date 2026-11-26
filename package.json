@@ -50,6 +50,7 @@
     "jszip": "3.10.2",
     "lucide-react": "1.63.0",
     "mdb-reader": "3.2.0",
+    "mupdf": "1.26.4",
     "next": "16.2.12",
     "node-forge": "1.4.3",
     "node-unrar-js": "2.0.2",

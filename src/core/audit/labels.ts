@@ -453,6 +453,13 @@ const EXACT: Record<string, string> = {
   "ri.book-reopen": "Desfez o encerramento de um livro do Registro de Imóveis",
   "ri.book-delete": "Apagou um livro do Registro de Imóveis lançado por engano",
   "ri.book-restore": "Restaurou um livro do Registro de Imóveis apagado",
+  "ri.onr-image-add": "Gerou a imagem de uma matrícula para a ONR (TIFF)",
+  "ri.onr-image-copied":
+    "Marcou imagens de matrícula como copiadas para a pasta da ONR",
+  "ri.onr-image-not-copied":
+    "Desfez a marca de imagens copiadas para a pasta da ONR",
+  "ri.onr-image-delete": "Apagou a imagem de uma matrícula para a ONR",
+  "ri.onr-image-restore": "Restaurou a imagem de uma matrícula para a ONR",
   "ri.annotation-edit": "Alterou uma anotação de um registro do Livro 3",
   "ri.annotation-delete": "Apagou uma anotação de um registro do Livro 3",
   "ri.annotation-restore": "Restaurou uma anotação apagada do Livro 3",
@@ -866,6 +873,10 @@ const EXPLANATIONS: Record<string, string> = {
     "O encerramento de um livro do Registro de Imóveis foi desfeito. O encerramento anterior fica no histórico do livro.",
   "ri.book-delete":
     "Um livro do Registro de Imóveis lançado por engano foi apagado, com justificativa. Ele continua guardado e pode ser restaurado.",
+  "ri.onr-image-add":
+    "A matrícula anexada em PDF ou Word foi conferida, assinada com a imagem de quem assina e transformada no TIFF preto e branco do manual da ONR (200 dpi, pasta e nome do manual).",
+  "ri.onr-image-delete":
+    "Uma imagem de matrícula para a ONR foi apagada, com justificativa. Ela continua guardada e pode ser restaurada.",
   "ri.annotation-edit":
     "Uma anotação de um registro do Livro 3 foi alterada. O texto anterior fica no histórico da anotação.",
   "ri.annotation-delete":
