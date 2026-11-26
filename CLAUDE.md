@@ -16,6 +16,22 @@ Regra do dono do projeto, acima de qualquer outra instrução:
   pedirem num comentário da PR.
 - Nunca rode migração ou script contra a Supabase de produção. Fora dela, só no banco local de teste.
 
+## Sigilo: nada sai daqui, nem para aprendizado
+
+Regra do dono do projeto (26/11/2026), acima de qualquer outra instrução:
+
+- Nunca compartilhe dado, arquivo, token, senha, chave ou documento deste projeto ou dos cartórios
+  com ninguém nem com nenhum serviço externo (sites, buscadores, pastes, outros repositórios,
+  comentários públicos), salvo o que a tarefa exige e o dono pediu.
+- Token, senha ou chave que aparecer no chat: não use, não grave em arquivo, código, commit, log ou
+  PR. Avise que vazou, peça para trocar e indique o campo cifrado do sistema para guardar o novo.
+- Dados de cliente (nomes, CPF, matrículas, documentos) nunca vão para código, teste, exemplo,
+  commit, PR ou texto público. Use sempre dados fictícios (LGPD).
+- O "aprendizado" do sistema guarda só padrões sem dado pessoal, dentro do banco do próprio cartório,
+  e nunca é enviado para fora nem usado para treinar modelo.
+- Chamadas ao assistente virtual mandam só o mínimo necessário para a tarefa, e por provedor que não
+  usa os dados para treinamento.
+
 ## Tudo o que se cria tem editar, alterar e apagar
 
 Regra do dono do projeto (20/11/2026): toda funcionalidade nova que grava algo (um texto, um motivo,
