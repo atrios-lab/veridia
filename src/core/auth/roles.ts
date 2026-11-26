@@ -134,6 +134,11 @@ export const OFFICE_PERMISSIONS = [
   "ri.edit",
   "ri.import",
   "ri.export",
+  // The books of the Registro de Imóveis (change registro-de-imoveis-livros):
+  // opening and closing the volumes, their termos and the daily closing
+  // of the Protocolo, signed by the oficial (Lei nº 6.015/1973, arts. 4º
+  // and 210).
+  "ri.books",
   // The guides of the attributions (decision of 14/11/2026): books,
   // indexes and deadlines of each specialty, as the law sets them.
   "attributions.view",
@@ -209,6 +214,7 @@ export const GRANTABLE_PERMISSIONS = [
   "ri.edit",
   "ri.import",
   "ri.export",
+  "ri.books",
   "attributions.view",
   "attributions.import",
   "dpo.assist",
@@ -269,6 +275,8 @@ export const DERIVED_FROM: Partial<Record<GrantablePermission, Permission>> = {
   "ri.import": "attributions.import",
   // Whoever lança atos generates the cargas of what they lançaram.
   "ri.export": "ri.edit",
+  // Whoever changes the acervo opens and closes its books.
+  "ri.books": "ri.edit",
   // Whoever loads the attributions' files loads the legal base.
   "knowledge.manage": "attributions.import",
   // Whoever answers the pedidos at the counter qualifies the títulos.
@@ -629,6 +637,8 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Registro de Imóveis: importar a planilha do índice de matrículas",
   "ri.export":
     "Registro de Imóveis: gerar os arquivos para a ONR (lote de CNM, Indicador Real e Indicador Pessoal)",
+  "ri.books":
+    "Registro de Imóveis: abrir, alterar e encerrar os livros, com os termos de abertura e encerramento e o encerramento diário do Protocolo",
   "attributions.view":
     "Atribuições: consultar os guias de cada especialidade (livros, índices e prazos da lei)",
   "attributions.import":

@@ -32,8 +32,8 @@ export default async function SignerPage({
     excluidos?: string;
     retirado?: string;
     /** A panel route that generates a PDF (guia, declaração) to sign. */
-    origem?: string;
-    titulo?: string;
+    origem?: string | string[];
+    titulo?: string | string[];
   }>;
 }) {
   const query = await searchParams;
@@ -219,17 +219,25 @@ export default async function SignerPage({
  * Only the panel's own routes may be preloaded: a path under /admin/, on
  * this site, never another host.
  */
-function preloadFrom(origem?: string, titulo?: string) {
-  if (!origem?.startsWith("/admin/") || origem.startsWith("//")) {
-    return undefined;
-  }
-  const title = (titulo ?? "").trim().slice(0, 120) || "Documento";
-  const name = `${
-    title
-      .replace(/[^\w\s-]/g, "")
-      .trim()
-      .replace(/\s+/g, "-")
-      .toLowerCase() || "documento"
-  }.pdf`;
-  return { url: origem, name, title };
+function preloadFrom(origem?: string | string[], titulo?: string | string[]) {
+  const urls = (Array.isArray(origem) ? origem : origem ? [origem] : []).slice(
+    0,
+    20,
+  );
+  const titles = Array.isArray(titulo) ? titulo : titulo ? [titulo] : [];
+  const items = urls.flatMap((url, index) => {
+    if (!url.startsWith("/admin/") || url.startsWith("//")) return [];
+    const title = (titles[index] ?? "").trim().slice(0, 120) || "Documento";
+    const name = `${
+      title
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-")
+        .toLowerCase() || "documento"
+    }.pdf`;
+    return [{ url, name, title }];
+  });
+  return items.length ? items : undefined;
 }

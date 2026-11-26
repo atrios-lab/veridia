@@ -7,12 +7,26 @@ import { AdminIcon } from "./icon";
  * panel offers it next to its print link (decision of 11/11/2026).
  */
 export function signHref(pdfHref: string, title: string): string {
-  // The digital version: a note in place of the line to sign by hand.
-  const digital = `${pdfHref}${pdfHref.includes("?") ? "&" : "?"}assinatura=digital`;
-  return `/admin/utilitarios/assinador?${new URLSearchParams({
-    origem: digital,
-    titulo: title,
-  })}#assinar`;
+  return signBatchHref([{ pdf: pdfHref, title }]);
+}
+
+/** The digital version: a note in place of the line to sign by hand. */
+const digitalOf = (pdfHref: string) =>
+  `${pdfHref}${pdfHref.includes("?") ? "&" : "?"}assinatura=digital`;
+
+/**
+ * Several PDFs at once (up to 20, what the assinador takes in one go): the
+ * fichas of a book, signed with the certificate and password typed once.
+ */
+export function signBatchHref(
+  items: readonly { pdf: string; title: string }[],
+): string {
+  const params = new URLSearchParams();
+  for (const item of items.slice(0, 20)) {
+    params.append("origem", digitalOf(item.pdf));
+    params.append("titulo", item.title);
+  }
+  return `/admin/utilitarios/assinador?${params}#assinar`;
 }
 
 /**

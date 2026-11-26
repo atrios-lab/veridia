@@ -446,6 +446,13 @@ const EXACT: Record<string, string> = {
   "ri.geometry-add": "Lançou o perímetro georreferenciado de uma matrícula",
   "ri.geometry-delete": "Apagou o perímetro georreferenciado de uma matrícula",
   "ri.geometry-restore": "Restaurou um perímetro georreferenciado apagado",
+  "ri.book-open": "Abriu um livro do Registro de Imóveis (termo de abertura)",
+  "ri.book-edit": "Alterou os dados de um livro do Registro de Imóveis",
+  "ri.book-close":
+    "Encerrou um livro do Registro de Imóveis (termo de encerramento)",
+  "ri.book-reopen": "Desfez o encerramento de um livro do Registro de Imóveis",
+  "ri.book-delete": "Apagou um livro do Registro de Imóveis lançado por engano",
+  "ri.book-restore": "Restaurou um livro do Registro de Imóveis apagado",
   "ri.annotation-edit": "Alterou uma anotação de um registro do Livro 3",
   "ri.annotation-delete": "Apagou uma anotação de um registro do Livro 3",
   "ri.annotation-restore": "Restaurou uma anotação apagada do Livro 3",
@@ -849,6 +856,16 @@ const EXPLANATIONS: Record<string, string> = {
     "O perímetro de uma matrícula foi lido do memorial descritivo ou da planilha do Sigef e guardado, com área, perímetro e planta (Lei nº 6.015/1973, art. 176, §§ 3º a 5º).",
   "ri.geometry-delete":
     "Um perímetro georreferenciado foi apagado, com justificativa. Ele continua guardado e pode ser restaurado.",
+  "ri.book-open":
+    "Um livro do Registro de Imóveis foi aberto no sistema, com número, forma de escrituração e folhas. O termo de abertura sai dele, para assinar (Lei nº 6.015/1973, art. 4º).",
+  "ri.book-edit":
+    "Os dados de um livro do Registro de Imóveis foram alterados. Os valores anteriores ficam no histórico do livro.",
+  "ri.book-close":
+    "Um livro do Registro de Imóveis foi encerrado, com a data e a última folha escriturada. O termo de encerramento sai dele, para assinar (Lei nº 6.015/1973, art. 4º).",
+  "ri.book-reopen":
+    "O encerramento de um livro do Registro de Imóveis foi desfeito. O encerramento anterior fica no histórico do livro.",
+  "ri.book-delete":
+    "Um livro do Registro de Imóveis lançado por engano foi apagado, com justificativa. Ele continua guardado e pode ser restaurado.",
   "ri.annotation-edit":
     "Uma anotação de um registro do Livro 3 foi alterada. O texto anterior fica no histórico da anotação.",
   "ri.annotation-delete":

@@ -253,7 +253,7 @@ export function SignForm({
    * A document the panel generated (a guia, a declaração), sent here by
    * its "Assinar digitalmente" button: fetched and already on the list.
    */
-  preload?: { url: string; name: string; title: string };
+  preload?: { url: string; name: string; title: string }[];
 }) {
   const router = useRouter();
   // Nothing chosen at first (decision of 11/11/2026): the certificate
@@ -270,7 +270,10 @@ export function SignForm({
     files.every((f) => f.state.kind === "signed" || f.state.kind === "error") &&
     !running;
 
-  const choose = (list: FileList | File[] | null, title?: string) => {
+  const choose = (
+    list: FileList | File[] | null,
+    title?: string | string[],
+  ) => {
     setError("");
     const picked = Array.from(list ?? []);
     const pdfs = picked.filter(
@@ -284,7 +287,9 @@ export function SignForm({
       pdfs.slice(0, MAX_FILES).map((file, index) => ({
         key: `${index}-${file.name}-${file.size}`,
         file,
-        title: title ?? file.name.replace(/\.pdf$/i, ""),
+        title:
+          (Array.isArray(title) ? title[index] : title) ??
+          file.name.replace(/\.pdf$/i, ""),
         state:
           file.size > MAX_BYTES
             ? { kind: "error", message: "Passa de 4 MB." }
@@ -296,23 +301,34 @@ export function SignForm({
   // The generated document comes in by itself, ready to sign.
   // biome-ignore lint/correctness/useExhaustiveDependencies: once, on arrival
   useEffect(() => {
-    if (!preload) return;
+    if (!preload?.length) return;
     let gone = false;
     void (async () => {
       try {
-        const response = await fetch(preload.url, {
-          credentials: "same-origin",
-        });
-        const type = response.headers.get("content-type") ?? "";
-        if (!response.ok || !type.includes("pdf")) throw new Error();
-        const blob = await response.blob();
+        // In order, one at a time: a book's fichas come in lots of 20.
+        const files: File[] = [];
+        for (const item of preload) {
+          const response = await fetch(item.url, {
+            credentials: "same-origin",
+          });
+          const type = response.headers.get("content-type") ?? "";
+          if (!response.ok || !type.includes("pdf")) throw new Error();
+          const blob = await response.blob();
+          files.push(new File([blob], item.name, { type: "application/pdf" }));
+        }
         if (gone) return;
         choose(
-          [new File([blob], preload.name, { type: "application/pdf" })],
-          preload.title,
+          files,
+          preload.map((item) => item.title),
         );
       } catch {
-        if (!gone) setError("Não foi possível carregar o documento gerado.");
+        if (!gone) {
+          setError(
+            preload.length > 1
+              ? "Não foi possível carregar os documentos gerados."
+              : "Não foi possível carregar o documento gerado.",
+          );
+        }
       }
     })();
     return () => {

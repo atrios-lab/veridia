@@ -3662,3 +3662,44 @@ export const riProtocols = pgTable(
     index("ri_protocols_status").on(t.tenantSlug, t.status),
   ],
 );
+
+/**
+ * The books of the Registro de Imóveis as volumes (change
+ * registro-de-imoveis-livros): each opened, numbered and closed by the
+ * oficial (Lei nº 6.015/1973, art. 4º), the number kept with letters (art.
+ * 6º), in fichas (art. 173, parágrafo único), folhas or meio eletrônico
+ * (arts. 1º, § 3º, and 7º-A). "Apagar" hides the volume; its history stays.
+ */
+export const riBooks = pgTable(
+  "ri_books",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    /** 1 to 5 (art. 173). */
+    book: integer("book").notNull(),
+    /** "2", "2-A", "1-B"… */
+    volume: text("volume").notNull(),
+    /** "fichas", "folhas" or "eletronico". */
+    form: text("form").notNull().default("fichas"),
+    sheetCount: integer("sheet_count").notNull().default(0),
+    /** The first and last matrícula, registro or número de ordem. */
+    firstItem: integer("first_item"),
+    lastItem: integer("last_item"),
+    openedOn: date("opened_on").notNull(),
+    closedOn: date("closed_on"),
+    lastSheet: integer("last_sheet"),
+    openingNotes: text("opening_notes").notNull().default(""),
+    closingNotes: text("closing_notes").notNull().default(""),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_books_tenant").on(t.tenantSlug, t.book)],
+);

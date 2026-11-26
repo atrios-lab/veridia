@@ -624,6 +624,13 @@
       "when": 1795654764148,
       "tag": "0088_ri_geometrias",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1795655753527,
+      "tag": "0089_ri_livros",
+      "breakpoints": true
     }
   ]
 }
