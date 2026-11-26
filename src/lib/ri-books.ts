@@ -1,7 +1,12 @@
 import "server-only";
 import { and, eq, ne } from "drizzle-orm";
 import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
-import { actLabel, matriculaPeople, situationOf } from "@/core/ri/acts.ts";
+import {
+  type Act,
+  actLabel,
+  matriculaPeople,
+  situationOf,
+} from "@/core/ri/acts.ts";
 import { AUX_ROLE_LABELS, auxText, notesOf } from "@/core/ri/auxiliary.ts";
 import {
   BOOKS,
@@ -858,10 +863,10 @@ export async function bookPdfFor(
       year,
       columns: [
         { label: "Nº de ordem", width: 0.1 },
-        { label: "Data", width: 0.11 },
-        { label: "Nome do apresentante", width: 0.27 },
+        { label: "Data", width: 0.13 },
+        { label: "NOME DO APRESENTANTE", width: 0.25 },
         { label: "Natureza formal do título", width: 0.22 },
-        { label: "Anotações", width: 0.3 },
+        { label: "ANOTAÇÕES", width: 0.3 },
       ],
       rows,
       footer,
@@ -915,7 +920,7 @@ export async function bookPdfFor(
         }
         run = [];
       };
-      for (const [index, p] of items.entries()) {
+      for (const p of items) {
         const image = signed.get(p.number);
         if (image) {
           // The Livro 2 digital: the signed ficha is the page.
@@ -932,30 +937,12 @@ export async function bookPdfFor(
           continue;
         }
         const acts = acervo.acts.get(p.id) ?? [];
-        const owners = situationOf(acts).owners;
-        run.push({
-          volume: row.volume,
-          sheet: Number(p.ficha) || index + 1,
-          matricula: p.number,
-          date: brDay(p.openedOn),
-          identification: p.description || propertyTitle(p),
-          owner: owners
-            .map((o) =>
-              o.document ? `${o.name}, ${formatTaxId(o.document)}` : o.name,
-            )
-            .join("; "),
-          previous: p.origin,
-          acts: acts
-            .filter((a) => a.kind !== "M")
-            .map((a) => ({
-              label: `${actLabel(a, p.number)}${a.registeredOn ? ` · ${brDay(a.registeredOn)}` : ""} ·`,
-              text: [a.nature, a.summary].filter(Boolean).join(". "),
-              seal: sealMode === "nenhum" ? undefined : a.seal || undefined,
-              sealImage: sealImages.get(a.id),
-            })),
-          cnm: p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
-          footer,
-        });
+        run.push(
+          fichaPageOf(tenant, p, acts, row.volume, footer, (a) => ({
+            seal: sealMode === "nenhum" ? undefined : a.seal || undefined,
+            sealImage: sealImages.get(a.id),
+          })),
+        );
       }
       await flush();
     } else if (record.book === 3) {
@@ -975,10 +962,10 @@ export async function bookPdfFor(
         year,
         columns: [
           { label: "Nº de ordem", width: 0.09 },
-          { label: "Data", width: 0.1 },
-          { label: "Registro", width: 0.43 },
+          { label: "Data", width: 0.12 },
+          { label: "REGISTRO", width: 0.41 },
           { label: "Ref. aos demais livros", width: 0.14 },
-          { label: "Averbações", width: 0.24 },
+          { label: "AVERBAÇÕES", width: 0.24 },
         ],
         rows: items.map((p) => ({
           cells: [
@@ -1013,9 +1000,9 @@ export async function bookPdfFor(
         year,
         columns: [
           { label: "Nº de ordem", width: 0.1 },
-          { label: "Identificação do imóvel", width: 0.5 },
+          { label: "IDENTIFICAÇÃO DO IMÓVEL", width: 0.5 },
           { label: "Referência aos demais livros", width: 0.2 },
-          { label: "Anotações", width: 0.2 },
+          { label: "ANOTAÇÕES", width: 0.2 },
         ],
         rows: items.map((p, i) => ({
           cells: [
@@ -1075,9 +1062,9 @@ export async function bookPdfFor(
         year,
         columns: [
           { label: "Nº de ordem", width: 0.1 },
-          { label: "Pessoas", width: 0.42 },
+          { label: "PESSOAS", width: 0.42 },
           { label: "Referência aos demais livros", width: 0.26 },
-          { label: "Anotações", width: 0.22 },
+          { label: "ANOTAÇÕES", width: 0.22 },
         ],
         rows: rows.map((e, i) => ({
           cells: [
@@ -1113,6 +1100,62 @@ export async function bookPdfFor(
  * the image of the signature only with `withImage`. A registro of the
  * Livro 3 comes out as its row of the model of the Livro 3.
  */
+/** The ficha of one matrícula, as drawFichas takes it. */
+function fichaPageOf(
+  tenant: Tenant,
+  p: Awaited<ReturnType<typeof loadAcervoWith>>["properties"][number],
+  acts: Act[],
+  volume: string,
+  footer: string,
+  extra: (a: Act) => { seal?: string; sealImage?: Uint8Array } = (a) => ({
+    seal: a.seal || undefined,
+  }),
+): FichaPage {
+  const people = matriculaPeople(acts);
+  const who = (list: typeof people) =>
+    list
+      .map(
+        (o) =>
+          `${o.name}${o.document ? `, CPF/CNPJ nº ${formatTaxId(o.document)}` : ""}${o.acts.length ? ` (${o.acts.join(", ")})` : ""}`,
+      )
+      .join("; ");
+  const current = situationOf(acts).owners;
+  const digits = (tenant.cns ?? "").replace(/\D/g, "");
+  return {
+    volume,
+    sheet: Number(p.ficha) || p.number,
+    matricula: p.number,
+    date: brDay(p.openedOn),
+    identificationLabel: p.location === 1 ? "IMÓVEL RURAL" : "IMÓVEL URBANO",
+    identification: p.description || propertyTitle(p),
+    memorial: "",
+    owner: current
+      .map((o) =>
+        o.document
+          ? `${o.name}, CPF/CNPJ nº ${formatTaxId(o.document)}`
+          : o.name,
+      )
+      .join("; "),
+    previousOwners: who(
+      people.filter((x) => x.situation.includes("Proprietário anterior")),
+    ),
+    previous: p.origin,
+    acts: acts
+      .filter((a) => a.kind !== "M")
+      .map((a) => ({
+        label: `${actLabel(a, p.number)}${a.registeredOn ? ` \u2013 Data: ${brDay(a.registeredOn)}` : ""}`,
+        text: [a.nature, a.summary].filter(Boolean).join(". "),
+        ...extra(a),
+      })),
+    cnm: p.cnm ? formatCnm(p.cnm) : "",
+    cns:
+      digits.length === 6
+        ? `${digits.slice(0, 2)}.${digits.slice(2, 5)}-${digits.slice(5)}`
+        : tenant.cns,
+    footer,
+  };
+}
+
 export async function fichaLegalPdfWith(
   database: Database,
   tenant: Tenant,
@@ -1136,10 +1179,10 @@ export async function fichaLegalPdfWith(
       year: `ANO: ${(p.openedOn ?? officeToday()).slice(0, 4)}`,
       columns: [
         { label: "Nº de ordem", width: 0.09 },
-        { label: "Data", width: 0.1 },
-        { label: "Registro", width: 0.43 },
+        { label: "Data", width: 0.12 },
+        { label: "REGISTRO", width: 0.41 },
         { label: "Ref. aos demais livros", width: 0.14 },
-        { label: "Averbações", width: 0.24 },
+        { label: "AVERBAÇÕES", width: 0.24 },
       ],
       rows: [
         {
@@ -1161,7 +1204,6 @@ export async function fichaLegalPdfWith(
     });
     return { bytes, number: p.number };
   }
-  const owners = situationOf(acts).owners;
   const { signer, settings } = await riSignerFor(tenant);
   const today = new Intl.DateTimeFormat("pt-BR", {
     timeZone: "America/Fortaleza",
@@ -1170,30 +1212,7 @@ export async function fichaLegalPdfWith(
     year: "numeric",
   }).format(new Date());
   const bytes = await drawFichas(
-    [
-      {
-        volume,
-        sheet: Number(p.ficha) || p.number,
-        matricula: p.number,
-        date: brDay(p.openedOn),
-        identification: p.description || propertyTitle(p),
-        owner: owners
-          .map((o) =>
-            o.document ? `${o.name}, ${formatTaxId(o.document)}` : o.name,
-          )
-          .join("; "),
-        previous: p.origin,
-        acts: acts
-          .filter((a) => a.kind !== "M")
-          .map((a) => ({
-            label: `${actLabel(a, p.number)}${a.registeredOn ? ` · ${brDay(a.registeredOn)}` : ""} ·`,
-            text: [a.nature, a.summary].filter(Boolean).join(". "),
-            seal: a.seal || undefined,
-          })),
-        cnm: p.cnm ? `CNM ${formatCnm(p.cnm)}` : "",
-        footer,
-      },
-    ],
+    [fichaPageOf(tenant, p, acts, volume, footer)],
     options.signer && signer
       ? {
           name: signer.name,

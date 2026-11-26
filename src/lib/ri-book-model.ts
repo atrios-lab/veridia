@@ -3,16 +3,17 @@ import PDFDocument from "pdfkit";
 
 /**
  * The books of the Registro de Imóveis drawn as the models annexed to the
- * Lei nº 6.015/1973 (decision of 26/11/2026: "os livros devem seguir o
- * padrão da lei nos anexos, e não nesse modelo como ofício"). The models
- * are for paper up to 0,40 × 0,55 m (art. 3º, § 1º); here they are drawn on
- * A4 with the same header and the same columns.
+ * Lei nº 6.015/1973 (decisions of 26/11/2026: "coloque o quadrado nos
+ * livros como o modelo", "na matrícula tem que sair a ficha, no modelo da
+ * 02"): a double frame; the head of the book in a box of its own; each
+ * column with its title in a box and running down to the foot of the
+ * folha. The ficha of the Livro 2 follows the office's own ficha (the one
+ * it sends to the ONR), without the logos: Times 12, justified, the labels
+ * in bold, "Página X de Y" under the frame and "Fl. 1v (continuação)" on
+ * the back of each folha.
  *
  * - Livro 1, Protocolo: Nº de ordem · Data · Nome do apresentante ·
  *   Natureza formal do título · Anotações;
- * - Livro 2, Registro Geral: the ficha (Livro nº 2, Fl., Matrícula nº,
- *   Data, Identificação do imóvel, Nome, domicílio e nacionalidade do
- *   proprietário, Número do registro anterior) and the atos;
  * - Livro 3, Registro Auxiliar: Nº de ordem · Data · Registro · Ref. aos
  *   demais livros · Averbações;
  * - Livro 4, Indicador Real: Nº de ordem · Identificação do imóvel ·
@@ -22,9 +23,9 @@ import PDFDocument from "pdfkit";
  */
 
 const A4: [number, number] = [595.28, 841.89];
-const MARGIN = 40;
-const WIDTH = A4[0] - 2 * MARGIN;
-const BOTTOM = A4[1] - MARGIN - 14;
+/** The frame: 2 cm from the sides, 2,5 cm from the top, 2 cm from the foot. */
+const FRAME = { left: 57, right: A4[0] - 45, top: 70, bottom: A4[1] - 62 };
+const PAD = 10;
 
 export interface TableColumn {
   label: string;
@@ -40,22 +41,27 @@ export interface TableBook {
   title: string;
   book: number;
   volume: string;
-  /** "ANO: 2026" at the top right. */
+  /** "ANO: 2026". */
   year: string;
   columns: TableColumn[];
   rows: TableRow[];
-  /** At the foot of every page. */
+  /** Under the frame of every folha. */
   footer: string;
 }
 
 export interface FichaPage {
   volume: string;
-  /** The number of the ficha (folha) in the book. */
+  /** The number of the ficha. */
   sheet: number;
   matricula: number;
   date: string;
+  /** "IMÓVEL RURAL" or "IMÓVEL URBANO": the label of the identification. */
+  identificationLabel?: string;
   identification: string;
+  memorial?: string;
   owner: string;
+  /** The owners before the current ones, with the ato that took them out. */
+  previousOwners?: string;
   previous: string;
   acts: {
     label: string;
@@ -64,45 +70,11 @@ export interface FichaPage {
     seal?: string;
     sealImage?: Uint8Array;
   }[];
-  /** "CNM 094615.2.0000001-07", top right of every page (CNN, art. 331). */
+  /** "CNM 094615.2.0000001-07". */
   cnm: string;
+  /** "09.461-5". */
+  cns?: string;
   footer: string;
-}
-
-function header(
-  pdf: PDFKit.PDFDocument,
-  title: string,
-  left: string,
-  right: string,
-): number {
-  let y = MARGIN;
-  pdf.font("Times-Bold").fontSize(13);
-  pdf.text("REGISTRO DE IMÓVEIS", MARGIN, y, { width: WIDTH, align: "center" });
-  y += 17;
-  pdf.text(title, MARGIN, y, { width: WIDTH, align: "center" });
-  y += 22;
-  pdf.font("Times-Roman").fontSize(10.5);
-  pdf.text(left, MARGIN, y, { width: WIDTH / 2 });
-  pdf.text(right, MARGIN + WIDTH / 2, y, { width: WIDTH / 2, align: "right" });
-  return y + 18;
-}
-
-function foot(pdf: PDFKit.PDFDocument, text: string, page: number) {
-  // The foot sits in the bottom margin: open it while writing, or pdfkit
-  // takes the line as overflow and adds a page (which draws the foot again).
-  const bottom = pdf.page.margins.bottom;
-  const { x, y } = pdf;
-  pdf.page.margins.bottom = 0;
-  pdf.font("Times-Roman").fontSize(7.5).fillColor("gray");
-  pdf.text(`${text} · página ${page}`, MARGIN, A4[1] - MARGIN + 6, {
-    width: WIDTH,
-    align: "center",
-    lineBreak: false,
-  });
-  pdf.fillColor("black");
-  pdf.page.margins.bottom = bottom;
-  pdf.x = x;
-  pdf.y = y;
 }
 
 function done(pdf: PDFKit.PDFDocument): Promise<Buffer> {
@@ -115,80 +87,194 @@ function done(pdf: PDFKit.PDFDocument): Promise<Buffer> {
   });
 }
 
-/** The table books (1, 3, 4 and 5), the columns of the model. */
+/** The double frame of the models. */
+function frame(pdf: PDFKit.PDFDocument) {
+  const { left, right, top, bottom } = FRAME;
+  pdf.save().lineWidth(1.6).strokeColor("dimgray");
+  pdf.rect(left, top, right - left, bottom - top).stroke();
+  pdf.lineWidth(0.5);
+  pdf.rect(left + 3, top + 3, right - left - 6, bottom - top - 6).stroke();
+  pdf.restore();
+}
+
+/** Writes in the margin without pdfkit taking it as overflow. */
+function inMargin(pdf: PDFKit.PDFDocument, draw: () => void) {
+  const margins = { ...pdf.page.margins };
+  const { x, y } = pdf;
+  pdf.page.margins = { top: 0, bottom: 0, left: 0, right: 0 };
+  draw();
+  pdf.page.margins = margins;
+  pdf.x = x;
+  pdf.y = y;
+}
+
+/** The table books (1, 3, 4 and 5), as the models of the law. */
 export async function drawTableBook(book: TableBook): Promise<Buffer> {
   const pdf = new PDFDocument({
     size: A4,
-    margin: MARGIN,
+    margin: 0,
     autoFirstPage: false,
+    bufferPages: true,
   });
-  const widths = book.columns.map((c) => c.width * WIDTH);
+  const inner = { left: FRAME.left + 7, right: FRAME.right - 7 };
+  const width = inner.right - inner.left;
+  const widths = book.columns.map((c) => c.width * width);
   const xs = widths.map((_, i) =>
-    widths.slice(0, i).reduce((a, b) => a + b, MARGIN),
+    widths.slice(0, i).reduce((a, b) => a + b, inner.left),
   );
-  let page = 0;
+  const colBottom = FRAME.bottom - 7;
   let y = 0;
-  const columnHeader = () => {
-    pdf.font("Times-Bold").fontSize(8.5);
-    const h =
+
+  const newPage = () => {
+    pdf.addPage();
+    frame(pdf);
+    // The head of the book, in its own box.
+    const headTop = FRAME.top + 7;
+    pdf.font("Times-Bold").fontSize(12).fillColor("black");
+    pdf.text("REGISTRO DE IMÓVEIS", inner.left, headTop + 10, {
+      width,
+      align: "center",
+    });
+    pdf.text(book.title, inner.left, pdf.y, { width, align: "center" });
+    pdf.font("Times-Roman").fontSize(11);
+    const line = pdf.y + 10;
+    pdf.text(`Livro nº ${book.volume}`, inner.left + 18, line, {
+      width: width / 2,
+    });
+    pdf.text(book.year, inner.left + width * 0.6, line, { width: width / 3 });
+    const headBottom = pdf.y + 4;
+    pdf.lineWidth(0.6).rect(inner.left, headTop, width, headBottom - headTop);
+    pdf.stroke();
+    // The titles of the columns, each in its box.
+    const labelTop = headBottom + 4;
+    pdf.font("Times-Roman").fontSize(9.5);
+    const labelH =
       Math.max(
         ...book.columns.map((c, i) =>
           pdf.heightOfString(c.label, { width: (widths[i] ?? 0) - 6 }),
         ),
-      ) + 8;
+      ) + 10;
     book.columns.forEach((c, i) => {
-      pdf.rect(xs[i] ?? MARGIN, y, widths[i] ?? 0, h).stroke();
-      pdf.text(c.label, (xs[i] ?? MARGIN) + 3, y + 4, {
-        width: (widths[i] ?? 0) - 6,
+      const x = (xs[i] ?? 0) + 1.5;
+      const w = (widths[i] ?? 0) - 3;
+      pdf.rect(x, labelTop, w, labelH).stroke();
+      const h = pdf.heightOfString(c.label, { width: w - 6 });
+      pdf.text(c.label, x + 3, labelTop + (labelH - h) / 2, {
+        width: w - 6,
         align: "center",
       });
     });
-    y += h;
+    // The columns run down to the foot of the folha.
+    const bodyTop = labelTop + labelH + 4;
+    book.columns.forEach((_, i) => {
+      pdf
+        .rect(
+          (xs[i] ?? 0) + 1.5,
+          bodyTop,
+          (widths[i] ?? 0) - 3,
+          colBottom - bodyTop,
+        )
+        .stroke();
+    });
+    y = bodyTop + 5;
   };
-  const newPage = () => {
-    pdf.addPage();
-    page++;
-    y = header(pdf, book.title, `Livro nº ${book.volume}`, book.year);
-    columnHeader();
-    foot(pdf, book.footer, page);
-  };
+
   newPage();
   for (const row of book.rows) {
-    pdf.font("Times-Roman").fontSize(9);
     if ("across" in row) {
-      pdf.font(row.bold ? "Times-Bold" : "Times-Italic").fontSize(9);
-      const h = pdf.heightOfString(row.across, { width: WIDTH - 8 }) + 8;
-      if (y + h > BOTTOM) newPage();
-      pdf.rect(MARGIN, y, WIDTH, h).stroke();
-      pdf.text(row.across, MARGIN + 4, y + 4, { width: WIDTH - 8 });
-      y += h;
+      pdf.font(row.bold ? "Times-Bold" : "Times-Italic").fontSize(9.5);
+      const h = pdf.heightOfString(row.across, { width: width - 16 }) + 8;
+      if (y + h > colBottom - 4) newPage();
+      // A line across the columns: the closing of the day (art. 184).
+      pdf
+        .save()
+        .rect(inner.left + 2, y - 2, width - 4, h)
+        .fill("white");
+      pdf.restore();
+      pdf
+        .lineWidth(0.6)
+        .moveTo(inner.left + 1.5, y - 2)
+        .lineTo(inner.right - 1.5, y - 2)
+        .moveTo(inner.left + 1.5, y + h - 2)
+        .lineTo(inner.right - 1.5, y + h - 2)
+        .stroke();
+      pdf.text(row.across, inner.left + 8, y + 2, { width: width - 16 });
+      y += h + 4;
       continue;
     }
-    const h =
-      Math.max(
-        12,
-        ...row.cells.map((cell, i) =>
-          pdf.heightOfString(cell || " ", { width: (widths[i] ?? 0) - 6 }),
-        ),
-      ) + 8;
-    if (y + h > BOTTOM) newPage();
-    pdf.font("Times-Roman").fontSize(9);
+    pdf.font("Times-Roman").fontSize(9.5);
+    const h = Math.max(
+      12,
+      ...row.cells.map((cell, i) =>
+        pdf.heightOfString(cell || " ", { width: (widths[i] ?? 0) - 10 }),
+      ),
+    );
+    if (y + h > colBottom - 4) newPage();
+    pdf.font("Times-Roman").fontSize(9.5);
     row.cells.forEach((cell, i) => {
-      pdf.rect(xs[i] ?? MARGIN, y, widths[i] ?? 0, h).stroke();
-      pdf.text(cell, (xs[i] ?? MARGIN) + 3, y + 4, {
-        width: (widths[i] ?? 0) - 6,
-      });
+      pdf.text(cell, (xs[i] ?? 0) + 5, y, { width: (widths[i] ?? 0) - 10 });
     });
-    y += h;
+    y += h + 6;
   }
   if (book.rows.length === 0) {
-    pdf.font("Times-Italic").fontSize(9);
-    pdf.text("Sem lançamentos no período.", MARGIN, y + 8, { width: WIDTH });
+    pdf.font("Times-Italic").fontSize(10);
+    pdf.text("Sem lançamentos no período.", inner.left + 10, y, { width });
+  }
+  const range = pdf.bufferedPageRange();
+  for (let i = 0; i < range.count; i++) {
+    pdf.switchToPage(range.start + i);
+    inMargin(pdf, () => {
+      pdf.font("Times-Roman").fontSize(9).fillColor("black");
+      pdf.text(
+        `Página ${i + 1} de ${range.count} · ${book.footer}`,
+        FRAME.left,
+        FRAME.bottom + 12,
+        { width: FRAME.right - FRAME.left, lineBreak: false },
+      );
+    });
   }
   return done(pdf);
 }
 
-/** The fichas of the Livro 2, each as the model of the law. */
+/** "Label: value", the label in bold, placed by hand (left, right or centre). */
+function pair(
+  pdf: PDFKit.PDFDocument,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  align: "left" | "right" | "center",
+  valueBold = true,
+) {
+  pdf.fontSize(12).font("Times-Roman");
+  const lw = pdf
+    .font(valueBold ? "Times-Roman" : "Times-Bold")
+    .widthOfString(label);
+  const vw = pdf
+    .font(valueBold ? "Times-Bold" : "Times-Roman")
+    .widthOfString(value);
+  const total = lw + vw;
+  const start =
+    align === "left"
+      ? x
+      : align === "right"
+        ? x + width - total
+        : x + (width - total) / 2;
+  pdf.font(valueBold ? "Times-Roman" : "Times-Bold").text(label, start, y, {
+    lineBreak: false,
+  });
+  pdf
+    .font(valueBold ? "Times-Bold" : "Times-Roman")
+    .text(value, start + lw, y, {
+      lineBreak: false,
+    });
+}
+
+const BODY = 12;
+const GAP = 6; // 1,5 line spacing at 12 pt
+
+/** The fichas of the Livro 2, as the office's ficha (the model of the law). */
 export async function drawFichas(
   fichas: readonly FichaPage[],
   signer?: {
@@ -198,133 +284,228 @@ export async function drawFichas(
     place: string;
   } | null,
 ): Promise<Buffer> {
+  const textLeft = FRAME.left + PAD + 4;
+  const textRight = FRAME.right - PAD - 4;
+  const width = textRight - textLeft;
   const pdf = new PDFDocument({
     size: A4,
-    margins: { top: MARGIN, left: MARGIN, right: MARGIN, bottom: MARGIN + 16 },
+    margins: {
+      top: FRAME.top + PAD + 6,
+      bottom: A4[1] - FRAME.bottom + PAD,
+      left: textLeft,
+      right: A4[0] - textRight,
+    },
     autoFirstPage: false,
+    bufferPages: true,
   });
-  let page = 0;
+  /** Pages of each ficha, to number them "Página X de Y" and "Fl. Nv". */
+  const runs: { ficha: FichaPage; first: number }[] = [];
   let current: FichaPage | null = null;
-  let continued = false;
-  // Every page of a ficha opens with the header of the model, also when
-  // a long ato flows onto the next page by itself.
+  let firstPageOfFicha = true;
+
   pdf.on("pageAdded", () => {
-    const f = current;
-    if (!f) return;
-    page++;
-    let y = header(
-      pdf,
-      "REGISTRO GERAL",
-      `Livro nº ${f.volume}`,
-      `Fl.: ${f.sheet}${continued ? " (continuação)" : ""}`,
-    );
-    if (f.cnm) {
-      pdf.font("Times-Roman").fontSize(8.5);
-      pdf.text(f.cnm, MARGIN, MARGIN - 14, { width: WIDTH, align: "right" });
+    frame(pdf);
+    if (!current) return;
+    if (firstPageOfFicha) {
+      firstPageOfFicha = false;
+      return;
     }
-    pdf.font("Times-Bold").fontSize(10.5);
-    pdf.text(`MATRÍCULA Nº ${f.matricula.toLocaleString("pt-BR")}`, MARGIN, y, {
-      width: WIDTH / 2,
-    });
-    pdf.text(`Data: ${f.date}`, MARGIN + WIDTH / 2, y, {
-      width: WIDTH / 2,
-      align: "right",
-    });
-    y += 16;
-    pdf
-      .moveTo(MARGIN, y)
-      .lineTo(MARGIN + WIDTH, y)
-      .stroke();
-    foot(pdf, f.footer, page);
-    continued = true;
-    pdf.font("Times-Roman").fontSize(10);
-    pdf.x = MARGIN;
-    pdf.y = y + 8;
+    // The back of the folha, or the next one: room for its marker.
+    pdf.y = FRAME.top + PAD + 22;
+    pdf.x = textLeft;
   });
+
+  const label = (title: string, text: string) => {
+    pdf.font("Times-Bold").fontSize(BODY).text(`${title}: `, textLeft, pdf.y, {
+      width,
+      align: "justify",
+      lineGap: GAP,
+      continued: true,
+    });
+    pdf.font("Times-Roman").text(text || "Não consta.", {
+      width,
+      align: "justify",
+      lineGap: GAP,
+    });
+    pdf.moveDown(0.6);
+  };
+
   for (const f of fichas) {
     current = f;
-    continued = false;
+    firstPageOfFicha = true;
     pdf.addPage();
-    const field = (label: string, text: string) => {
-      pdf.font("Times-Bold").fontSize(10).text(`${label}:`, MARGIN, pdf.y, {
-        width: WIDTH,
+    runs.push({ ficha: f, first: pdf.bufferedPageRange().count - 1 });
+    // "REGISTRO DE IMÓVEIS" over the frame.
+    inMargin(pdf, () => {
+      pdf.font("Times-Bold").fontSize(12).fillColor("black");
+      pdf.text("REGISTRO DE IMÓVEIS", 0, FRAME.top - 26, {
+        width: A4[0],
+        align: "center",
       });
-      pdf
-        .font("Times-Roman")
-        .fontSize(10)
-        .text(text || "não consta", {
-          width: WIDTH,
-          align: "justify",
-        });
-      pdf.moveDown(0.6);
-    };
-    field("IDENTIFICAÇÃO DO IMÓVEL", f.identification);
-    field("NOME, DOMICÍLIO E NACIONALIDADE DO PROPRIETÁRIO", f.owner);
-    field("NÚMERO DO REGISTRO ANTERIOR", f.previous);
+    });
+    // The head of the ficha.
+    let y = FRAME.top + 14;
+    pdf.font("Times-Bold").fontSize(12);
+    pdf.text("REGISTRO DE IMÓVEIS", textLeft, y, { width, align: "center" });
+    pdf.text("REGISTRO  GERAL", textLeft, pdf.y, { width, align: "center" });
+    y = pdf.y + 18;
+    pair(pdf, "Livro nº ", f.volume, textLeft, y, width, "left");
+    pair(
+      pdf,
+      "FICHA: ",
+      String(f.sheet).padStart(3, "0"),
+      textLeft,
+      y,
+      width,
+      "right",
+    );
+    y += 18;
     pdf
-      .moveTo(MARGIN, pdf.y)
-      .lineTo(MARGIN + WIDTH, pdf.y)
+      .lineWidth(0.8)
+      .moveTo(FRAME.left + 3, y)
+      .lineTo(FRAME.right - 3, y)
       .stroke();
-    pdf.moveDown(0.6);
+    y += 10;
+    const number = String(f.matricula).padStart(3, "0");
+    pair(pdf, "MATRÍCULA Nº ", number, textLeft, y, width, "left");
+    pair(pdf, "DATA: ", f.date, textLeft, y, width, "right");
+    y += 20;
+    if (f.cns) {
+      pair(pdf, "CNS: ", f.cns, textLeft, y, width, "center", false);
+      y += 20;
+    }
+    if (f.cnm) {
+      pair(
+        pdf,
+        "CNM: ",
+        f.cnm.replace(/^CNM\s*/, ""),
+        textLeft,
+        y,
+        width,
+        "center",
+        false,
+      );
+      y += 20;
+    }
+    pdf.x = textLeft;
+    pdf.y = y + 6;
+    label(f.identificationLabel ?? "IDENTIFICAÇÃO DO IMÓVEL", f.identification);
+    label("MEMORIAL DESCRITIVO", f.memorial ?? "");
+    label("NOME, DOMICÍLIO E NACIONALIDADE DOS PROPRIETÁRIOS ATUAIS", f.owner);
+    if (f.previousOwners) {
+      label(
+        "NOME, DOMICÍLIO E NACIONALIDADE DOS PROPRIETÁRIOS ANTERIORES",
+        f.previousOwners,
+      );
+    }
+    label("NÚMERO DO REGISTRO ANTERIOR AO TRANSPORTE", f.previous);
     for (const act of f.acts) {
-      pdf.font("Times-Bold").fontSize(10).text(act.label, MARGIN, pdf.y, {
-        width: WIDTH,
-        continued: true,
-      });
-      pdf.font("Times-Roman").text(` ${act.text}`, {
-        width: WIDTH,
+      pdf
+        .font("Times-Bold")
+        .fontSize(BODY)
+        .text(`${act.label.replace(/\s*·\s*$/, "")} \u2013 `, textLeft, pdf.y, {
+          width,
+          align: "justify",
+          lineGap: GAP,
+          continued: true,
+        });
+      pdf.font("Times-Roman").text(act.text, {
+        width,
         align: "justify",
+        lineGap: GAP,
       });
       if (act.sealImage) {
-        if (pdf.y + 64 > A4[1] - MARGIN - 16) pdf.addPage();
+        if (pdf.y + 70 > FRAME.bottom - PAD) pdf.addPage();
         const top = pdf.y + 4;
-        pdf.image(Buffer.from(act.sealImage), MARGIN, top, { fit: [140, 56] });
-        if (act.seal) {
-          pdf.fontSize(9).text(`Selo: ${act.seal}`, MARGIN + 150, top + 22, {
-            width: WIDTH - 150,
-          });
-        }
-        pdf.x = MARGIN;
-        pdf.y = top + 60;
+        pdf.image(
+          Buffer.from(act.sealImage),
+          textLeft + (width - 200) / 2,
+          top,
+          {
+            fit: [200, 62],
+            align: "center",
+          },
+        );
+        pdf.y = top + 66;
       } else if (act.seal) {
-        pdf.fontSize(9).text(`Selo: ${act.seal}`, MARGIN, pdf.y, {
-          width: WIDTH,
+        pdf.font("Times-Roman").fontSize(10).text(`Selo: ${act.seal}`, {
+          width,
+          align: "center",
         });
       }
       pdf.moveDown(0.6);
     }
-  }
-  if (signer && fichas.length) {
-    // Who signs the ficha (Lei nº 6.015/1973, art. 210).
-    if (pdf.y + 110 > A4[1] - MARGIN - 16) pdf.addPage();
-    pdf.moveDown(1);
-    pdf.font("Times-Roman").fontSize(10).text(signer.place, MARGIN, pdf.y, {
-      width: WIDTH,
-      align: "center",
-    });
-    const top = pdf.y + 8;
-    if (signer.image) {
-      pdf.image(Buffer.from(signer.image), A4[0] / 2 - 90, top, {
-        fit: [180, 46],
-        align: "center",
-      });
+    if (signer) {
+      // Who signs the ficha (art. 210), centred.
+      if (pdf.y + 120 > FRAME.bottom - PAD) pdf.addPage();
+      pdf.moveDown(1);
+      pdf
+        .font("Times-Roman")
+        .fontSize(BODY)
+        .text(signer.place, textLeft, pdf.y, {
+          width,
+          align: "center",
+        });
+      const top = pdf.y + 6;
+      if (signer.image) {
+        pdf.image(Buffer.from(signer.image), textLeft + width / 2 - 90, top, {
+          fit: [180, 46],
+          align: "center",
+        });
+      }
+      const rule = top + 50;
+      pdf
+        .lineWidth(0.6)
+        .moveTo(textLeft + width / 2 - 120, rule)
+        .lineTo(textLeft + width / 2 + 120, rule)
+        .stroke();
+      pdf.text(signer.name, textLeft, rule + 4, { width, align: "center" });
+      pdf.fontSize(10).text(signer.title, { width, align: "center" });
     }
-    const rule = top + 50;
-    pdf
-      .moveTo(A4[0] / 2 - 120, rule)
-      .lineTo(A4[0] / 2 + 120, rule)
-      .stroke();
-    pdf.text(signer.name, MARGIN, rule + 4, { width: WIDTH, align: "center" });
-    pdf.fontSize(9).text(signer.title, { width: WIDTH, align: "center" });
   }
   current = null;
   if (fichas.length === 0) {
     pdf.addPage();
-    header(pdf, "REGISTRO GERAL", "Livro nº 2", "");
     pdf
       .font("Times-Italic")
-      .fontSize(10)
-      .text("Nenhuma ficha neste intervalo.");
+      .fontSize(12)
+      .text("Nenhuma ficha neste intervalo.", textLeft, FRAME.top + 30);
   }
+
+  // "Página X de Y" under the frame; "Fl. Nv (continuação)" on the back of
+  // each folha and the ficha's number on the folhas after the first.
+  const total = pdf.bufferedPageRange().count;
+  runs.forEach((run, r) => {
+    const end = runs[r + 1]?.first ?? total;
+    const count = end - run.first;
+    for (let i = 0; i < count; i++) {
+      pdf.switchToPage(run.first + i);
+      inMargin(pdf, () => {
+        pdf.font("Times-Roman").fontSize(11).fillColor("black");
+        pdf.text("Página ", FRAME.left, FRAME.bottom + 14, {
+          continued: true,
+          lineBreak: false,
+        });
+        pdf.font("Times-Bold").text(String(i + 1), { continued: true });
+        pdf.font("Times-Roman").text(" de ", { continued: true });
+        pdf.font("Times-Bold").text(String(count), { lineBreak: false });
+        if (i > 0) {
+          const folha = Math.floor(i / 2) + 1;
+          const side = i % 2 === 1 ? `${folha}v` : String(folha);
+          pdf.font("Times-Italic").fontSize(10);
+          pdf.text(
+            `Ficha ${String(run.ficha.sheet).padStart(3, "0")} · Matrícula nº ${String(run.ficha.matricula).padStart(3, "0")} · Fl. ${side} (continuação)`,
+            FRAME.left + PAD,
+            FRAME.top + PAD,
+            {
+              width: FRAME.right - FRAME.left - 2 * PAD,
+              align: "right",
+              lineBreak: false,
+            },
+          );
+        }
+      });
+    }
+  });
   return done(pdf);
 }
