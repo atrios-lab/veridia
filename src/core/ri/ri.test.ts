@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { type Act, actLabel, nextSeq, situationOf } from "./acts.ts";
+import { EMPTY_AUX } from "./auxiliary.ts";
 import {
   cnmCheckDigits,
   cnmOf,
@@ -197,6 +198,7 @@ const base = (
   auxKind: "",
   linkedNumbers: "",
   priorActs: 0,
+  aux: { ...EMPTY_AUX, parties: [] },
   description: "",
   notes: "",
   ...over,

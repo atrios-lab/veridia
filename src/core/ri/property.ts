@@ -1,3 +1,4 @@
+import { type AuxData, EMPTY_AUX, readAux } from "./auxiliary.ts";
 import {
   CNM_SITUATIONS,
   codeIn,
@@ -65,6 +66,8 @@ export interface PropertyInput {
   linkedNumbers: string;
   /** Lançamentos already on the ficha before the system (R/AV numbering). */
   priorActs: number;
+  /** Livro 3: título, partes, valor, garantias, pacto (core/ri/auxiliary). */
+  aux: AuxData;
   description: string;
   notes: string;
 }
@@ -91,6 +94,10 @@ export const AUX_KINDS: readonly { name: string; source: string }[] = [
   {
     name: "Título registrado no inteiro teor, a pedido do interessado",
     source: "art. 178, VII",
+  },
+  {
+    name: "Instituição de bem de família (escritura)",
+    source: "arts. 167, I, 1, e 263",
   },
 ];
 
@@ -256,6 +263,7 @@ export function readProperty(raw: Record<string, unknown>): PropertyInput {
     ),
     description: clean(raw.description, MAX),
     notes: clean(raw.notes, MAX),
+    aux: book === 3 ? readAux(raw) : { ...EMPTY_AUX, parties: [] },
   };
 }
 

@@ -1,3 +1,4 @@
+import { EMPTY_AUX } from "./auxiliary.ts";
 import {
   CNM_SITUATIONS,
   STREET_KIND_UNSPECIFIED,
@@ -342,6 +343,7 @@ export function readSheet(rows: string[][]): SheetReading {
         auxKind: "",
         linkedNumbers: "",
         priorActs: prior,
+        aux: { ...EMPTY_AUX, parties: [] },
         description: "",
         notes,
       },

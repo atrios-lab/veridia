@@ -7,6 +7,7 @@ import {
   ROLES_BY_EFFECT,
   situationOf,
 } from "./acts.ts";
+import { AUX_ROLE_LABELS, type AuxData, type AuxRole } from "./auxiliary.ts";
 import {
   LOCATIONS,
   PROPERTY_KINDS,
@@ -96,6 +97,91 @@ interface Column {
 
 const named = (list: ReadonlyMap<number, string>, code: number | null) =>
   code === null ? "" : (list.get(code) ?? String(code));
+
+const moneyCell = (cents: number | null) =>
+  cents === null
+    ? ""
+    : (cents / 100).toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
+/** The Livro 3 has no imóvel: its own fields, empty in the Livro 2. */
+function auxColumns(): Column[] {
+  const text = (
+    label: string,
+    key: Exclude<keyof AuxData, "parties" | "valueCents">,
+  ): Column => ({
+    label: `${label} (Livro 3)`,
+    key: `aux.${key}`,
+    out: (p) => {
+      const value = p.aux[key];
+      if (value === null) return "";
+      return /On$/.test(key) ? brDate(value) : value;
+    },
+  });
+  return [
+    text("Título", "title"),
+    text("Emissão", "issuedOn"),
+    {
+      label: "Partes (Livro 3)",
+      key: "auxParties",
+      out: (p) =>
+        p.aux.parties
+          .map((x) =>
+            [`${AUX_ROLE_LABELS[x.role]}: ${x.name}`, x.document]
+              .filter(Boolean)
+              .join(" | "),
+          )
+          .join("\n"),
+    },
+    {
+      label: "Valor (Livro 3)",
+      key: "aux.value",
+      out: (p) => moneyCell(p.aux.valueCents),
+    },
+    text("Vencimento", "dueOn"),
+    text("Praça de pagamento", "paymentPlace"),
+    text("Pagamento e encargos", "terms"),
+    text("Garantias", "guarantees"),
+    text("Local dos bens", "goodsPlace"),
+    text("Regime de bens", "regime"),
+    text("Data do casamento", "weddingOn"),
+    text("Domicílio do casal", "domicile"),
+    text("Escritura", "deed"),
+    text("Protocolo nº", "protocolNumber"),
+    text("Data do protocolo", "protocolOn"),
+  ];
+}
+
+const AUX_ROLE_BY_LABEL = new Map<string, AuxRole>(
+  (Object.entries(AUX_ROLE_LABELS) as [AuxRole, string][]).flatMap(
+    ([role, label]) => [
+      [fold(label), role],
+      [role, role],
+    ],
+  ),
+);
+
+/** "Credor: BANCO | 11222333000181" per line → the aux.party.* keys. */
+function auxPartiesRaw(cell: string, raw: Record<string, unknown>) {
+  cell
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 20)
+    .forEach((line, i) => {
+      const colon = line.indexOf(":");
+      const roleText = colon > 0 ? fold(line.slice(0, colon)) : "";
+      const rest = colon > 0 ? line.slice(colon + 1) : line;
+      const [name = "", document = ""] = rest.split("|").map((x) => x.trim());
+      raw[`aux.party.${i}.name`] = name;
+      raw[`aux.party.${i}.document`] = document;
+      raw[`aux.party.${i}.role`] =
+        AUX_ROLE_BY_LABEL.get(roleText) ??
+        (roleText.startsWith("conjuge") ? "conjuge" : "outro");
+    });
+}
 
 const PROPERTY_COLUMNS: Column[] = [
   { label: "Livro", key: "book", out: (p) => String(p.book), real: true },
@@ -249,6 +335,7 @@ const PROPERTY_COLUMNS: Column[] = [
     key: "linkedNumbers",
     out: (p) => p.linkedNumbers,
   },
+  ...auxColumns(),
   {
     label: "Atos anteriores ao sistema",
     key: "priorActs",
@@ -330,6 +417,8 @@ export function readPropertyTable(rows: Table): TableReading<SheetRow> {
           .split(/\s*;\s*|\n/)
           .map((n) => n.trim())
           .filter(Boolean);
+      } else if (column.key === "auxParties") {
+        auxPartiesRaw(value, raw);
       } else if (column.key === "documents") {
         documents = value.split(/\s*;\s*|\n/).map((d) => d.replace(/\D/g, ""));
       } else {
@@ -1164,6 +1253,39 @@ export function propertyKey(p: {
   return `${p.recordKind === 4 ? "T" : p.book}:${p.number}`;
 }
 
+const AUX_FIELD_NAMES: Record<keyof AuxData, string> = {
+  title: "título",
+  issuedOn: "emissão",
+  valueCents: "valor",
+  dueOn: "vencimento",
+  paymentPlace: "praça de pagamento",
+  terms: "pagamento e encargos",
+  guarantees: "garantias",
+  goodsPlace: "local dos bens",
+  regime: "regime de bens",
+  weddingOn: "data do casamento",
+  domicile: "domicílio do casal",
+  deed: "escritura",
+  protocolNumber: "protocolo",
+  protocolOn: "data do protocolo",
+  parties: "partes",
+};
+
+function fillAux(current: AuxData, incoming: AuxData, fields: string[]) {
+  const out: AuxData = { ...current, parties: [...current.parties] };
+  for (const key of Object.keys(out) as (keyof AuxData)[]) {
+    const a = current[key];
+    const b = incoming[key];
+    const empty = (v: unknown) =>
+      v === null || v === "" || (Array.isArray(v) && v.length === 0);
+    if (empty(a) && !empty(b)) {
+      (out as unknown as Record<string, unknown>)[key] = b;
+      fields.push(`Livro 3: ${AUX_FIELD_NAMES[key]}`);
+    }
+  }
+  return out;
+}
+
 /** Fills only what the matrícula left empty; never changes a value. */
 export function fillEmpty(
   current: PropertyInput,
@@ -1252,6 +1374,7 @@ export function fillEmpty(
       incoming.description,
       str,
     ),
+    aux: fillAux(current.aux, incoming.aux, fields),
   };
   return { input, fields };
 }

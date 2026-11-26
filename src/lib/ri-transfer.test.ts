@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { situationOf } from "@/core/ri/acts.ts";
+import { EMPTY_AUX } from "@/core/ri/auxiliary.ts";
 import { EMPTY_CONDO, EMPTY_RURAL } from "@/core/ri/property.ts";
 import { transferFromJson, transferFromTable } from "@/core/ri/transfer.ts";
 import type { Database } from "@/db/index.ts";
@@ -54,6 +55,7 @@ const base = {
   auxKind: "",
   linkedNumbers: "",
   priorActs: 0,
+  aux: { ...EMPTY_AUX, parties: [] },
   description: "",
   notes: "",
 };
@@ -215,4 +217,31 @@ test("tabelas de exportação: atos, pessoas e indicadores", async () => {
   );
   const csv = await transferExportWith(db, FROM, "atos", "csv", ACTOR);
   assert.deepEqual([...csv.bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
+});
+
+test("Livro 3: as partes do registro entram no cadastro de pessoas", async () => {
+  const TENANT = "cartorio-teste-ri-livro3";
+  await createPropertyWith(
+    db,
+    TENANT,
+    {
+      ...base,
+      book: 3,
+      number: 9,
+      auxKind: "Convenção antenupcial (pacto antenupcial)",
+      aux: {
+        ...EMPTY_AUX,
+        regime: "separação total de bens",
+        parties: [
+          { name: "CARLA FICTÍCIA", document: "39053344705", role: "conjuge" },
+          { name: "DAVI FICTÍCIO", document: "", role: "conjuge" },
+        ],
+      },
+    },
+    ACTOR,
+  );
+  const acervo = await loadAcervoWith(db, TENANT);
+  const names = [...acervo.people.values()].map((p) => p.name).sort();
+  assert.deepEqual(names, ["CARLA FICTÍCIA", "DAVI FICTÍCIO"]);
+  assert.equal(acervo.properties[0]?.aux.regime, "separação total de bens");
 });

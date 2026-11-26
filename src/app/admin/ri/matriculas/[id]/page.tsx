@@ -36,6 +36,7 @@ import { riSignerFor } from "@/lib/ri-docs.ts";
 import { listFilesWith, riFolder } from "@/lib/ri-files.ts";
 import { blobUploadEnabled } from "@/lib/uploads.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
+import { AuxPanel } from "../../_components/aux-panel.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
 import { FilesPanel } from "../../_components/files-panel.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
@@ -187,79 +188,88 @@ export default async function PropertyPage({
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5 lg:col-span-2">
-          <Panel
-            title="Situação atual"
-            description="Calculada a partir dos atos lançados (CNN, art. 125: descrição, titularidade e ônus não cancelados)."
-          >
-            <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Proprietários
-            </h3>
-            {situation.owners.length === 0 ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Nenhum proprietário lançado.{" "}
-                {canEdit && (
-                  <Link
-                    href={`/admin/ri/matriculas/${p.id}/ato/novo`}
-                    className="font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    Lançar o ato
-                  </Link>
-                )}
-              </p>
-            ) : (
-              <ul className="mt-1 divide-y">
-                {situation.owners.map((o) => (
-                  <li
-                    key={o.personId}
-                    className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
-                  >
+          {p.book === 3 ? (
+            <AuxPanel kind={p.auxKind} aux={p.aux} linked={p.linkedNumbers} />
+          ) : (
+            <Panel
+              title="Situação atual"
+              description="Calculada a partir dos atos lançados (CNN, art. 125: descrição, titularidade e ônus não cancelados)."
+            >
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Proprietários
+              </h3>
+              {situation.owners.length === 0 ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Nenhum proprietário lançado.{" "}
+                  {canEdit && (
                     <Link
-                      href={`/admin/ri/pessoas/${o.personId}`}
-                      className="font-medium text-foreground hover:text-primary"
+                      href={`/admin/ri/matriculas/${p.id}/ato/novo`}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
                     >
-                      {o.name}
+                      Lançar o ato
                     </Link>
-                    <span className="text-xs text-muted-foreground">
-                      {o.document ? formatTaxId(o.document) : "sem CPF/CNPJ"}
-                      {o.share ? ` · ${o.share}` : ""} · desde {o.since}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <h3 className="mt-4 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-              Ônus em vigor
-            </h3>
-            {situation.burdens.length === 0 ? (
-              <p className="mt-1 text-sm text-muted-foreground">
-                Nenhum ônus em vigor.
-              </p>
-            ) : (
-              <ul className="mt-1 flex flex-col gap-1.5">
-                {situation.burdens.map((b) => (
-                  <li
-                    key={b.actId}
-                    className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-text"
-                  >
-                    <span className="font-semibold">{b.label}</span> {b.nature}
-                    {b.registeredOn ? ` · ${brDate(b.registeredOn)}` : ""}
-                  </li>
-                ))}
-              </ul>
-            )}
-            {situation.cancelledBurdens.length > 0 && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Cancelados:{" "}
-                {situation.cancelledBurdens
-                  .map((b) => `${b.label} ${b.nature} (por ${b.cancelledBy})`)
-                  .join("; ")}
-              </p>
-            )}
-          </Panel>
+                  )}
+                </p>
+              ) : (
+                <ul className="mt-1 divide-y">
+                  {situation.owners.map((o) => (
+                    <li
+                      key={o.personId}
+                      className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm"
+                    >
+                      <Link
+                        href={`/admin/ri/pessoas/${o.personId}`}
+                        className="font-medium text-foreground hover:text-primary"
+                      >
+                        {o.name}
+                      </Link>
+                      <span className="text-xs text-muted-foreground">
+                        {o.document ? formatTaxId(o.document) : "sem CPF/CNPJ"}
+                        {o.share ? ` · ${o.share}` : ""} · desde {o.since}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <h3 className="mt-4 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                Ônus em vigor
+              </h3>
+              {situation.burdens.length === 0 ? (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Nenhum ônus em vigor.
+                </p>
+              ) : (
+                <ul className="mt-1 flex flex-col gap-1.5">
+                  {situation.burdens.map((b) => (
+                    <li
+                      key={b.actId}
+                      className="rounded-md bg-warning-soft px-3 py-2 text-sm text-warning-text"
+                    >
+                      <span className="font-semibold">{b.label}</span>{" "}
+                      {b.nature}
+                      {b.registeredOn ? ` · ${brDate(b.registeredOn)}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {situation.cancelledBurdens.length > 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Cancelados:{" "}
+                  {situation.cancelledBurdens
+                    .map((b) => `${b.label} ${b.nature} (por ${b.cancelledBy})`)
+                    .join("; ")}
+                </p>
+              )}
+            </Panel>
+          )}
 
           <Panel
-            title="Atos da matrícula"
-            description="Numeração única para registros e averbações (Lei nº 6.015/1973, art. 232)."
+            title={p.book === 3 ? "Averbações à margem" : "Atos da matrícula"}
+            description={
+              p.book === 3
+                ? "Aditivo, endosso, cessão, quitação e cancelamento se averbam à margem do registro; o cancelamento segue a Lei nº 6.015/1973, art. 250."
+                : "Numeração única para registros e averbações (Lei nº 6.015/1973, art. 232)."
+            }
             actions={
               canEdit && (
                 <Link
@@ -400,7 +410,9 @@ export default async function PropertyPage({
           />
 
           {p.description && (
-            <Panel title="Descrição do imóvel">
+            <Panel
+              title={p.book === 3 ? "Texto do registro" : "Descrição do imóvel"}
+            >
               <p className="text-sm whitespace-pre-line">{p.description}</p>
             </Panel>
           )}
@@ -417,67 +429,83 @@ export default async function PropertyPage({
           )}
           <Panel title="Identificação">
             <dl className="grid gap-3">
-              <Field label="Tipo" value={RECORD_KINDS.get(p.recordKind)} />
+              {p.book !== 3 && (
+                <Field label="Tipo" value={RECORD_KINDS.get(p.recordKind)} />
+              )}
               <Field
                 label="Livro"
                 value={
                   p.book === 3 ? "3 · Registro Auxiliar" : "2 · Registro Geral"
                 }
               />
-              <Field label="Abertura" value={brDate(p.openedOn)} />
+              <Field
+                label={p.book === 3 ? "Data do registro" : "Abertura"}
+                value={brDate(p.openedOn)}
+              />
               <Field label="Ficha" value={p.ficha} />
-              <Field label="Origem" value={p.origin} />
-              <Field label="Área" value={p.area} />
+              {p.book !== 3 && (
+                <>
+                  <Field label="Origem" value={p.origin} />
+                  <Field label="Área" value={p.area} />
+                </>
+              )}
               {p.book === 3 && (
                 <>
                   <Field label="Natureza (Livro 3)" value={p.auxKind} />
                   <Field
-                    label="Matrícula(s) a que se refere"
-                    value={p.linkedNumbers}
+                    label="Matrícula(s) relacionada(s)"
+                    value={
+                      p.linkedNumbers ||
+                      "nenhuma (o Livro 3 não precisa de imóvel)"
+                    }
                   />
                 </>
               )}
             </dl>
           </Panel>
-          <Panel title="Localização (Livro 4)">
-            <dl className="grid gap-3">
-              <Field label="Localização" value={LOCATIONS.get(p.location)} />
-              <Field
-                label="Tipo de imóvel"
-                value={p.propertyKind ? PROPERTY_KINDS.get(p.propertyKind) : ""}
-              />
-              <Field
-                label="Logradouro"
-                value={[
-                  p.streetKind && p.streetKind !== 177
-                    ? STREET_KINDS.get(p.streetKind)
-                    : "",
-                  p.street,
-                  p.streetNumber,
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              />
-              <Field label="Bairro" value={p.district} />
-              <Field label="CEP" value={p.cep} />
-              {p.contributors.length > 0 && (
+          {p.book !== 3 && (
+            <Panel title="Localização (Livro 4)">
+              <dl className="grid gap-3">
+                <Field label="Localização" value={LOCATIONS.get(p.location)} />
                 <Field
-                  label="Inscrição imobiliária"
-                  value={p.contributors.join("; ")}
+                  label="Tipo de imóvel"
+                  value={
+                    p.propertyKind ? PROPERTY_KINDS.get(p.propertyKind) : ""
+                  }
                 />
-              )}
-              {(Object.keys(RURAL_LABELS) as (keyof RuralData)[])
-                .filter((k) => p.rural[k])
-                .map((k) => (
-                  <Field key={k} label={RURAL_LABELS[k]} value={p.rural[k]} />
-                ))}
-              {(Object.keys(CONDO_LABELS) as (keyof CondoData)[])
-                .filter((k) => p.condo[k])
-                .map((k) => (
-                  <Field key={k} label={CONDO_LABELS[k]} value={p.condo[k]} />
-                ))}
-            </dl>
-          </Panel>
+                <Field
+                  label="Logradouro"
+                  value={[
+                    p.streetKind && p.streetKind !== 177
+                      ? STREET_KINDS.get(p.streetKind)
+                      : "",
+                    p.street,
+                    p.streetNumber,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                />
+                <Field label="Bairro" value={p.district} />
+                <Field label="CEP" value={p.cep} />
+                {p.contributors.length > 0 && (
+                  <Field
+                    label="Inscrição imobiliária"
+                    value={p.contributors.join("; ")}
+                  />
+                )}
+                {(Object.keys(RURAL_LABELS) as (keyof RuralData)[])
+                  .filter((k) => p.rural[k])
+                  .map((k) => (
+                    <Field key={k} label={RURAL_LABELS[k]} value={p.rural[k]} />
+                  ))}
+                {(Object.keys(CONDO_LABELS) as (keyof CondoData)[])
+                  .filter((k) => p.condo[k])
+                  .map((k) => (
+                    <Field key={k} label={CONDO_LABELS[k]} value={p.condo[k]} />
+                  ))}
+              </dl>
+            </Panel>
+          )}
           {p.notes && (
             <Panel title="Observações internas">
               <p className="text-sm whitespace-pre-line">{p.notes}</p>

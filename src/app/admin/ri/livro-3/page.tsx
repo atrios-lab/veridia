@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { PARTY_ROLE_LABELS } from "@/core/ri/acts.ts";
+import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
 import { AUX_KINDS } from "@/core/ri/property.ts";
 import { statusLabel } from "@/core/ri/sheet.ts";
 import { loadAcervo } from "@/lib/ri.ts";
@@ -27,7 +28,20 @@ export default async function AuxiliaryBookPage({
   const rows = acervo.properties
     .filter((p) => p.book === 3)
     .map((p) => {
-      const parties = (acervo.acts.get(p.id) ?? []).flatMap((a) => a.parties);
+      const parties = [
+        ...p.aux.parties.map((x) => ({
+          name: x.name,
+          document: x.document,
+          role: AUX_ROLE_LABELS[x.role],
+        })),
+        ...(acervo.acts.get(p.id) ?? []).flatMap((a) =>
+          a.parties.map((x) => ({
+            name: x.name,
+            document: x.document,
+            role: PARTY_ROLE_LABELS[x.role],
+          })),
+        ),
+      ];
       return { p, parties };
     })
     .filter(
@@ -36,6 +50,7 @@ export default async function AuxiliaryBookPage({
         [
           p.number,
           p.auxKind,
+          p.aux.title,
           p.linkedNumbers,
           ...parties.map((x) => `${x.name} ${x.document}`),
         ]
@@ -47,7 +62,7 @@ export default async function AuxiliaryBookPage({
     <RiPage
       wide
       title="Registro Auxiliar (Livro 3)"
-      description="Os registros que não dizem respeito diretamente a imóvel matriculado (Lei nº 6.015/1973, art. 177), com o índice por número, natureza, partes e matrícula a que se referem. As partes também estão no Indicador Pessoal (art. 180)."
+      description="Os registros que a lei manda fazer no Registro de Imóveis e que não dizem respeito diretamente a imóvel matriculado (Lei nº 6.015/1973, arts. 177 e 178): cédula de crédito industrial, penhor rural e industrial, pacto antenupcial, convenção de condomínio, debêntures, bem de família e título no inteiro teor. Não precisa ter imóvel; quando houver ato ligado numa matrícula, faz-se a remissão recíproca. As partes estão no Indicador Pessoal (art. 180)."
       actions={
         riCan(session, "ri.edit") && (
           <Link
@@ -87,7 +102,9 @@ export default async function AuxiliaryBookPage({
                 <th className="px-3 py-2 font-medium">Nº</th>
                 <th className="px-3 py-2 font-medium">Natureza</th>
                 <th className="px-3 py-2 font-medium">Partes</th>
-                <th className="px-3 py-2 font-medium">Matrícula(s)</th>
+                <th className="px-3 py-2 font-medium">
+                  Matrícula(s) relacionada(s)
+                </th>
                 <th className="px-3 py-2 font-medium">Situação</th>
               </tr>
             </thead>
@@ -102,17 +119,22 @@ export default async function AuxiliaryBookPage({
                       {p.number.toLocaleString("pt-BR")}
                     </Link>
                   </td>
-                  <td className="px-3 py-2">{p.auxKind || "não informada"}</td>
+                  <td className="px-3 py-2">
+                    {p.auxKind || "não informada"}
+                    {p.aux.title && (
+                      <span className="block text-xs text-muted-foreground">
+                        {p.aux.title}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-xs">
                     {parties.length
-                      ? parties
-                          .map(
-                            (x) => `${x.name} (${PARTY_ROLE_LABELS[x.role]})`,
-                          )
-                          .join("; ")
+                      ? parties.map((x) => `${x.name} (${x.role})`).join("; ")
                       : "nenhuma lançada"}
                   </td>
-                  <td className="px-3 py-2 text-xs">{p.linkedNumbers}</td>
+                  <td className="px-3 py-2 text-xs">
+                    {p.linkedNumbers || "nenhuma (não precisa de imóvel)"}
+                  </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {statusLabel(p.status)}
                   </td>

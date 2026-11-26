@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { actLabel, PARTY_ROLE_LABELS } from "@/core/ri/acts.ts";
+import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { loadAcervo } from "@/lib/ri.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
@@ -28,13 +29,38 @@ export default async function PersonalIndicatorPage({
     act: string;
   };
   const byPerson = new Map<string, Line[]>();
+  const byDocument = new Map<string, string>();
+  const byName = new Map<string, string>();
+  for (const person of acervo.people.values()) {
+    if (person.deletedAt) continue;
+    if (person.document) byDocument.set(person.document, person.id);
+    else byName.set(fold(person.name), person.id);
+  }
   for (const p of acervo.properties) {
     if (p.status === 4) continue;
+    // The Livro 3 has its parties in the registro itself (art. 180: the
+    // people of every other book are in the Indicador Pessoal).
+    if (p.book === 3) {
+      for (const party of p.aux.parties) {
+        const id = party.document
+          ? byDocument.get(party.document)
+          : byName.get(fold(party.name));
+        if (!id) continue;
+        const list = byPerson.get(id) ?? [];
+        list.push({
+          property: `Livro 3 nº ${p.number.toLocaleString("pt-BR")}`,
+          propertyId: p.id,
+          role: AUX_ROLE_LABELS[party.role],
+          act: "Registro",
+        });
+        byPerson.set(id, list);
+      }
+    }
     for (const act of acervo.acts.get(p.id) ?? []) {
       for (const party of act.parties) {
         const list = byPerson.get(party.personId) ?? [];
         list.push({
-          property: p.number.toLocaleString("pt-BR"),
+          property: `${p.book === 3 ? "Livro 3 nº" : "Mat."} ${p.number.toLocaleString("pt-BR")}`,
           propertyId: p.id,
           role: PARTY_ROLE_LABELS[party.role],
           act: actLabel(act),
@@ -127,7 +153,7 @@ export default async function PersonalIndicatorPage({
                   href={`/admin/ri/matriculas/${line.propertyId}`}
                   className="rounded-full border bg-background px-2 py-0.5 text-xs hover:border-primary/40"
                 >
-                  Mat. {line.property} · {line.role} · {line.act}
+                  {line.property} · {line.role} · {line.act}
                 </Link>
               ))}
             </span>
