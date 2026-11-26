@@ -32,6 +32,7 @@ import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
   exportMatriculaToOnrAction,
   fulfillRequirementAction,
+  issueRequirementsAction,
   protocolStatusAction,
   registerProtocolAction,
   setProtocolVoidedAction,
@@ -74,6 +75,17 @@ export default async function ProtocolPage({
   );
   const ids = (row.propertyIds as string[]) ?? [];
   const properties = acervo.properties.filter((p) => ids.includes(p.id));
+  const suggested = [
+    ...properties.flatMap((p) => {
+      const situation = situationOf(acervo.acts.get(p.id) ?? []);
+      return registryChecks(
+        { ...situation, closed: situation.closed || p.status !== 0 },
+        [],
+      )
+        .filter((c) => !c.ok)
+        .map((c) => `${propertyTitle(p)}: ${c.text} | ${c.source}`);
+    }),
+  ];
   const requirements = (row.requirements as Requirement[]) ?? [];
   const history = [
     ...((row.history as ProtocolHistoryEntry[]) ?? []),
@@ -212,17 +224,39 @@ export default async function ProtocolPage({
             description="O que dá para conferir pela matrícula. O restante da qualificação é do oficial."
           >
             {properties.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Nenhuma matrícula ligada. Informe em Alterar dados. Se o título
-                é do Livro 3 (Registro Auxiliar), anexe e digitalize em{" "}
-                <Link
-                  href="/admin/ri/livro-3"
-                  className="text-primary underline underline-offset-2"
-                >
-                  Registro Auxiliar (Livro 3)
-                </Link>
-                : o sistema lê o documento e avisa se o número já tem registro.
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma matrícula ligada. Informe em Alterar dados. Se o
+                  título é do Livro 3 (Registro Auxiliar), anexe e digitalize em{" "}
+                  <Link
+                    href="/admin/ri/livro-3"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Registro Auxiliar (Livro 3)
+                  </Link>
+                  .
+                </p>
+                {!exam && canEdit && (
+                  <div className="mt-3 rounded-lg border bg-background p-3">
+                    <p className="text-sm font-semibold">
+                      Título do Livro 3: digitalizar aqui
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Anexe o título. O sistema lê, guarda em texto, preenche o
+                      registro e avisa se o número já tem registro (aí é
+                      averbação). Se preferir, lance à mão em Registro Auxiliar.
+                    </p>
+                    <div className="mt-2">
+                      <Link
+                        href={`/admin/ri/matriculas/nova?livro=3&protocolo=${row.number}`}
+                        className={buttonVariants({ size: "sm" })}
+                      >
+                        Digitalizar o título do Livro 3
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <ul className="flex flex-col gap-4">
                 {properties.map((p) => {
@@ -521,6 +555,52 @@ export default async function ProtocolPage({
                 </div>
               </div>
             )}
+            {canEdit &&
+              row.status !== "registrado" &&
+              requirements.length === 0 &&
+              (suggested.length > 0 || plan.some((a) => a.kind === null)) && (
+                <div className="mb-4 rounded-lg border border-warning/50 bg-warning-soft p-3 text-sm text-warning-text">
+                  <p className="font-semibold">
+                    O sistema achou o que conferir antes de registrar:
+                  </p>
+                  <ul className="mt-1 list-disc pl-5">
+                    {suggested.map((t) => (
+                      <li key={t}>{t.split(" | ")[0]}</li>
+                    ))}
+                    {plan
+                      .filter((a) => a.kind === null)
+                      .map((a) => (
+                        <li key={a.nature}>
+                          Ato não reconhecido: {a.nature}. Confira a natureza do
+                          título.
+                        </li>
+                      ))}
+                  </ul>
+                  <div className="mt-2">
+                    <ActionButton
+                      action={issueRequirementsAction}
+                      fields={{
+                        id: row.id,
+                        exigencias: [
+                          ...suggested,
+                          ...plan
+                            .filter((a) => a.kind === null)
+                            .map(
+                              (a) =>
+                                `Esclarecer a natureza do ato pedido ("${a.nature}"). | Lei nº 6.015/1973, art. 167`,
+                            ),
+                        ].join("\n"),
+                      }}
+                      label="Abrir a exigência com isso"
+                      pendingLabel="Abrindo…"
+                    />
+                  </div>
+                  <p className="mt-1 text-xs">
+                    Se estiver tudo certo, ignore. Depois de aberta, cada
+                    exigência pode ser marcada como cumprida.
+                  </p>
+                </div>
+              )}
             {canEdit && row.status !== "registrado" && (
               <RequirementsForm
                 id={row.id}

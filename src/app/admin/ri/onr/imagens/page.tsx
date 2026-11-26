@@ -94,11 +94,11 @@ export default async function OnrImagesPage({
                 Nenhuma imagem gerada ainda.
               </p>
             ) : (
-              <ul className="flex flex-col divide-y">
+              <ul className="flex flex-col gap-3">
                 {current.map((r) => (
                   <li
                     key={r.id}
-                    className="flex flex-wrap items-center justify-between gap-2 py-2"
+                    className="flex flex-col gap-2 rounded-lg border bg-background p-3"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground">
@@ -130,14 +130,17 @@ export default async function OnrImagesPage({
                           applied={Boolean(r.appliedAt)}
                         />
                       </div>
-                      {(r.issues as string[]).length > 0 && (
+                      {!r.appliedAt && (r.issues as string[]).length > 0 && (
                         <p className="text-xs text-warning-text">
                           Gerada com apontamentos conferidos:{" "}
                           {(r.issues as string[]).join(" ")}
                         </p>
                       )}
                     </div>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap items-center gap-2 border-t pt-2">
+                      <span className="text-xs text-muted-foreground">
+                        Só da matrícula nº {r.number.toLocaleString("pt-BR")}:
+                      </span>
                       <a
                         href={`/admin/ri/onr/imagens/baixar?id=${r.id}&formato=pdf`}
                         target="_blank"

@@ -1,10 +1,11 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ACT_EFFECT_LABELS, PARTY_ROLE_LABELS } from "@/core/ri/acts.ts";
 import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
 import { brDate } from "@/core/ri/property.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
-import { propertyDetailWith } from "@/lib/ri.ts";
+import { loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
 import { fileWith, type ReadingResult } from "@/lib/ri-files.ts";
 import { ApplyForm } from "../../_components/apply-form.tsx";
 import { ActionButton } from "../../_components/client.tsx";
@@ -63,6 +64,14 @@ export default async function ReadingPage({
     );
   }
   const r = stored.reading;
+  // A título of the Livro 3 whose number is already registered there is an
+  // averbação of that registro, not a new one (decision of 26/11/2026).
+  const sameNumber =
+    !detail && aux && r.number
+      ? (await loadAcervo(tenant.slug)).properties.find(
+          (p) => p.book === 3 && p.number === r.number && !p.deletedAt,
+        )
+      : undefined;
   const taken = new Set(detail?.acts.map((a) => a.seq) ?? []);
   const people = (list: { name: string; document: string; role: string }[]) =>
     list
@@ -90,6 +99,26 @@ export default async function ReadingPage({
         />
       }
     >
+      {sameNumber && (
+        <div className="rounded-lg border border-warning/50 bg-warning-soft px-4 py-3 text-sm text-warning-text">
+          <p className="font-semibold">
+            Já existe o registro nº {String(sameNumber.number).padStart(3, "0")}{" "}
+            no Livro 3.
+          </p>
+          <p>
+            Este título não abre registro novo: ele é averbação (AV) do registro
+            existente (Lei nº 6.015/1973, art. 167, II). Lance a averbação nele
+            e marque o selo.
+          </p>
+          <Link
+            href={`/admin/ri/matriculas/${sameNumber.id}/ato/novo`}
+            className="mt-1 inline-block font-medium underline underline-offset-2"
+          >
+            Lançar a averbação no registro nº{" "}
+            {String(sameNumber.number).padStart(3, "0")}
+          </Link>
+        </div>
+      )}
       {stored.notes.length > 0 && (
         <ul className="rounded-lg border border-warning/50 bg-warning-soft px-4 py-3 text-sm text-warning-text">
           {stored.notes.map((n) => (
