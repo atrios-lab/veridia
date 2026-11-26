@@ -125,7 +125,7 @@ test("imagem da assinatura: papel fica transparente, tinta preta", async () => {
   assert.equal((await signatureSettingsWith(db, TENANT)).signatureImage, null);
 });
 
-test("TIFF da matrícula: preto e branco, 1 bit, G4, 300 dpi, várias páginas", async () => {
+test("TIFF da matrícula: preto e branco, 1 bit, G4, 200 dpi (manual Matrícula Online), várias páginas", async () => {
   const [first] = (await loadAcervoWith(db, TENANT)).properties;
   assert.ok(first);
   const ficha = fichaContent({
@@ -141,7 +141,7 @@ test("TIFF da matrícula: preto e branco, 1 bit, G4, 300 dpi, várias páginas",
   const meta = await sharp(tif, { pages: -1 }).metadata();
   assert.equal(meta.format, "tiff");
   assert.ok((meta.pages ?? 1) >= 2);
-  assert.equal(meta.density, 300);
+  assert.equal(meta.density, 200);
   assert.equal(meta.channels, 1);
   const scan = await sharp({
     create: {
