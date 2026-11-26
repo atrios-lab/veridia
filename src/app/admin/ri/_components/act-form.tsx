@@ -58,6 +58,7 @@ export function ActForm({
   act,
   burdens,
   people,
+  fromProtocol,
 }: {
   propertyId: string;
   /** "R-8 / AV-8": the number this one takes when saved. */
@@ -65,6 +66,8 @@ export function ActForm({
   act?: ActFormValue;
   burdens: { actId: string; label: string }[];
   people: { name: string; document: string }[];
+  /** A new ato from a protocolo: its number and the natureza asked. */
+  fromProtocol?: { number: string; nature: string };
 }) {
   const [state, action, pending] = useActionState(saveActAction, IDLE);
   const migration = act?.kind === "M";
@@ -72,7 +75,9 @@ export function ActForm({
     act && act.kind !== "M" ? act.kind : "R",
   );
   const [effect, setEffect] = useState<ActEffect>(act?.effect ?? "transmissao");
-  const [nature, setNature] = useState(act?.nature ?? "Compra e venda");
+  const [nature, setNature] = useState(
+    act?.nature ?? (fromProtocol?.nature || "Compra e venda"),
+  );
   const [parties, setParties] = useState<PartyRow[]>(
     act?.parties.length
       ? act.parties.map((p) => ({ ...p, key: next++ }))
@@ -235,7 +240,7 @@ export function ActForm({
                 <Input
                   id="a-protocol"
                   name="protocol"
-                  defaultValue={act?.protocol ?? ""}
+                  defaultValue={act?.protocol ?? fromProtocol?.number ?? ""}
                   className="bg-background"
                 />
               </div>
@@ -256,6 +261,7 @@ export function ActForm({
                   id="a-seal"
                   name="seal"
                   defaultValue={act?.seal ?? ""}
+                  required={Boolean(fromProtocol)}
                   placeholder="Digite o selo do ato"
                   className="bg-background"
                 />

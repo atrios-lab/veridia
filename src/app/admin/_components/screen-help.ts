@@ -781,6 +781,7 @@ ENTRIES["/admin/ri"] = {
   steps: [
     "Comece trazendo o que a serventia já tem, em Importar e exportar: planilha do índice, atos, pessoas ou os arquivos da ONR. O sistema confere e mostra o que leu antes de importar.",
     "Resolva as pendências na ordem da tela: números repetidos, duplicidades, saltos, CNM e dados do Indicador Real. Cada uma tem o passo a passo e a regra.",
+    "No balcão, lance o título em Protocolo (Livro 1): o número de ordem fixa a prioridade e os prazos correm em dias úteis. Qualifique, emita a nota devolutiva ou lance o ato com o número do protocolo e o selo.",
     "Lance os atos (R e AV) na matrícula: proprietários e ônus em vigor são calculados dos atos.",
     "Em Arquivos para a ONR, gere o lote de CNM e os indicadores e importe com o certificado do oficial. Depois marque como importado.",
   ],
