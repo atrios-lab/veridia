@@ -230,6 +230,7 @@ const EXACT: Record<string, AuditLevel> = {
   "ri.person-edit": "analise",
   "ri.person-restore": "atencao",
   "ri.cnm-in-pgv": "analise",
+  "ri.onr-image-hide": "analise",
   "ri.pgv-import": "analise",
   "ri.pgv-credential-save": "atencao",
   "ri.pgv-credential-clear": "atencao",

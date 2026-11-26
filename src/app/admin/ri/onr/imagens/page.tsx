@@ -3,7 +3,12 @@ import Link from "next/link";
 import { ONR_PATTERNS, onrPath } from "@/core/ri/onr-images.ts";
 import { db } from "@/db/index.ts";
 import { signatureSettingsWith } from "@/lib/ri-files.ts";
-import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
+import {
+  currentOf,
+  deleteReasonOf,
+  hiddenFromListOf,
+  listOnrImagesWith,
+} from "@/lib/ri-onr-images.ts";
 import { buttonVariants } from "../../../_ui/button.tsx";
 import { ActionButton, ConfirmButton } from "../../_components/client.tsx";
 import {
@@ -35,7 +40,7 @@ export default async function OnrImagesPage({
   ]);
   const current = currentOf(rows);
   const pending = current.filter((r) => !r.copiedAt);
-  const deleted = rows.filter((r) => r.deletedAt);
+  const deleted = rows.filter((r) => r.deletedAt && !hiddenFromListOf(r));
   const older = rows.filter(
     (r) => !r.deletedAt && !current.some((c) => c.id === r.id),
   );
@@ -208,20 +213,35 @@ export default async function OnrImagesPage({
                         key={r.id}
                         className="flex flex-wrap items-center justify-between gap-2 text-sm"
                       >
-                        <span>
+                        <span className="min-w-0">
                           Matrícula nº {r.number.toLocaleString("pt-BR")},
                           apagada em {stamp(r.deletedAt)}
+                          <span className="block text-xs text-muted-foreground">
+                            Situação: apagada (guardada) · Motivo:{" "}
+                            {deleteReasonOf(r) || "não informado"}
+                          </span>
                         </span>
-                        <ConfirmButton
-                          action={setOnrImageDeletedAction}
-                          fields={{ id: r.id, op: "restore" }}
-                          trigger="Restaurar"
-                          question="Restaurar esta imagem?"
-                          consequence="Ela volta à lista; se for a mais nova da matrícula, passa a ser a imagem em vigor."
-                          confirmLabel="Restaurar"
-                          pendingLabel="Restaurando…"
-                          destructive={false}
-                        />
+                        <div className="flex flex-wrap gap-1.5">
+                          <ConfirmButton
+                            action={setOnrImageDeletedAction}
+                            fields={{ id: r.id, op: "restore" }}
+                            trigger="Restaurar"
+                            question="Restaurar esta imagem?"
+                            consequence="Ela volta à lista; se for a mais nova da matrícula, passa a ser a imagem em vigor."
+                            confirmLabel="Restaurar"
+                            pendingLabel="Restaurando…"
+                            destructive={false}
+                          />
+                          <ConfirmButton
+                            action={setOnrImageDeletedAction}
+                            fields={{ id: r.id, op: "hide" }}
+                            trigger="Remover da lista"
+                            question={`Tirar a matrícula nº ${r.number.toLocaleString("pt-BR")} desta lista?`}
+                            consequence="Ela some do histórico da tela, mas não sai do banco: fica guardada e na Auditoria, com o motivo que você escrever (por exemplo: era teste)."
+                            confirmLabel="Remover da lista"
+                            pendingLabel="Removendo…"
+                          />
+                        </div>
                       </li>
                     ))}
                   </ul>

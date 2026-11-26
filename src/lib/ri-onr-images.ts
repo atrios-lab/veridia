@@ -47,6 +47,61 @@ export interface OnrHistoryEntry {
   at: string;
   by: string;
   what: string;
+  /** The reason typed (apagar, restaurar, tirar da lista). */
+  why?: string;
+}
+
+/** Why the image was deleted: the reason of the last "apagou". */
+export function deleteReasonOf(row: Pick<OnrImageRow, "history">): string {
+  const h = (row.history as OnrHistoryEntry[] | null) ?? [];
+  return [...h].reverse().find((e) => e.what === "apagou a imagem")?.why ?? "";
+}
+
+/** Taken out of the Histórico list (it stays saved and in the audit). */
+export function hiddenFromListOf(row: Pick<OnrImageRow, "history">): boolean {
+  const h = (row.history as OnrHistoryEntry[] | null) ?? [];
+  const last = [...h]
+    .reverse()
+    .find(
+      (e) => e.what === "tirou da lista" || e.what === "restaurou a imagem",
+    );
+  return last?.what === "tirou da lista";
+}
+
+/** Takes a deleted image out of the Histórico list, with the reason. */
+export async function hideOnrImageFromListWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  reason: string,
+  actor: Actor,
+): Promise<void> {
+  const row = await own(database, tenantSlug, id);
+  if (!row.deletedAt) {
+    throw new RiError("Só a imagem apagada pode sair da lista.");
+  }
+  await database
+    .update(riOnrImages)
+    .set({
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: "tirou da lista",
+          why: reason.slice(0, 2000),
+        },
+      ],
+    })
+    .where(eq(riOnrImages.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.onr-image-hide",
+    targetType: "ri-onr-image",
+    targetId: id,
+    reason: reason.slice(0, 2000),
+  });
 }
 
 export interface BookSuggestion {
@@ -593,6 +648,7 @@ export async function setOnrImageDeletedWith(
   id: string,
   deleted: boolean,
   actor: Actor,
+  reason = "",
 ): Promise<void> {
   const row = await own(database, tenantSlug, id);
   if (Boolean(row.deletedAt) === deleted) return;
@@ -608,6 +664,7 @@ export async function setOnrImageDeletedWith(
           at: new Date().toISOString(),
           by: actor.id,
           what: deleted ? "apagou a imagem" : "restaurou a imagem",
+          ...(reason ? { why: reason.slice(0, 2000) } : {}),
         },
       ],
     })
@@ -618,6 +675,7 @@ export async function setOnrImageDeletedWith(
     action: deleted ? "ri.onr-image-delete" : "ri.onr-image-restore",
     targetType: "ri-onr-image",
     targetId: id,
+    reason: reason ? reason.slice(0, 2000) : undefined,
   });
 }
 

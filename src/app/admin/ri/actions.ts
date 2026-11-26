@@ -72,6 +72,7 @@ import {
 } from "@/lib/ri-geo.ts";
 import {
   applyOnrReadingWith,
+  hideOnrImageFromListWith,
   prepareOnrImageWith,
   setCopiedWith,
   setOnrImageDeletedWith,
@@ -1546,22 +1547,40 @@ export async function setOnrImageDeletedAction(
   if (why) return { status: "error", message: why };
   const ok = await access("ri.export");
   if (!ok) return denied("ri.export");
-  const deleted = text(formData, "op") !== "restore";
+  const op = text(formData, "op");
+  const deleted = op !== "restore";
+  const reason = String(formData.get("justificativa") ?? "").trim();
   try {
-    await setOnrImageDeletedWith(
-      db,
-      ok.tenant.slug,
-      text(formData, "id"),
-      deleted,
-      ok.actor,
-    );
+    if (op === "hide") {
+      await hideOnrImageFromListWith(
+        db,
+        ok.tenant.slug,
+        text(formData, "id"),
+        reason,
+        ok.actor,
+      );
+    } else {
+      await setOnrImageDeletedWith(
+        db,
+        ok.tenant.slug,
+        text(formData, "id"),
+        deleted,
+        ok.actor,
+        reason,
+      );
+    }
   } catch (error) {
     return failure(error, "ri.onr-image.delete");
   }
   revalidatePath("/admin/ri/onr/imagens");
   return {
     status: "success",
-    message: deleted ? "Imagem apagada (fica guardada)." : "Imagem restaurada.",
+    message:
+      op === "hide"
+        ? "Tirada da lista. Continua guardada e na auditoria, com o motivo."
+        : deleted
+          ? "Imagem apagada (fica guardada, com o motivo)."
+          : "Imagem restaurada.",
   };
 }
 
