@@ -6,6 +6,7 @@ import {
   type CertidaoKind,
   certidaoSections,
 } from "@/core/ri/certidao.ts";
+import { custasNoteFor, LGPD_ATTENTION } from "@/core/ri/closing-notes.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { officialName } from "@/core/tenant/identification.ts";
@@ -88,6 +89,7 @@ export async function certidaoDocumentFor(
   let situation: ReturnType<typeof situationOf> | undefined;
   let bookRef: { volume: string; ficha: string } | undefined;
   let headline: string | undefined;
+  let idLabel: string | undefined;
 
   if (request.kind === "negativa") {
     const searched = request.searched ?? { name: "", document: "" };
@@ -130,6 +132,7 @@ export async function certidaoDocumentFor(
       volume: open?.volume ?? String(p.book),
       ficha: (p.ficha || String(p.number)).padStart(3, "0"),
     };
+    idLabel = p.location === 1 ? "IMÓVEL RURAL" : "IMÓVEL URBANO";
     headline = `${p.book === 3 ? "REGISTRO" : "MATRÍCULA"} Nº ${p.number.toLocaleString("pt-BR")}${p.openedOn ? ` - Data: ${p.openedOn.split("-").reverse().join("/")}` : ""}${p.cnm ? ` - CNM: ${formatCnm(p.cnm)}` : ""}.`;
     reference =
       p.book === 3
@@ -150,6 +153,7 @@ export async function certidaoDocumentFor(
     requester: request.requester?.trim() || undefined,
     book: bookRef,
     headline,
+    idLabel,
   });
 
   await recordAuditWith(db, {
@@ -175,12 +179,19 @@ export async function certidaoDocumentFor(
         paragraphs: x.paragraphs,
       })),
       seal: request.seal,
+      compactSignature: true,
+      closingNotes: [
+        ...(custasNoteFor(tenant.location.state)
+          ? [{ text: custasNoteFor(tenant.location.state) as string }]
+          : []),
+        { heading: "ATENÇÃO!", text: LGPD_ATTENTION },
+      ],
       signee: signer?.name,
       signatureImage: request.withSignatureImage
         ? (settings.signatureImage ?? undefined)
         : undefined,
       signature: signer ? [signer.title] : [],
-      footer: `${office} · ${tenant.legalFooter} · ATENÇÃO: certidão lavrada com base no art. 17 da Lei nº 6.015/1973; os dados nela consignados são protegidos pela LGPD (Lei nº 13.709/2018) e devem ser usados só para o fim a que se destinam.`,
+      footer: `${office} · ${tenant.legalFooter}`,
     },
   };
 }

@@ -23,6 +23,7 @@ import {
   type TermOffice,
   type TermText,
 } from "@/core/ri/books.ts";
+import { custasNoteFor } from "@/core/ri/closing-notes.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { addressLine, isoDate, propertyTitle } from "@/core/ri/property.ts";
@@ -455,6 +456,9 @@ function termDocument(
     dateLine: term.dateLine,
     ...signer,
     footer: `${officialName(tenant)} · ${term.subtitle} · ${term.title} · ${tenant.legalFooter}`,
+    closingNotes: custasNoteFor(tenant.location.state)
+      ? [{ text: custasNoteFor(tenant.location.state) as string }]
+      : undefined,
   };
 }
 
@@ -680,6 +684,9 @@ export async function bookDocumentsFor(
           })),
           ...signer,
           footer,
+          closingNotes: custasNoteFor(tenant.location.state)
+            ? [{ text: custasNoteFor(tenant.location.state) as string }]
+            : undefined,
         });
       }
     } else if (record.book === 4) {
@@ -812,7 +819,13 @@ export async function bookPdfFor(
   };
   const addTable = async (book: TableBook) => {
     if (options.word) blocks.push({ kind: "table", book });
-    else parts.push(await drawTableBook(book));
+    else
+      parts.push(
+        await drawTableBook({
+          ...book,
+          closingNote: custasNoteFor(tenant.location.state),
+        }),
+      );
   };
   await addTerm(termDocument(tenant, openingTerm(record, office), signer));
   const footer = `${officialName(tenant)} · Livro nº ${row.volume}`;
@@ -916,7 +929,10 @@ export async function bookPdfFor(
       const flush = async () => {
         if (run.length) {
           if (options.word) blocks.push({ kind: "fichas", fichas: run });
-          else parts.push(await drawFichas(run));
+          else
+            parts.push(
+              await drawFichas(run, null, custasNoteFor(tenant.location.state)),
+            );
         }
         run = [];
       };
@@ -1173,6 +1189,7 @@ export async function fichaLegalPdfWith(
   const volume = openBook?.volume ?? String(p.book);
   if (p.book === 3) {
     const bytes = await drawTableBook({
+      closingNote: custasNoteFor(tenant.location.state),
       title: "REGISTRO AUXILIAR",
       book: 3,
       volume,
@@ -1224,6 +1241,7 @@ export async function fichaLegalPdfWith(
               : undefined,
         }
       : null,
+    custasNoteFor(tenant.location.state),
   );
   return { bytes, number: p.number };
 }

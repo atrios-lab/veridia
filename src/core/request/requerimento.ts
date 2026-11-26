@@ -183,6 +183,14 @@ export interface RequerimentoDocument {
    * text, before the signature.
    */
   seal?: { number: string; image?: Uint8Array };
+  /**
+   * Small notes after the signature, near the foot (the custas of the selo
+   * digital, the ATENÇÃO of the LGPD), each centred, with an optional
+   * heading in bold.
+   */
+  closingNotes?: { heading?: string; text: string }[];
+  /** The signature right under the date, not at the foot of the page. */
+  compactSignature?: boolean;
 }
 
 export interface RequerimentoData {

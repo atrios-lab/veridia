@@ -47,6 +47,8 @@ export interface TableBook {
   rows: TableRow[];
   /** Under the frame of every folha. */
   footer: string;
+  /** The custas note, at the end of the last folha. */
+  closingNote?: string | null;
 }
 
 export interface FichaPage {
@@ -219,6 +221,21 @@ export async function drawTableBook(book: TableBook): Promise<Buffer> {
   if (book.rows.length === 0) {
     pdf.font("Times-Italic").fontSize(10);
     pdf.text("Sem lançamentos no período.", inner.left + 10, y, { width });
+    y = pdf.y + 6;
+  }
+  if (book.closingNote) {
+    pdf.font("Times-Roman").fontSize(8);
+    const h = pdf.heightOfString(book.closingNote, { width: width - 20 });
+    if (y + h > colBottom - 4) newPage();
+    pdf
+      .save()
+      .rect(inner.left + 2, y, width - 4, h + 6)
+      .fill("white")
+      .restore();
+    pdf.fillColor("black").text(book.closingNote, inner.left + 10, y + 3, {
+      width: width - 20,
+      align: "center",
+    });
   }
   const range = pdf.bufferedPageRange();
   for (let i = 0; i < range.count; i++) {
@@ -283,6 +300,7 @@ export async function drawFichas(
     image?: Uint8Array;
     place: string;
   } | null,
+  closingNote?: string | null,
 ): Promise<Buffer> {
   const textLeft = FRAME.left + PAD + 4;
   const textRight = FRAME.right - PAD - 4;
@@ -462,6 +480,13 @@ export async function drawFichas(
       pdf.text(signer.name, textLeft, rule + 4, { width, align: "center" });
       pdf.fontSize(10).text(signer.title, { width, align: "center" });
     }
+    if (closingNote) {
+      pdf.moveDown(1);
+      pdf.font("Times-Roman").fontSize(8).text(closingNote, textLeft, pdf.y, {
+        width,
+        align: "center",
+      });
+    }
   }
   current = null;
   if (fichas.length === 0) {
@@ -489,6 +514,21 @@ export async function drawFichas(
         pdf.font("Times-Bold").text(String(i + 1), { continued: true });
         pdf.font("Times-Roman").text(" de ", { continued: true });
         pdf.font("Times-Bold").text(String(count), { lineBreak: false });
+        // The CNM on every page of the ficha (decision of 26/11/2026).
+        // Only on the verso and the continuations: the front has it.
+        if (run.ficha.cnm && i > 0) {
+          pdf.font("Times-Roman").fontSize(9);
+          pdf.text(
+            `CNM: ${run.ficha.cnm.replace(/^CNM\s*/, "")}`,
+            FRAME.left,
+            FRAME.top - 12,
+            {
+              width: FRAME.right - FRAME.left,
+              align: "right",
+              lineBreak: false,
+            },
+          );
+        }
         if (i > 0) {
           const folha = Math.floor(i / 2) + 1;
           const side = i % 2 === 1 ? `${folha}v` : String(folha);
