@@ -128,6 +128,8 @@ export async function prepareOnrImageWith(
     typed: number | null;
     pattern: string;
     sign: boolean;
+    /** The rubrica at the top of every folha (the office chooses). */
+    rubric?: boolean;
     confirmed: boolean;
   },
   actor: Actor,
@@ -144,6 +146,11 @@ export async function prepareOnrImageWith(
   }
   const { signer, settings } = await riSignerFor(tenant);
   const signature = input.sign ? settings.signatureImage : null;
+  if (input.rubric && !settings.rubricImage) {
+    throw new RiError(
+      "Cadastre a imagem da rubrica em RI › Configurações antes, ou desmarque a rubrica.",
+    );
+  }
   if (input.sign && !signature) {
     throw new RiError(
       "Cadastre a imagem da assinatura em RI › Configurações antes, ou desmarque a assinatura.",
@@ -157,7 +164,7 @@ export async function prepareOnrImageWith(
       pdf = await pdfToOnrTiff(
         input.bytes,
         signature,
-        input.sign ? settings.rubricImage : null,
+        input.rubric ? settings.rubricImage : null,
       );
     } catch {
       throw new RiError(

@@ -31,15 +31,18 @@ type Item = {
 export function OnrImageForm({
   patterns,
   hasSignature,
+  hasRubric,
 }: {
   patterns: { id: string; label: string }[];
   hasSignature: boolean;
+  hasRubric: boolean;
 }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [pattern, setPattern] = useState(patterns[0]?.id ?? "p12");
   const [sign, setSign] = useState(hasSignature);
+  const [rubric, setRubric] = useState(hasRubric);
   const [running, setRunning] = useState(false);
 
   const choose = (list: FileList | null) => {
@@ -74,6 +77,7 @@ export function OnrImageForm({
       form.set("numero", item.number);
       form.set("padrao", pattern);
       form.set("assinar", sign ? "1" : "0");
+      form.set("rubricar", rubric ? "1" : "0");
       form.set("conferi", item.confirm ? "1" : "0");
       const state = await prepareOnrImageAction(form).catch(
         (): OnrImageState => ({
@@ -142,6 +146,23 @@ export function OnrImageForm({
           {!hasSignature && (
             <span className="block text-xs text-muted-foreground">
               Cadastre a imagem em RI › Configurações para usar.
+            </span>
+          )}
+        </span>
+      </label>
+      <label className="-mt-2 flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4"
+          checked={rubric}
+          disabled={!hasRubric}
+          onChange={(e) => setRubric(e.target.checked)}
+        />
+        <span>
+          Pôr a minha rubrica no canto superior direito de todas as folhas
+          {!hasRubric && (
+            <span className="block text-xs text-muted-foreground">
+              Cadastre a imagem da rubrica em RI › Configurações para usar.
             </span>
           )}
         </span>

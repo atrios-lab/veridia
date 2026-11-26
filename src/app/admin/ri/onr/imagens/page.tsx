@@ -66,6 +66,7 @@ export default async function OnrImagesPage({
             <OnrImageForm
               patterns={ONR_PATTERNS.map((p) => ({ id: p.id, label: p.label }))}
               hasSignature={Boolean(signature.signatureImage)}
+              hasRubric={Boolean(signature.rubricImage)}
             />
           </Panel>
 
