@@ -617,6 +617,13 @@
       "when": 1795652411571,
       "tag": "0087_ri_protocolo",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1795654764148,
+      "tag": "0088_ri_geometrias",
+      "breakpoints": true
     }
   ]
 }

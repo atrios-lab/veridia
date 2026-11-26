@@ -239,6 +239,8 @@ const EXACT: Record<string, AuditLevel> = {
   "ri.transfer-export": "atencao",
   "ri.protocol-edit": "analise",
   "ri.annotation-edit": "analise",
+  "ri.geometry-delete": "atencao",
+  "ri.geometry-restore": "atencao",
   "ri.annotation-delete": "atencao",
   "ri.annotation-restore": "atencao",
   "ri.protocol-status": "analise",

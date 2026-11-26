@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -3550,6 +3551,49 @@ export const riFiles = pgTable(
   (t) => [
     index("ri_files_property").on(t.propertyId),
     index("ri_files_tenant").on(t.tenantSlug),
+  ],
+);
+
+/**
+ * The geometry of an imóvel (change registro-de-imoveis-mapa): the
+ * vértices of its perímetro from the memorial descritivo or the Sigef
+ * (Lei nº 6.015/1973, art. 176, §§ 3º a 5º), with área, perímetro and
+ * fuso. One matrícula may have several over time (each averbação of
+ * georreferenciamento or retificação); the newest in force is the one on
+ * the map. "Apagar" only marks it.
+ */
+export const riGeometries = pgTable(
+  "ri_geometries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => riProperties.id),
+    actId: uuid("act_id").references(() => riActs.id),
+    /** "memorial", "sigef" or "manual". */
+    source: text("source").notNull().default("memorial"),
+    /** The text it was read from (memorial or table), for conferência. */
+    sourceText: text("source_text").notNull().default(""),
+    /** [{ code, lat, lon }] in SIRGAS 2000, decimal degrees. */
+    vertices: jsonb("vertices").notNull().default(sql`'[]'::jsonb`),
+    zone: integer("zone").notNull(),
+    areaM2: doublePrecision("area_m2").notNull(),
+    perimeterM: doublePrecision("perimeter_m").notNull(),
+    /** The Sigef certification (code of the parcela), when there is one. */
+    sigefCode: text("sigef_code").notNull().default(""),
+    notes: text("notes").notNull().default(""),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [
+    index("ri_geometries_property").on(t.propertyId),
+    index("ri_geometries_tenant").on(t.tenantSlug),
   ],
 );
 
