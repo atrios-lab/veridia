@@ -3,10 +3,10 @@ import type { RequerimentoDocument } from "@/core/request/requerimento.ts";
 import { situationOf } from "@/core/ri/acts.ts";
 import {
   CERTIDAO_LABELS,
-  CERTIDAO_RULES,
   type CertidaoKind,
   certidaoSections,
 } from "@/core/ri/certidao.ts";
+import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -14,6 +14,7 @@ import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { recordAuditWith } from "./audit.ts";
 import { type Actor, loadAcervo, propertyDetailWith, RiError } from "./ri.ts";
+import { listBooksWith } from "./ri-books.ts";
 import { riSignerFor } from "./ri-docs.ts";
 
 /**
@@ -85,6 +86,8 @@ export async function certidaoDocumentFor(
   let fileName: string = request.kind;
   let ficha: ReturnType<typeof fichaContent> | undefined;
   let situation: ReturnType<typeof situationOf> | undefined;
+  let bookRef: { volume: string; ficha: string } | undefined;
+  let headline: string | undefined;
 
   if (request.kind === "negativa") {
     const searched = request.searched ?? { name: "", document: "" };
@@ -120,6 +123,14 @@ export async function certidaoDocumentFor(
     });
     situation = situationOf(detail.acts);
     const n = String(p.number).padStart(3, "0");
+    const open = (await listBooksWith(db, tenant.slug)).find(
+      (b) => b.book === p.book && !b.deletedAt && !b.closedOn,
+    );
+    bookRef = {
+      volume: open?.volume ?? String(p.book),
+      ficha: (p.ficha || String(p.number)).padStart(3, "0"),
+    };
+    headline = `${p.book === 3 ? "REGISTRO" : "MATRÍCULA"} Nº ${p.number.toLocaleString("pt-BR")}${p.openedOn ? ` - Data: ${p.openedOn.split("-").reverse().join("/")}` : ""}${p.cnm ? ` - CNM: ${formatCnm(p.cnm)}` : ""}.`;
     reference =
       p.book === 3
         ? `o registro nº ${n} do Livro 3 (Registro Auxiliar)`
@@ -137,6 +148,8 @@ export async function certidaoDocumentFor(
     questions: request.questions,
     searched: request.searched,
     requester: request.requester?.trim() || undefined,
+    book: bookRef,
+    headline,
   });
 
   await recordAuditWith(db, {
@@ -151,9 +164,11 @@ export async function certidaoDocumentFor(
   return {
     fileName,
     document: {
-      eyebrow: "Registro de Imóveis · Certidão",
+      // Only the name of the certidão on top (decision of 26/11/2026).
+      eyebrow: "",
       title: CERTIDAO_LABELS[request.kind],
-      subtitle: CERTIDAO_RULES[request.kind],
+      subtitle: "",
+      dateLine: `${place}, ${dateText}.`,
       office: [office, tenant.subtitle],
       sections: sections.map((x) => ({
         heading: x.heading ?? "",
@@ -165,7 +180,7 @@ export async function certidaoDocumentFor(
         ? (settings.signatureImage ?? undefined)
         : undefined,
       signature: signer ? [signer.title] : [],
-      footer: `${office} · ${tenant.legalFooter} · Dados tratados conforme a LGPD (Lei nº 13.709/2018), só para a finalidade da certidão.`,
+      footer: `${office} · ${tenant.legalFooter} · ATENÇÃO: certidão lavrada com base no art. 17 da Lei nº 6.015/1973; os dados nela consignados são protegidos pela LGPD (Lei nº 13.709/2018) e devem ser usados só para o fim a que se destinam.`,
     },
   };
 }
