@@ -76,6 +76,7 @@ import {
   readGeometrySource,
   setGeometryDeletedWith,
 } from "@/lib/ri-geo.ts";
+import { forgetLearnedActWith, learnActWith } from "@/lib/ri-learning.ts";
 import {
   applyOnrReadingWith,
   hideOnrImageFromListWith,
@@ -329,6 +330,32 @@ export async function savePgvCredentialAction(
   }
 }
 
+export async function forgetLearnedActAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  try {
+    await forgetLearnedActWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      String(formData.get("justificativa") ?? ""),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.learned-act.forget");
+  }
+  revalidatePath("/admin/ri/configuracoes");
+  return {
+    status: "success",
+    message: "Esquecido. Fica guardado e na auditoria.",
+  };
+}
+
 // ------------------------------------------------------------------ atos
 
 function partiesFrom(formData: FormData): ActPartyInput[] {
@@ -376,6 +403,13 @@ export async function saveActAction(
         await createActWith(db, ok.tenant.slug, propertyId, input, ok.actor)
       ).id;
     }
+    // The office teaches the system with every ato it saves or corrects.
+    await learnActWith(
+      db,
+      ok.tenant.slug,
+      { nature: input.nature, kind: input.kind, effect: input.effect },
+      ok.actor,
+    );
     const file = formData.get("sealImage");
     if (file instanceof File && file.size > 0) {
       if (file.size > 3 * 1024 * 1024) {

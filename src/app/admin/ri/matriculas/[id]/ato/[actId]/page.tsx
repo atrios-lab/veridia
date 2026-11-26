@@ -3,6 +3,7 @@ import { actLabel, situationOf } from "@/core/ri/acts.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
 import { actSealImageWith, loadAcervo, propertyDetailWith } from "@/lib/ri.ts";
+import { listLearnedActsWith } from "@/lib/ri-learning.ts";
 import { ActForm } from "../../../../_components/act-form.tsx";
 import { RiPage } from "../../../../_components/page.tsx";
 import { requireRi } from "../../../../_lib.ts";
@@ -46,6 +47,7 @@ export default async function EditActPage({
       back={{ href: `/admin/ri/matriculas/${id}`, label: propertyTitle(p) }}
     >
       <ActForm
+        learned={await listLearnedActsWith(db, tenant.slug)}
         propertyId={id}
         nextLabel={actLabel(act, p.number)}
         act={{

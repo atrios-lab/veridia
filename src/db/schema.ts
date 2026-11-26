@@ -3798,3 +3798,28 @@ export const riProtocolDays = pgTable(
   },
   (t) => [index("ri_protocol_days_tenant").on(t.tenantSlug, t.day)],
 );
+
+/**
+ * What the office taught by writing and correcting its atos (core/ri/
+ * act-learning): only the words of the natureza, never a name or number,
+ * with R or AV and what the ato did. "Esquecer" marks it, nothing leaves.
+ */
+export const riLearnedActs = pgTable(
+  "ri_learned_acts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    cue: text("cue").notNull(),
+    kind: text("kind").notNull(),
+    effect: text("effect").notNull(),
+    uses: integer("uses").notNull().default(1),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
+    removedAt: timestamp("removed_at", { withTimezone: true }),
+    removedBy: text("removed_by"),
+  },
+  (t) => [uniqueIndex("ri_learned_acts_cue").on(t.tenantSlug, t.cue)],
+);

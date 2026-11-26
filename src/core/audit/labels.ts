@@ -430,6 +430,8 @@ const EXACT: Record<string, string> = {
   "ri.act-seal-image": "Anexou a imagem do selo de um ato",
   "ri.act-seal-image-remove":
     "Tirou a imagem do selo de um ato (fica no histórico)",
+  "ri.learned-act-forget":
+    "Mandou o sistema esquecer uma natureza de ato aprendida",
   "ri.pgv-import": "Importou o arquivo de retorno do PGV-CNM",
   "ri.pgv-credential-save": "Salvou a credencial de integração do PGV-CNM",
   "ri.pgv-credential-clear": "Apagou a credencial de integração do PGV-CNM",
