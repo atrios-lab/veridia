@@ -2261,13 +2261,23 @@ export async function importProtocolBookAction(
     );
     revalidatePath("/admin/ri", "layout");
     const summary = importSummary(created, skipped, reading.errors, "títulos");
-    if (reading.merged && summary.status !== "idle") {
-      return {
-        status: summary.status,
-        message: `${summary.message} ${reading.merged} lançamentos repetidos no livro original (mesmo número ou com letra) foram guardados nas anotações do primeiro.`,
-      };
-    }
-    return summary;
+    if (summary.status === "idle") return summary;
+    const extra = [
+      reading.merged
+        ? `${reading.merged} lançamentos repetidos no livro original (mesmo número ou com letra) foram guardados nas anotações do primeiro.`
+        : "",
+      reading.gaps
+        ? `${reading.gaps} números sem lançamento no livro original entraram como protocolo não utilizado (cancelado).`
+        : "",
+      reading.blank
+        ? `${reading.blank} linhas em branco do livro foram ignoradas.`
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+    return extra
+      ? { status: summary.status, message: `${summary.message} ${extra}` }
+      : summary;
   } catch (error) {
     if (error instanceof SheetFileError) {
       return { status: "error", message: error.message };

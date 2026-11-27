@@ -134,6 +134,43 @@ export function protocolNumber(value: string): {
   return number ? { number, suffix: (m[2] ?? "").toUpperCase(), note } : null;
 }
 
+const ILLEGIBLE =
+  /ilegivel|nao lido|nao encontrado|incert|rasurad|nao legivel|duvidos/;
+
+/**
+ * Every number missing between 1 and the last one of the book becomes a
+ * "Protocolo não utilizado (cancelado)", dated with the número before it
+ * (decision of 27/11/2026: "preencha como sendo protocolo não usado e
+ * cancelado"). A number already in the system is never touched.
+ */
+export function fillGaps(items: ProtocolImport[]): ProtocolImport[] {
+  if (!items.length) return [];
+  const sorted = [...items].sort((a, b) => a.number - b.number);
+  const have = new Set(sorted.map((i) => i.number));
+  const last = sorted[sorted.length - 1]?.number ?? 0;
+  const out: ProtocolImport[] = [];
+  let prev = sorted[0] as ProtocolImport;
+  let k = 0;
+  for (let n = 1; n <= last; n++) {
+    while (k < sorted.length && (sorted[k]?.number ?? 0) < n) {
+      prev = sorted[k] as ProtocolImport;
+      k++;
+    }
+    if (have.has(n)) continue;
+    const before = sorted[k - 1] ?? prev;
+    out.push({
+      number: n,
+      presentedOn: before.presentedOn,
+      presenter: "Não consta",
+      titleKind: "Protocolo não utilizado (cancelado)",
+      acts: "Número sem lançamento no livro original: considerado não utilizado e cancelado na migração. Data do lançamento anterior.",
+      status: "cessado",
+      voided: true,
+    });
+  }
+  return out;
+}
+
 const CANCELLED =
   /cancelad|anulad|sem lancamento|nao consta|nao constam|lacuna|omissao|riscad/;
 
@@ -147,7 +184,7 @@ const CANCELLED =
 export function readProtocolImport(
   rows: string[][],
   today: string,
-): Reading<ProtocolImport> & { merged: number } {
+): Reading<ProtocolImport> & { merged: number; blank: number; gaps: number } {
   const [header = [], ...body] = rows;
   const at = {
     number: column(header, "nº de ordem", "numero de ordem", "numero", "n "),
@@ -161,6 +198,8 @@ export function readProtocolImport(
     return {
       items: [],
       merged: 0,
+      blank: 0,
+      gaps: 0,
       errors: [
         `A planilha precisa das colunas ${PROTOCOL_IMPORT_COLUMNS.slice(0, 4).join(", ")}.`,
       ],
@@ -170,6 +209,7 @@ export function readProtocolImport(
   const byNumber = new Map<number, ProtocolImport>();
   const items: ProtocolImport[] = [];
   let merged = 0;
+  let blank = 0;
   let lastDate: string | null = null;
   const statusByLabel = new Map(
     Object.entries(PROTOCOL_STATUS_LABELS).map(([k, label]) => [
@@ -183,6 +223,11 @@ export function readProtocolImport(
     if (row.every((c) => !String(c ?? "").trim())) return;
     const parsed = protocolNumber(cell(at.number));
     if (!parsed) {
+      // A blank line of the book ("[EM BRANCO]") is not a título: skipped.
+      if (/em branco|\[\s*\]/i.test(cell(at.number))) {
+        blank++;
+        return;
+      }
       errors.push(
         `Linha ${line}: número de ordem "${cell(at.number)}" ilegível; corrija na planilha e importe de novo (o que já entrou fica como está).`,
       );
@@ -226,6 +271,18 @@ export function readProtocolImport(
       lastDate = presentedOn;
     }
     if (parsed.note) notes.push(`Observação: ${parsed.note}`);
+    if (
+      ILLEGIBLE.test(
+        fold(
+          `${typedDate} ${presenter} ${titleKind} ${annotations} ${parsed.note}`,
+        ),
+      )
+    ) {
+      notes.push(
+        "Trecho ilegível ou incerto no livro original; conferir no livro físico.",
+      );
+    }
+    if (voided) notes.push("Protocolo cancelado.");
     const acts = [annotations, ...notes]
       .filter(Boolean)
       .join(" ")
@@ -267,7 +324,16 @@ export function readProtocolImport(
     byNumber.set(parsed.number, item);
     items.push(item);
   });
-  return { items, errors, merged };
+  // The numbers the book skipped (between 1 and the last one): not used,
+  // cancelled, dated with the número before them.
+  const gaps = fillGaps(items);
+  return {
+    items: [...items, ...gaps].sort((a, b) => a.number - b.number),
+    errors,
+    merged,
+    blank,
+    gaps: gaps.length,
+  };
 }
 
 // ── Livro de Cadastro de Aquisição por Estrangeiro ──────────────────────

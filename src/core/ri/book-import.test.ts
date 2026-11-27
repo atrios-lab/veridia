@@ -82,8 +82,11 @@ test("o livro antigo como o cartório digitou: datas, números e cancelados", ()
     ],
     "2026-11-27",
   );
+  assert.equal(r.gaps, 1501);
   assert.deepEqual(
-    r.items.map((i) => [i.number, i.presentedOn, i.voided]),
+    r.items
+      .filter((i) => i.titleKind !== "Protocolo não utilizado (cancelado)")
+      .map((i) => [i.number, i.presentedOn, i.voided]),
     [
       [1, "1981-09-13", true],
       [5, "1981-09-13", false],
@@ -91,11 +94,13 @@ test("o livro antigo como o cartório digitou: datas, números e cancelados", ()
       [1505, "2024-09-02", false],
     ],
   );
-  assert.match(r.items[0]?.acts ?? "", /Data não consta/);
-  assert.match(r.items[1]?.acts ?? "", /sic - grafado 13\/09\/80/);
+  const byNumber = new Map(r.items.map((i) => [i.number, i]));
+  assert.match(byNumber.get(1)?.acts ?? "", /Data não consta/);
+  assert.match(byNumber.get(5)?.acts ?? "", /sic - grafado 13\/09\/80/);
   assert.equal(r.merged, 1);
-  assert.match(r.items[3]?.acts ?? "", /1505-A|1505/);
-  assert.match(r.errors[0] ?? "", /ilegível/);
+  assert.match(byNumber.get(1505)?.acts ?? "", /1505-A|1505/);
+  assert.equal(r.blank, 1);
+  assert.equal(r.errors.length, 0);
 });
 
 test("datas do livro antigo", () => {
@@ -168,4 +173,36 @@ test("o livro de estrangeiro entra pelo modelo, conferido linha a linha", () => 
   assert.equal(r.items[0]?.kind, "arrendamento");
   assert.equal(r.items[0]?.securityArea, true);
   assert.match(r.errors[0] ?? "", /Linha 3: .*atos constitutivos/);
+});
+
+test("números que faltam entram como protocolo não utilizado (cancelado)", () => {
+  const r = readProtocolImport(
+    [
+      [
+        "Nº de ordem",
+        "Data",
+        "Apresentante",
+        "Natureza do título",
+        "Anotações",
+      ],
+      ["1", "02/01/2026", "Pessoa A", "Escritura", "Registrado"],
+      ["4", "05/01/2026", "Pessoa B", "Escritura", "[não lido] Registrado"],
+      ["2.3 [EM BRANCO]", "", "", "", ""],
+    ],
+    "2026-11-27",
+  );
+  assert.deepEqual(
+    r.items.map((i) => [i.number, i.voided, i.presentedOn]),
+    [
+      [1, false, "2026-01-02"],
+      [2, true, "2026-01-02"],
+      [3, true, "2026-01-02"],
+      [4, false, "2026-01-05"],
+    ],
+  );
+  assert.equal(r.gaps, 2);
+  assert.equal(r.blank, 1);
+  assert.equal(r.errors.length, 0);
+  assert.equal(r.items[1]?.titleKind, "Protocolo não utilizado (cancelado)");
+  assert.match(r.items[3]?.acts ?? "", /ilegível ou incerto/);
 });
