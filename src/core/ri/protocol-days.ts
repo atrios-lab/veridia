@@ -20,7 +20,13 @@ export type ClosingKind =
   | "movimento"
   | "sem-movimento"
   | "feriado"
-  | "fim-de-semana";
+  | "fim-de-semana"
+  /**
+   * A day of the Protocolo kept on paper and brought in by the import: it
+   * was closed in the physical book, so it asks for no new termo
+   * (decision of 27/11/2026).
+   */
+  | "livro-fisico";
 
 export interface ClosingReason {
   kind: ClosingKind;
@@ -67,6 +73,9 @@ export function closingText(
   reason: ClosingReason,
   numbers: { count: number; first: number | null; last: number | null },
 ): string {
+  if (reason.kind === "livro-fisico") {
+    return `Dia ${br(day)} escriturado no livro físico do Protocolo; o encerramento consta do próprio livro (dados importados).`;
+  }
   const when = `${br(day)} (${weekdayName(day)})`;
   if (reason.kind === "movimento" && numbers.first !== null) {
     const span =

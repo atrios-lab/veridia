@@ -6,6 +6,8 @@ import { createTestDb } from "@/db/test-db.ts";
 import {
   closeDaysWith,
   closedDaysWith,
+  closePhysicalDaysWith,
+  lastImportedDayWith,
   pendingDaysWith,
   reopenDayWith,
 } from "./ri-protocol-days.ts";
@@ -103,4 +105,61 @@ test("dia encerrado não aceita prenotação; reaberto, aceita", async () => {
     "2026-11-22",
   );
   assert.equal((await closedDaysWith(db, TENANT)).get("2026-11-17")?.count, 1);
+});
+
+test("Protocolo importado: os dias do livro físico saem do aviso sem termo novo", async () => {
+  const T = "cartorio-teste-livro-fisico";
+  // Fictitious títulos of the paper book, imported long after their days.
+  const { importProtocolsWith } = await import("./ri-protocols.ts");
+  await importProtocolsWith(
+    db,
+    T,
+    [
+      {
+        number: 1,
+        presentedOn: "2026-11-02",
+        presenter: "Pessoa A",
+        titleKind: "Escritura",
+        acts: "Registrado",
+        status: "registrado",
+        voided: false,
+      },
+      {
+        number: 2,
+        presentedOn: "2026-11-20",
+        presenter: "Pessoa B",
+        titleKind: "Escritura",
+        acts: "Registrado",
+        status: "registrado",
+        voided: false,
+      },
+    ],
+    { id: "u-oficial" },
+  );
+  const before1 = await pendingDaysWith(db, T, "2026-11-27");
+  assert.equal(before1[0], "2026-11-02");
+  assert.equal(await lastImportedDayWith(db, T), "2026-11-20");
+  const n = await closePhysicalDaysWith(
+    db,
+    T,
+    "2026-11-20",
+    { id: "u-oficial" },
+    "2026-11-27",
+  );
+  assert.equal(n, 19);
+  const after1 = await pendingDaysWith(db, T, "2026-11-27");
+  assert.deepEqual(after1, [
+    "2026-11-21",
+    "2026-11-22",
+    "2026-11-23",
+    "2026-11-24",
+    "2026-11-25",
+    "2026-11-26",
+    "2026-11-27",
+  ]);
+  const closed = await closedDaysWith(db, T);
+  assert.equal(closed.get("2026-11-02")?.kind, "livro-fisico");
+  await assert.rejects(
+    closePhysicalDaysWith(db, T, "2026-11-27", { id: "u" }, "2026-11-27"),
+  );
 });

@@ -220,3 +220,86 @@ export async function reopenDayWith(
     targetId: row.id,
   });
 }
+
+/**
+ * Marks the days up to `to` that are still open as kept in the physical
+ * book (kind "livro-fisico"): the Protocolo brought in by the import was
+ * closed on paper, so none of those days asks for a termo (decision of
+ * 27/11/2026). Nothing is removed; a day already closed stays as it is.
+ */
+export async function closePhysicalDaysWith(
+  database: Database,
+  tenantSlug: string,
+  to: string,
+  actor: Actor,
+  today = officeToday(),
+): Promise<number> {
+  if (to >= today) {
+    throw new RiError(
+      "Escolha um dia anterior a hoje: o dia de hoje é do sistema.",
+    );
+  }
+  const start = await startOf(database, tenantSlug);
+  if (!start || start > to) return 0;
+  const closed = await closedDaysWith(database, tenantSlug);
+  const days = pendingDays(start, to, new Set(closed.keys()), 40_000);
+  const rows = days.map((day) => ({
+    tenantSlug,
+    day,
+    kind: "livro-fisico",
+    why: "escriturado no livro físico",
+    count: 0,
+    firstNumber: null,
+    lastNumber: null,
+    closedBy: actor.id,
+  }));
+  for (let i = 0; i < rows.length; i += 500) {
+    await database.insert(riProtocolDays).values(rows.slice(i, i + 500));
+  }
+  if (days.length) {
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId: actor.id,
+      action: "ri.protocol-day-close",
+      targetType: "ri-protocol-day",
+      targetId: null,
+      reason: `${days.length} dias do livro físico, de ${days[0]} a ${days.at(-1)}`,
+    });
+  }
+  return days.length;
+}
+
+/**
+ * The last day of the títulos brought in by an import: they were created
+ * long after their own date (a live prenotação is typed on its day). The
+ * screen offers it as the end of the physical book.
+ */
+export async function lastImportedDayWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<string | null> {
+  const rows = await database
+    .select({
+      presentedOn: riProtocols.presentedOn,
+      createdAt: riProtocols.createdAt,
+    })
+    .from(riProtocols)
+    .where(
+      and(
+        eq(riProtocols.tenantSlug, tenantSlug),
+        eq(riProtocols.kind, "prenotacao"),
+      ),
+    );
+  let last: string | null = null;
+  for (const r of rows) {
+    const created = r.createdAt.toLocaleDateString("en-CA", {
+      timeZone: OFFICE_TIME_ZONE,
+    });
+    const lagDays =
+      (Date.parse(`${created}T00:00:00Z`) -
+        Date.parse(`${r.presentedOn}T00:00:00Z`)) /
+      86_400_000;
+    if (lagDays > 1 && (!last || r.presentedOn > last)) last = r.presentedOn;
+  }
+  return last;
+}

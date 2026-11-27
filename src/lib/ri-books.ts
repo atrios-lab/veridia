@@ -652,7 +652,9 @@ export async function bookDocumentsFor(
     }
     // The closed days without títulos go in the book too, on their date.
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day] of closed) {
+    for (const [day, row] of closed) {
+      // The days of the physical book have no termo of their own here.
+      if (row.kind === "livro-fisico") continue;
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const ordered = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -850,7 +852,9 @@ export async function bookPdfFor(
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
     const days = await protocolDaysWith(database, tenant.slug, from, to);
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day] of closed) {
+    for (const [day, row] of closed) {
+      // The days of the physical book have no termo of their own here.
+      if (row.kind === "livro-fisico") continue;
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const total = [...days.values()].reduce((n, l) => n + l.length, 0);
