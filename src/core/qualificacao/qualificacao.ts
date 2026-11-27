@@ -48,6 +48,7 @@ export const ACTS: Record<Attribution, Record<string, string>> = {
     "abertura-matricula": "Abertura de matrícula",
     retificacao: "Retificação",
     cancelamento: "Cancelamento",
+    certidao: "Certidão (inteiro teor, ônus, negativa, busca)",
     outro: "Outro ato",
   },
   notas: {
@@ -534,8 +535,11 @@ export function qualificationFromRequest(input: {
   const lower = (input.attribution ?? "").toLowerCase();
   const attribution: Attribution = isAttribution(lower) ? lower : "rcpn";
   const base = emptyQualification(attribution, input.receivedOn);
+  const act = input.actName ? actOfName(attribution, input.actName) : "";
   return {
     ...base,
+    act,
+    actOther: act === "outro" ? (input.actName ?? "").slice(0, 200) : "",
     presenter: {
       name: input.applicantName.slice(0, 300),
       document: "",
@@ -546,4 +550,44 @@ export function qualificationFromRequest(input: {
       ? `Pedido de ${input.actName.toLowerCase()} pelo balcão online, com os documentos anexados.`
       : "",
   };
+}
+
+const foldName = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+/**
+ * The act of the qualificação from the name of the service asked on the
+ * online counter ("CERTIDAO NEGATIVA" → certidão; decision of 27/11/2026),
+ * so the library shows the exigências of that act. "outro" when no act of
+ * the attribution matches.
+ */
+export function actOfName(attribution: Attribution, name: string): string {
+  const n = foldName(name);
+  const acts = ACTS[attribution];
+  const byWord: [RegExp, string][] = [
+    [/certid/, "certidao"],
+    [/cancel/, "cancelamento"],
+    [/retific/, "retificacao"],
+    [/abertura de matricula|matricula nova/, "abertura-matricula"],
+    [/averba/, "averbacao"],
+    [/notifica/, "notificacao"],
+    [/procura/, "procuracao"],
+    [/ata notarial/, "ata"],
+    [/escritura/, "escritura"],
+    [/protest/, "protesto"],
+    [/prenome/, "prenome"],
+    [/sobrenome/, "sobrenome"],
+    [/socioafetiv/, "socioafetiva"],
+    [/divorci|separa/, "divorcio"],
+    [/uniao estavel/, "uniao-estavel"],
+    [/obito/, "obito"],
+    [/registr/, "registro"],
+  ];
+  for (const [re, key] of byWord) {
+    if (re.test(n) && Object.hasOwn(acts, key)) return key;
+  }
+  return "outro";
 }

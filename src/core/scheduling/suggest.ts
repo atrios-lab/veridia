@@ -26,11 +26,13 @@ export interface SuggestInput {
   /** How many people attend at once. */
   staff: number;
   /**
-   * The attendants' lunch, taken in turns inside the window: with 12:00 to
-   * 14:00 and an hour each, half go at 12:00 and half at 13:00, and the
-   * counter never closes. Absent: nobody stops.
+   * The attendants' lunch. In turns inside the window: with 12:00 to 14:00
+   * and an hour each, half go at 12:00 and half at 13:00, and the counter
+   * never closes. `closed`: the office closes for lunch and everyone stops
+   * from `from` and comes back at `to` (decision of 27/11/2026). Absent:
+   * nobody stops.
    */
-  lunch?: { from: SlotTime; to: SlotTime; minutes: number };
+  lunch?: { from: SlotTime; to: SlotTime; minutes: number; closed?: boolean };
   /** The quick services, placed between the long ones. */
   quick: SuggestService[];
   /** The other services, taken in turns by each attendant. */
@@ -80,7 +82,15 @@ function lane(input: SuggestInput, index: number): SuggestedBlock[] {
   // 2 at the next, and round again.
   let lunchStart: number | undefined;
   let lunchEnd: number | undefined;
-  if (input.lunch && input.lunch.minutes > 0) {
+  if (input.lunch?.closed) {
+    // Closed for lunch: the whole team stops at the same time.
+    const from = minutesOf(input.lunch.from);
+    const to = minutesOf(input.lunch.to);
+    if (to > from) {
+      lunchStart = from;
+      lunchEnd = to;
+    }
+  } else if (input.lunch && input.lunch.minutes > 0) {
     const from = minutesOf(input.lunch.from);
     const turns = Math.floor(
       (minutesOf(input.lunch.to) - from) / input.lunch.minutes,

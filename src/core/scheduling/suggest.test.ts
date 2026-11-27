@@ -111,3 +111,22 @@ test("a duração sugerida e o que é rápido saem do nome do serviço", () => {
   );
   assert.equal(isQuickService("Habilitação de casamento"), false);
 });
+
+test("fecha para almoço: todos param e voltam juntos", () => {
+  const s = suggestGrid({
+    open: "08:00",
+    close: "17:00",
+    staff: 2,
+    lunch: { from: "12:00", to: "14:00", minutes: 60, closed: true },
+    quick: [],
+    long: [{ id: "a", minutes: 60 }],
+  });
+  for (const lane of s.lanes) {
+    const lunch = lane.find((b) => b.kind === "lunch");
+    assert.equal(lunch?.start, "12:00");
+    assert.equal(lunch?.end, "14:00");
+  }
+  assert.ok(!s.times.includes("12:00"));
+  assert.ok(!s.times.includes("13:00"));
+  assert.ok(s.times.includes("14:00"));
+});

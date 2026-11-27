@@ -26,6 +26,53 @@ const CNN = "Código Nacional de Normas (Provimento CNJ nº 149/2023)";
 const CNRN = "Código de Normas da CGJ/RN (Provimento CGJ/RN nº 156/2016)";
 
 export const LIBRARY_SEEDS: LibrarySeed[] = [
+  // ------------------------------------------------ RI, certidões
+  // Lei nº 6.015/1973, arts. 17, 19, 179 and 180, checked on 27/11/2026
+  // in the compiled text (planalto.gov.br).
+  {
+    key: "ri-certidao-dados-busca",
+    attribution: "ri",
+    acts: ["certidao"],
+    title: "Dados para a busca",
+    description:
+      "O pedido de certidão não traz os dados que a busca exige: pelo Indicador Pessoal, o nome completo e o CPF ou CNPJ da pessoa; pelo Indicador Real, a matrícula, a transcrição ou a identificação e a localização do imóvel.",
+    howToComply:
+      "Informar o nome completo e o CPF ou CNPJ da pessoa pesquisada (busca pessoal) ou a matrícula, a transcrição ou a localização do imóvel (busca real).",
+    basis: `${LRP}, arts. 179 e 180 (Indicadores Real e Pessoal).`,
+  },
+  {
+    key: "ri-certidao-especie",
+    attribution: "ri",
+    acts: ["certidao"],
+    title: "Espécie da certidão e período da busca",
+    description:
+      "O pedido não diz que certidão quer (inteiro teor, ônus reais, negativa ou positiva de propriedade, vintenária, em relatório conforme quesitos) nem o período da busca, quando ele importa.",
+    howToComply:
+      "Indicar a espécie da certidão e, sendo busca, o período a pesquisar; em relatório, formular os quesitos.",
+    basis: `${LRP}, art. 19.`,
+  },
+  {
+    key: "ri-certidao-assinatura-internet",
+    attribution: "ri",
+    acts: ["certidao"],
+    title: "Assinatura do pedido feito pela internet",
+    description:
+      "O pedido chegou pela internet sem assinatura eletrônica avançada ou qualificada.",
+    howToComply:
+      "Assinar o requerimento com assinatura eletrônica avançada ou qualificada (por exemplo, gov.br ou certificado ICP-Brasil) e reenviar.",
+    basis: `${LRP}, art. 17, § 1º.`,
+  },
+  {
+    key: "ri-certidao-emolumentos",
+    attribution: "ri",
+    acts: ["certidao"],
+    title: "Emolumentos da certidão",
+    description:
+      "Os emolumentos da certidão, pela tabela vigente, ainda não foram pagos.",
+    howToComply:
+      "Pagar os emolumentos indicados pela serventia, conforme a tabela de emolumentos vigente.",
+    basis: `${LRP}, art. 14; tabela de emolumentos vigente.`,
+  },
   // ------------------------------------------------ RCPN, any act
   {
     key: "rcpn-requerimento",
