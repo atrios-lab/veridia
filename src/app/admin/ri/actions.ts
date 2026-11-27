@@ -1579,9 +1579,6 @@ export async function saveBookAction(
       await updateBookWith(db, ok.tenant.slug, id, input, ok.actor);
     } else {
       target = await openBookWith(db, ok.tenant.slug, input, ok.actor);
-      if (input.book === 2) {
-        await openIndexBooksWith(db, ok.tenant.slug, ok.actor);
-      }
     }
   } catch (error) {
     return failure(error, "ri.book.save");
@@ -1592,6 +1589,37 @@ export async function saveBookAction(
     status: "success",
     message: "Livro alterado. Os dados anteriores ficaram no histórico.",
   };
+}
+
+/**
+ * Optional (decision of 27/11/2026): opens the Livros 4 and 5 that were
+ * never opened, in meio eletrônico, on the day of the Livro 2 in use. An
+ * office that already keeps them launches its own or imports instead.
+ */
+export async function openIndexBooksAction(
+  _previous: RiState,
+  _formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  let opened = 0;
+  try {
+    opened = await openIndexBooksWith(db, ok.tenant.slug, ok.actor);
+  } catch (error) {
+    return failure(error, "ri.book.save");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return opened
+    ? {
+        status: "success",
+        message:
+          "Livros 4 e 5 abertos na data do Livro 2, em meio eletrônico. O termo de abertura já pode ser assinado.",
+      }
+    : {
+        status: "error",
+        message:
+          "Abra antes o Livro 2: os Livros 4 e 5 tomam a data dele. Se já estão abertos, nada muda.",
+      };
 }
 
 /** Closes the volume: date, last folha, and the termo de encerramento. */
