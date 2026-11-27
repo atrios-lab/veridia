@@ -206,3 +206,18 @@ test("números que faltam entram como protocolo não utilizado (cancelado)", () 
   assert.equal(r.items[1]?.titleKind, "Protocolo não utilizado (cancelado)");
   assert.match(r.items[3]?.acts ?? "", /ilegível ou incerto/);
 });
+
+test("Protocolo: a coluna Livro vai com cada título", () => {
+  const r = readProtocolImport(
+    [
+      ["Nº de ordem", "Data", "Apresentante", "Natureza do título", "Livro"],
+      ["1", "05/03/2001", "Pessoa A", "Escritura", "1"],
+      ["2", "06/03/2001", "Pessoa B", "Escritura", "1-B"],
+    ],
+    "2026-11-27",
+  );
+  assert.deepEqual(
+    r.items.map((i) => i.volume),
+    ["1", "1-B"],
+  );
+});

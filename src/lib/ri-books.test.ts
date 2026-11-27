@@ -14,7 +14,9 @@ import {
   listBooksWith,
   openBookWith,
   openIndexBooksWith,
+  openProtocolVolumesWith,
   protocolDaysWith,
+  protocolVolumeOf,
   readBookInput,
   reopenBookWith,
   setBookDeletedWith,
@@ -237,4 +239,73 @@ test("os Livros 4 e 5 abrem uma vez só, na data do Livro 2, em meio eletrônico
     assert.equal(r?.volume, String(n));
   }
   assert.equal(await openIndexBooksWith(db, T, ACTOR), 0);
+});
+
+test("Livro 1: volume pelo número, com 1, 1-B e Livro 1-C", () => {
+  assert.equal(protocolVolumeOf("1"), "1");
+  assert.equal(protocolVolumeOf("01"), "1");
+  assert.equal(protocolVolumeOf("Livro 1-b"), "1-B");
+  assert.equal(protocolVolumeOf("livro nº 1 - C"), "1-C");
+  assert.equal(protocolVolumeOf("2"), null);
+});
+
+test("Livro 1: abre os volumes pelos números, com as datas dos títulos", async () => {
+  const T = "cartorio-teste-volumes";
+  const { importProtocolsWith } = await import("./ri-protocols.ts");
+  const item = (number: number, presentedOn: string) => ({
+    number,
+    presentedOn,
+    presenter: "Pessoa Fictícia",
+    titleKind: "Escritura",
+    acts: "Registrado",
+    status: "registrado" as const,
+    voided: false,
+  });
+  await importProtocolsWith(
+    db,
+    T,
+    [
+      item(10, "2001-03-05"),
+      item(11, "2007-07-26"),
+      item(12, "2007-08-02"),
+      item(13, "2024-06-28"),
+      item(14, "2024-07-04"),
+    ],
+    ACTOR,
+  );
+  const r = await openProtocolVolumesWith(
+    db,
+    T,
+    [
+      { volume: "1-B", first: 12, last: 13, form: "folhas", sheetCount: 200 },
+      { volume: "1", first: 10, last: 11, form: "folhas", sheetCount: 200 },
+      {
+        volume: "1-C",
+        first: 14,
+        last: null,
+        form: "eletronico",
+        sheetCount: 0,
+      },
+    ],
+    ACTOR,
+    "2026-11-27",
+  );
+  assert.deepEqual(r.opened, ["1", "1-B", "1-C"]);
+  const books = (await listBooksWith(db, T)).filter((b) => b.book === 1);
+  const by = new Map(books.map((b) => [b.volume, b]));
+  assert.equal(by.get("1")?.openedOn, "2001-03-05");
+  assert.equal(by.get("1")?.closedOn, "2007-07-26");
+  assert.equal(by.get("1-B")?.openedOn, "2007-08-02");
+  assert.equal(by.get("1-B")?.closedOn, "2024-06-28");
+  assert.equal(by.get("1-C")?.closedOn, null);
+  assert.equal(by.get("1-C")?.firstItem, 14);
+  // Again: nothing changes.
+  const again = await openProtocolVolumesWith(
+    db,
+    T,
+    [{ volume: "1", first: 10, last: 11, form: "folhas", sheetCount: 0 }],
+    ACTOR,
+    "2026-11-27",
+  );
+  assert.deepEqual(again, { opened: [], kept: ["1"] });
 });
