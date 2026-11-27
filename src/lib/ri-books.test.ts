@@ -216,7 +216,7 @@ test("the fichas of a volume and the days of the Protocolo", async () => {
   assert.equal(days.has("2026-11-21"), false);
 });
 
-test("os Livros 4 e 5 abrem com a data e a forma do Livro 2, uma vez só", async () => {
+test("os Livros 4 e 5 abrem uma vez só, na data do Livro 2, em meio eletrônico", async () => {
   const T = "cartorio-teste-indicadores";
   assert.equal(await openIndexBooksWith(db, T, ACTOR), 0);
   await openBookWith(
@@ -233,7 +233,7 @@ test("os Livros 4 e 5 abrem com a data e a forma do Livro 2, uma vez só", async
   for (const n of [4, 5]) {
     const r = rows.find((x) => x.book === n);
     assert.equal(r?.openedOn, "2026-04-30");
-    assert.equal(r?.form, "fichas");
+    assert.equal(r?.form, "eletronico");
     assert.equal(r?.volume, String(n));
   }
   assert.equal(await openIndexBooksWith(db, T, ACTOR), 0);

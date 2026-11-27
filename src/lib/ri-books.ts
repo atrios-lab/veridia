@@ -216,7 +216,9 @@ export async function openBookWith(
  * The Indicador Real (Livro 4) and the Indicador Pessoal (Livro 5) are
  * kept by the system from the matrículas and the people: when they were
  * never opened, they open with the Livro 2 in use, on the same day and in
- * the same form (decision of 27/11/2026). Returns how many were opened.
+ * electronically: they are kept by the system (decision of 27/11/2026).
+ * There is one Livro 4 and one Livro 5 for the whole acervo, never one per
+ * Livro 2: they open once. Returns how many were opened.
  */
 export async function openIndexBooksWith(
   database: Database,
@@ -239,12 +241,12 @@ export async function openIndexBooksWith(
       {
         book,
         volume: String(book),
-        form: base.form as BookForm,
+        form: "eletronico",
         sheetCount: 0,
         firstItem: null,
         lastItem: null,
         openedOn: base.openedOn,
-        openingNotes: `Aberto junto com o Livro ${base.volume}; alimentado pelas matrículas e pessoas lançadas (Lei nº 6.015/1973, arts. 179 e 180).`,
+        openingNotes: `Aberto na data do Livro ${base.volume}, em meio eletrônico; alimentado pelas matrículas e pessoas lançadas (Lei nº 6.015/1973, arts. 179 e 180).`,
       },
       actor,
     );

@@ -1594,33 +1594,6 @@ export async function saveBookAction(
   };
 }
 
-/** Opens the Livros 4 and 5 with the Livro 2 in use (same day, same form). */
-export async function openIndexBooksAction(
-  _previous: RiState,
-  _formData: FormData,
-): Promise<RiState> {
-  const ok = await access("ri.books");
-  if (!ok) return denied("ri.books");
-  let opened = 0;
-  try {
-    opened = await openIndexBooksWith(db, ok.tenant.slug, ok.actor);
-  } catch (error) {
-    return failure(error, "ri.book.save");
-  }
-  revalidatePath("/admin/ri", "layout");
-  return opened
-    ? {
-        status: "success",
-        message:
-          "Livros 4 e 5 abertos com a mesma data e forma do Livro 2. O termo de abertura já pode ser assinado.",
-      }
-    : {
-        status: "error",
-        message:
-          "Abra antes o Livro 2: os Livros 4 e 5 acompanham a data dele.",
-      };
-}
-
 /** Closes the volume: date, last folha, and the termo de encerramento. */
 export async function closeBookAction(
   _previous: RiState,
