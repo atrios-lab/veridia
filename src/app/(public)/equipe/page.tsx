@@ -178,6 +178,11 @@ export default async function TeamPage() {
                           >
                             {group.level.label}
                           </p>
+                          {person.dpo && (
+                            <p className="mx-auto mt-1.5 w-fit rounded-full bg-brand-tint px-2.5 py-0.5 text-center text-[11px] font-semibold text-brand-primary">
+                              Encarregado de Dados (DPO)
+                            </p>
+                          )}
                           {person.profession && (
                             <p className="mt-1 text-center text-xs text-brand-muted">
                               {person.profession}

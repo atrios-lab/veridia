@@ -61,6 +61,7 @@ export interface PersonView {
   showOnSite: boolean;
   imageConsent: boolean;
   canSign: boolean;
+  isDpo: boolean;
   hasPhoto: boolean;
   hasPortaria: boolean;
   portariaName: string;
@@ -538,6 +539,24 @@ export function PersonForm({
               <span className="block text-xs text-muted-foreground">
                 Entra em "Quem assina" (guias, ISS e declarações), com este
                 nome, cargo e Portaria/Matrícula.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="isDpo"
+              value="1"
+              defaultChecked={person?.isDpo ?? false}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">Encarregado de Dados (DPO)</span>
+              <span className="block text-xs text-muted-foreground">
+                Função da LGPD (Lei nº 13.709/2018, art. 41), além do cargo:
+                aparece com o selo no quadro da equipe e com a foto na área LGPD
+                do site. Só uma pessoa por vez; marcar aqui tira de quem tinha.
+                A foto segue a autorização de imagem.
               </span>
             </span>
           </label>

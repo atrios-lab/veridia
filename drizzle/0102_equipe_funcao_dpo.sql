@@ -1,0 +1,1 @@
+ALTER TABLE "office_staff" ADD COLUMN "is_dpo" boolean DEFAULT false NOT NULL;
