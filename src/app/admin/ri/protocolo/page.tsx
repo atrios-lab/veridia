@@ -12,6 +12,7 @@ import {
 import { buttonVariants } from "../../_ui/button.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
+import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 import { importProtocolBookAction } from "../actions.ts";
 import { dueOf, statusText } from "./_shared.ts";
@@ -157,16 +158,10 @@ export default async function ProtocolListPage({
               </>
             ) : (
               <p className="text-sm text-muted-foreground">
-                O Livro 1 ainda não foi lançado no sistema, por isso não há
-                termos para imprimir.{" "}
-                <Link
-                  href="/admin/ri/livros"
-                  className="text-primary underline-offset-4 hover:underline"
-                >
-                  Abrir o Livro 1 em Livros e assinatura
-                </Link>{" "}
-                (com o número e a data do livro em uso). A exportação e a
-                importação ao lado já funcionam.
+                O Livro 1 ainda não foi aberto no sistema, por isso não há
+                termos para imprimir. Abra os livros em &quot;Abrir os livros do
+                Protocolo&quot;, logo abaixo: basta dizer os números de cada um.
+                A exportação e a importação ao lado já funcionam.
               </p>
             )}
           </div>
@@ -198,12 +193,71 @@ export default async function ProtocolListPage({
             )}
             <p className="text-xs text-muted-foreground">
               Colunas: Nº de ordem, Data, Apresentante, Natureza do título, Atos
-              (anotações) e, se quiser, Situação. Número que já existe fica como
-              está; título importado não volta a contar prazo.
+              (anotações) e, se quiser, Situação e Livro (1, 1-A, 1-B…). Com a
+              coluna Livro, os livros abrem sozinhos na importação. Número que
+              já existe fica como está; título importado não volta a contar
+              prazo.
             </p>
           </div>
         </div>
       </Panel>
+
+      {books1.length > 1 && (
+        <Panel
+          title="Os livros do Protocolo"
+          description="Cada livro com os seus números, termos e PDF."
+        >
+          <ul className="divide-y text-sm">
+            {[...books1]
+              .sort(
+                (a, b) =>
+                  (a.firstItem ?? 0) - (b.firstItem ?? 0) ||
+                  a.openedOn.localeCompare(b.openedOn),
+              )
+              .map((b) => (
+                <li
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-2 py-2"
+                >
+                  <span>
+                    <Link
+                      href={`/admin/ri/livros/${b.id}`}
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Livro {b.volume}
+                    </Link>
+                    <span className="text-muted-foreground">
+                      {b.firstItem ? ` · nº ${b.firstItem}` : ""}
+                      {b.lastItem
+                        ? ` a ${b.lastItem}`
+                        : b.firstItem
+                          ? " em diante"
+                          : ""}
+                      {` · aberto em ${brDate(b.openedOn)}`}
+                      {b.closedOn
+                        ? ` · encerrado em ${brDate(b.closedOn)}`
+                        : " · em uso"}
+                    </span>
+                  </span>
+                  <SignOrPrint
+                    pdfHref={`/admin/ri/livros/${b.id}/pdf`}
+                    title={`Livro ${b.volume} (Protocolo)`}
+                    size="sm"
+                  />
+                </li>
+              ))}
+          </ul>
+        </Panel>
+      )}
+
+      {riCan(session, "ri.books") && (
+        <Panel
+          title="Abrir os livros do Protocolo"
+          description="Para o Protocolo que veio do livro físico: o sistema abre cada livro (1, 1-A, 1-B…) pelos números e tira as datas dos títulos importados."
+        >
+          <ProtocolVolumesForm />
+        </Panel>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-4">
         {[

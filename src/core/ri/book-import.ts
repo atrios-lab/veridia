@@ -64,6 +64,8 @@ export interface ProtocolImport {
   acts: string;
   status: ProtocolStatus;
   voided: boolean;
+  /** The "Livro" column, when the spreadsheet has it ("1", "1-B"…). */
+  volume?: string;
 }
 
 /** The columns the Livro 1 is exported with (art. 175), and "Situação". */
@@ -193,6 +195,7 @@ export function readProtocolImport(
     title: column(header, "natureza"),
     acts: column(header, "atos", "anotacoes", "anotacao"),
     status: column(header, "situacao"),
+    volume: column(header, "livro"),
   };
   if (at.number < 0 || at.date < 0 || at.presenter < 0 || at.title < 0) {
     return {
@@ -315,6 +318,8 @@ export function readProtocolImport(
             : "cessado"),
       voided,
     };
+    const volume = at.volume >= 0 ? cell(at.volume).slice(0, 30) : "";
+    if (volume) item.volume = volume;
     if (!item.presenter || !item.titleKind) {
       item.presenter ||= "Não consta";
       item.titleKind ||= "Não consta";

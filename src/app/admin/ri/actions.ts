@@ -64,6 +64,9 @@ import {
   fichaLegalPdfWith,
   openBookWith,
   openIndexBooksWith,
+  openProtocolVolumesWith,
+  type ProtocolVolume,
+  protocolVolumeOf,
   readBookInput,
   reopenBookWith,
   setBookDeletedWith,
@@ -2299,6 +2302,39 @@ export async function importProtocolBookAction(
     if (lastDay && lastDay < officeToday()) {
       await closePhysicalDaysWith(db, ok.tenant.slug, lastDay, ok.actor);
     }
+    // The "Livro" column opens the volumes by themselves (decision of
+    // 27/11/2026): each one from its first to its last número.
+    const ranges = new Map<string, { first: number; last: number }>();
+    for (const item of reading.items) {
+      const volume = protocolVolumeOf(item.volume ?? "");
+      if (!volume) continue;
+      const r = ranges.get(volume);
+      ranges.set(volume, {
+        first: Math.min(r?.first ?? item.number, item.number),
+        last: Math.max(r?.last ?? item.number, item.number),
+      });
+    }
+    let books = "";
+    if (ranges.size) {
+      const ordered = [...ranges.entries()].sort(
+        ([, a], [, b]) => a.first - b.first,
+      );
+      const { opened } = await openProtocolVolumesWith(
+        db,
+        ok.tenant.slug,
+        ordered.map(([volume, r], i) => ({
+          volume,
+          first: r.first,
+          last: i === ordered.length - 1 ? null : r.last,
+          form: "folhas",
+          sheetCount: 0,
+        })),
+        ok.actor,
+      );
+      if (opened.length) {
+        books = `Livros abertos pela coluna "Livro": ${opened.join(", ")}.`;
+      }
+    }
     revalidatePath("/admin/ri", "layout");
     const summary = importSummary(created, skipped, reading.errors, "títulos");
     if (summary.status === "idle") return summary;
@@ -2312,6 +2348,7 @@ export async function importProtocolBookAction(
       reading.blank
         ? `${reading.blank} linhas em branco do livro foram ignoradas.`
         : "",
+      books,
     ]
       .filter(Boolean)
       .join(" ");
@@ -2349,5 +2386,77 @@ export async function importForeignAction(
       return { status: "error", message: error.message };
     }
     return foreignFailure(error, "ri.foreign.import");
+  }
+}
+
+/**
+ * Opens the volumes of the Livro 1 from their números (up to 6 lines):
+ * the dates come from the títulos already imported.
+ */
+export async function openProtocolVolumesAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const volumes: ProtocolVolume[] = [];
+  for (let i = 0; i < 6; i++) {
+    const raw = text(formData, `livro-${i}`);
+    const firstRaw = text(formData, `de-${i}`);
+    if (!raw && !firstRaw) continue;
+    const volume = protocolVolumeOf(raw);
+    if (!volume) {
+      return {
+        status: "error",
+        message: `Linha ${i + 1}: o livro deve ser 1, 1-A, 1-B e assim por diante (Lei nº 6.015/1973, art. 6º).`,
+      };
+    }
+    const first = Number(firstRaw.replace(/\D/g, ""));
+    const lastRaw = text(formData, `ate-${i}`).replace(/\D/g, "");
+    const last = lastRaw ? Number(lastRaw) : null;
+    if (!first) {
+      return {
+        status: "error",
+        message: `Linha ${i + 1}: diga o primeiro número de ordem do livro ${volume}.`,
+      };
+    }
+    if (last !== null && last < first) {
+      return {
+        status: "error",
+        message: `Linha ${i + 1}: o último número não pode ser menor que o primeiro.`,
+      };
+    }
+    volumes.push({
+      volume,
+      first,
+      last,
+      form:
+        text(formData, `forma-${i}`) === "eletronico" ? "eletronico" : "folhas",
+      sheetCount: Number(text(formData, `folhas-${i}`).replace(/\D/g, "")) || 0,
+    });
+  }
+  if (!volumes.length) {
+    return { status: "error", message: "Preencha ao menos um livro." };
+  }
+  try {
+    const { opened, kept } = await openProtocolVolumesWith(
+      db,
+      ok.tenant.slug,
+      volumes,
+      ok.actor,
+    );
+    revalidatePath("/admin/ri", "layout");
+    const parts = [
+      opened.length ? `Livros abertos: ${opened.join(", ")}.` : "",
+      kept.length
+        ? `Já estavam abertos e ficaram como estão: ${kept.join(", ")}.`
+        : "",
+    ].filter(Boolean);
+    return {
+      status: "success",
+      message: `${parts.join(" ")} As datas vieram dos títulos lançados; confira com os termos dos livros físicos.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.book.open");
   }
 }

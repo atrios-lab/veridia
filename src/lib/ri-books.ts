@@ -100,7 +100,7 @@ export function readBookInput(
   if (!isBookNumber(book)) throw new RiError("Escolha o livro (1 a 5).");
   const volume = clean(raw.volume, 20).toUpperCase().replace(/\s+/g, "");
   if (
-    !/^[1-5](-[A-Z0-9]{1,4})?$/.test(volume) ||
+    !/^[1-5](-[A-Z0-9]{1,9})?$/.test(volume) ||
     !volume.startsWith(String(book))
   ) {
     throw new RiError(
@@ -643,7 +643,21 @@ export async function bookDocumentsFor(
   if (record.book === 1) {
     const from = isoDate(range.from ?? "") ?? row.openedOn;
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
-    const days = await protocolDaysWith(database, tenant.slug, from, to);
+    // A volume with its números (1, 1-B…) takes only its own títulos: two
+    // volumes can share the day one closed and the other opened.
+    const low = record.firstItem ?? 1;
+    const high = record.lastItem ?? Number.MAX_SAFE_INTEGER;
+    const days = new Map(
+      [...(await protocolDaysWith(database, tenant.slug, from, to))]
+        .map(
+          ([day, lines]) =>
+            [
+              day,
+              lines.filter((l) => l.number >= low && l.number <= high),
+            ] as const,
+        )
+        .filter(([, lines]) => lines.length > 0),
+    );
     const total = [...days.values()].reduce((n, l) => n + l.length, 0);
     if (total > MAX_PROTOCOL_LINES) {
       throw new BookTooLarge(
@@ -1263,4 +1277,108 @@ export async function fichaLegalPdfWith(
     custasNoteFor(tenant.location.state),
   );
   return { bytes, number: p.number };
+}
+
+export interface ProtocolVolume {
+  /** "1", "1-B", "1-C"… */
+  volume: string;
+  first: number;
+  /** Empty: the volume in use. */
+  last: number | null;
+  form: BookForm;
+  sheetCount: number;
+}
+
+/**
+ * Opens the volumes of the Livro 1 from their números (decision of
+ * 27/11/2026): the dates come from the títulos already in the Protocolo,
+ * the first one's for the abertura and the last one's for the
+ * encerramento. A volume already open is left as it is.
+ */
+export async function openProtocolVolumesWith(
+  database: Database,
+  tenantSlug: string,
+  volumes: ProtocolVolume[],
+  actor: Actor,
+  today = officeToday(),
+): Promise<{ opened: string[]; kept: string[] }> {
+  const rows = await database
+    .select({
+      number: riProtocols.number,
+      presentedOn: riProtocols.presentedOn,
+    })
+    .from(riProtocols)
+    .where(
+      and(
+        eq(riProtocols.tenantSlug, tenantSlug),
+        eq(riProtocols.kind, "prenotacao"),
+      ),
+    );
+  const opened: string[] = [];
+  const kept: string[] = [];
+  const sorted = [...volumes].sort((a, b) => a.first - b.first);
+  for (const v of sorted) {
+    const input = readBookInput(
+      {
+        book: 1,
+        volume: v.volume,
+        form: v.form,
+        sheetCount: String(v.sheetCount || ""),
+        firstItem: String(v.first),
+        lastItem: v.last === null ? "" : String(v.last),
+        openedOn: "",
+      },
+      today,
+    );
+    if (await volumeTaken(database, tenantSlug, input)) {
+      kept.push(input.volume);
+      continue;
+    }
+    const high = v.last ?? Number.MAX_SAFE_INTEGER;
+    const dates = rows
+      .filter((r) => r.number >= v.first && r.number <= high)
+      .map((r) => r.presentedOn)
+      .sort();
+    const id = await openBookWith(
+      database,
+      tenantSlug,
+      {
+        ...input,
+        openedOn: dates[0] ?? today,
+        openingNotes:
+          "Livro aberto pelo sistema a partir dos números de ordem; a data é a do primeiro título lançado nele. Confira com o termo de abertura do livro.",
+      },
+      actor,
+    );
+    if (v.last !== null) {
+      await closeBookWith(
+        database,
+        tenantSlug,
+        id,
+        {
+          closedOn: dates.at(-1) ?? dates[0] ?? today,
+          lastSheet: null,
+          lastItem: v.last,
+          notes:
+            "Encerrado pelo sistema na data do último título lançado no livro. Confira com o termo de encerramento do livro físico.",
+        },
+        actor,
+      );
+    }
+    opened.push(input.volume);
+  }
+  return { opened, kept };
+}
+
+/** "1", "1-b", "Livro 1-B", "livro nº 1 - B" → "1-B"; anything else null. */
+export function protocolVolumeOf(value: string): string | null {
+  const v = value
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/LIVRO|N[º°O]\.?|\s+/g, "")
+    .replace(/^0+(?=\d)/, "");
+  const m = /^1-?([A-Z0-9]{1,9})?$/.exec(v);
+  if (!m) return null;
+  return m[1] ? `1-${m[1]}` : "1";
 }
