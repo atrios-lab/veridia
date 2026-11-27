@@ -480,6 +480,11 @@ const EXACT: Record<string, string> = {
   "ri.protocol-import": "Importou títulos do Protocolo (Livro 1)",
   "ri.foreign-import":
     "Importou assentos do livro de aquisição por estrangeiro",
+  "book.entry-create": "Lançou num livro da atribuição",
+  "book.entry-update": "Alterou um lançamento de livro",
+  "book.entry-delete": "Apagou um lançamento de livro",
+  "book.entry-restore": "Restaurou um lançamento de livro",
+  "book.import": "Importou lançamentos de livro",
   "ri.book-open": "Abriu um livro do Registro de Imóveis (termo de abertura)",
   "ri.protocol-day-close": "Encerrou dias do Protocolo (Livro 1)",
   "ri.protocol-day-reopen": "Reabriu um dia encerrado do Protocolo (Livro 1)",
@@ -923,6 +928,15 @@ const EXPLANATIONS: Record<string, string> = {
     "Títulos do Protocolo que o cartório já tinha foram importados por planilha. Número já existente ficou como estava; nenhum título importado conta prazo.",
   "ri.foreign-import":
     "Assentos do livro de aquisição por estrangeiro foram importados por planilha. Número já existente ficou como estava.",
+  "book.entry-create":
+    "Um lançamento foi incluído num livro de Notas, Títulos e Documentos, Pessoas Jurídicas ou Protesto.",
+  "book.entry-update":
+    "Um lançamento de livro foi alterado, com o motivo. Os valores anteriores ficam no histórico do lançamento.",
+  "book.entry-delete":
+    "Um lançamento saiu do livro, com o motivo. Ele continua guardado e pode ser restaurado.",
+  "book.entry-restore": "Um lançamento apagado voltou ao livro.",
+  "book.import":
+    "Lançamentos foram importados por planilha ou JSON num livro da atribuição. Nenhum valor que já estava no livro foi trocado.",
   "ri.book-open":
     "Um livro do Registro de Imóveis foi aberto no sistema, com número, forma de escrituração e folhas. O termo de abertura sai dele, para assinar (Lei nº 6.015/1973, art. 4º).",
   "ri.book-edit":

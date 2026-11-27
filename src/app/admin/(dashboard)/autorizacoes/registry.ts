@@ -5,6 +5,7 @@ import {
 } from "@/app/admin/(dashboard)/adequacao/actions.ts";
 import { removeAppointmentAction as a7 } from "@/app/admin/(dashboard)/agenda/actions.ts";
 import { removeAttributionFileAction as a6 } from "@/app/admin/(dashboard)/atribuicoes/actions.ts";
+import { setBookEntryDeletedAction as g1 } from "@/app/admin/(dashboard)/atribuicoes/livros-actions.ts";
 import { disableCertificate as a14 } from "@/app/admin/(dashboard)/configuracoes/certificados/actions.ts";
 import { removePixKey as a18 } from "@/app/admin/(dashboard)/configuracoes/cobranca/actions.ts";
 import { deletePersonAction as a17 } from "@/app/admin/(dashboard)/configuracoes/equipe/actions.ts";
@@ -89,6 +90,11 @@ import {
 type Replayable = (previous: any, formData: FormData) => Promise<unknown>;
 
 export const APPROVABLE: Record<string, { label: string; run: Replayable }> = {
+  "attributions.book-entry": {
+    label:
+      "Lançamento de livro (Notas, Títulos e Documentos, Pessoas Jurídicas ou Protesto)",
+    run: g1,
+  },
   "ri.foreign": {
     label: "Assento do livro de aquisição por estrangeiro",
     run: f1,

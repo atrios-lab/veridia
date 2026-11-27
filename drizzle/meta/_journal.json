@@ -708,6 +708,13 @@
       "when": 1795776593602,
       "tag": "0100_livro_aquisicao_estrangeiro",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1795780698719,
+      "tag": "0101_livros_das_atribuicoes",
+      "breakpoints": true
     }
   ]
 }
