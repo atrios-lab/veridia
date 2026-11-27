@@ -117,6 +117,7 @@ import {
   closePhysicalDaysWith,
   reopenDayWith,
 } from "@/lib/ri-protocol-days.ts";
+import { setBookPagingWith } from "@/lib/ri-protocol-sheets.ts";
 import {
   createProtocolWith,
   fulfillRequirementWith,
@@ -2401,14 +2402,19 @@ export async function openProtocolVolumesAction(
   if (!ok) return denied("ri.books");
   const volumes: ProtocolVolume[] = [];
   for (let i = 0; i < 6; i++) {
-    const raw = text(formData, `livro-${i}`);
+    const raw = text(formData, `livro-${i}`).trim();
     const firstRaw = text(formData, `de-${i}`);
     if (!raw && !firstRaw) continue;
-    const volume = protocolVolumeOf(raw);
+    // Every volume is the Livro 1; only the letter it had is typed ("B").
+    const volume = protocolVolumeOf(
+      /^[a-z0-9]{1,9}$/i.test(raw) && !/^0*1$/.test(raw)
+        ? `1-${raw}`
+        : raw || "1",
+    );
     if (!volume) {
       return {
         status: "error",
-        message: `Linha ${i + 1}: o livro deve ser 1, 1-A, 1-B e assim por diante (Lei nº 6.015/1973, art. 6º).`,
+        message: `Linha ${i + 1}: a letra do livro antigo deve ser A, B, C… (ou vazia, se não havia).`,
       };
     }
     const first = Number(firstRaw.replace(/\D/g, ""));
@@ -2461,4 +2467,37 @@ export async function openProtocolVolumesAction(
   } catch (error) {
     return failure(error, "ri.book.open");
   }
+}
+
+/** Where the folhas of the Livro 1 begin, and how they are laid out. */
+export async function saveBookPagingAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  try {
+    await setBookPagingWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      {
+        fromItem: text(formData, "fromItem").replace(/\D/g, ""),
+        fromSheet: text(formData, "fromSheet").replace(/\D/g, ""),
+        fromSide: text(formData, "fromSide"),
+        bothSides: text(formData, "bothSides") !== "nao",
+        entryLines: text(formData, "entryLines"),
+        dayBreak: text(formData, "dayBreak"),
+      },
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.book.paging");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message:
+      "Folhas definidas. Cada novo protocolo já mostra em que folha cai.",
+  };
 }

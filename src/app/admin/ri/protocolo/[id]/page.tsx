@@ -6,10 +6,11 @@ import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { can } from "@/core/auth/roles.ts";
 import { planActs } from "@/core/ri/act-plan.ts";
 import { situationOf } from "@/core/ri/acts.ts";
-import { volumeOfNumber } from "@/core/ri/books.ts";
+import { volumeLetter, volumeOfNumber } from "@/core/ri/books.ts";
 import { PROTOCOL_FIELD_NAMES, plainValue } from "@/core/ri/history-text.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { type Requirement, registryChecks } from "@/core/ri/protocol.ts";
+import { faceLabel, placeOf } from "@/core/ri/protocol-sheets.ts";
 import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
 import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
@@ -17,6 +18,7 @@ import { loadAcervo } from "@/lib/ri.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
 import { signatureSettingsWith } from "@/lib/ri-files.ts";
 import { listLearnedActsWith } from "@/lib/ri-learning.ts";
+import { bookSheetsWith } from "@/lib/ri-protocol-sheets.ts";
 import {
   officeToday,
   type ProtocolHistoryEntry,
@@ -75,6 +77,12 @@ export default async function ProtocolPage({
           books.filter((b) => b.book === 1 && !b.deletedAt),
         )
       : null;
+  // The folha it fell on, in the book whose folhas the system prints.
+  const inBook = volume
+    ? books.find((b) => b.book === 1 && !b.deletedAt && b.volume === volume)
+    : undefined;
+  const sheets = inBook ? await bookSheetsWith(db, tenant, inBook.id) : null;
+  const sheetPlace = sheets ? placeOf(sheets.pagination, row.number) : null;
   const today = officeToday();
   const canEdit = riCan(session, "ri.edit") && !row.voidedAt;
   const exam = row.kind === "exame";
@@ -117,7 +125,9 @@ export default async function ProtocolPage({
           <span className="mr-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
             {row.voidedAt ? "Apagado" : statusText(row)}
           </span>
-          {volume ? `Livro ${volume}. ` : ""}
+          {volume
+            ? `Livro 1${volumeLetter(volume) ? `, letra ${volumeLetter(volume)}` : ""}${sheetPlace ? `, folha ${faceLabel(sheetPlace.sheet, sheetPlace.side)}` : ""}. `
+            : ""}
           Apresentado em {brDate(row.presentedOn)} por {row.presenterName}.
         </>
       }

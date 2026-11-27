@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { type Period, periodRange } from "@/core/ri/books.ts";
+import { type Period, periodRange, volumeName } from "@/core/ri/books.ts";
 import { SignOrPrint } from "../../_components/sign-or-print.tsx";
 import { Input } from "../../_ui/input.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
@@ -93,7 +93,7 @@ export function ProtocolPeriodPrint({
       {range ? (
         <SignOrPrint
           pdfHref={`/admin/ri/livros/${bookId}/pdf?de=${range.from}&ate=${range.to}`}
-          title={`Livro ${volume} (Protocolo), ${LABELS[period].toLowerCase()}`}
+          title={`${volumeName(volume)} (Protocolo), ${LABELS[period].toLowerCase()}`}
           size="sm"
         />
       ) : (

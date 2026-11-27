@@ -127,6 +127,22 @@ export const BOOK_FORMS: { id: BookForm; label: string; source: string }[] = [
 ];
 
 /**
+ * The letter of an old volume, kept apart (decision of 27/11/2026): every
+ * volume is the Livro 1, as the Registro de Imóveis goes on, and the letter
+ * it had ("1-B" → "B") is only a reference. "1" has none.
+ */
+export function volumeLetter(volume: string): string {
+  return /^\d+-(.+)$/.exec(volume)?.[1] ?? "";
+}
+
+/** "Livro 1" or "Livro 1 (letra B)". */
+export function volumeName(volume: string): string {
+  const letter = volumeLetter(volume);
+  const book = volume.split("-")[0] ?? volume;
+  return letter ? `Livro ${book} (letra ${letter})` : `Livro ${book}`;
+}
+
+/**
  * The volume a número de ordem belongs to (1, 1-A, 1-B…): the Livro 1 is
  * one book, and each título keeps the letter of the volume it was written
  * in (decision of 27/11/2026). Null when no volume has its range.

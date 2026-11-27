@@ -26,7 +26,7 @@ export function ProtocolVolumesForm() {
         <table className="w-full min-w-[36rem] text-sm">
           <thead>
             <tr className="text-left text-xs text-muted-foreground">
-              <th className="pb-1 font-medium">Livro</th>
+              <th className="pb-1 font-medium">Letra (vazio se não havia)</th>
               <th className="pb-1 font-medium">Do nº</th>
               <th className="pb-1 font-medium">Ao nº (vazio: em uso)</th>
               <th className="pb-1 font-medium">Forma</th>
@@ -39,8 +39,8 @@ export function ProtocolVolumesForm() {
                 <td className="py-1 pr-2">
                   <Input
                     name={`livro-${i}`}
-                    aria-label={`Livro, linha ${i + 1}`}
-                    placeholder={i === 0 ? "1" : `1-${"ABC"[i - 1]}`}
+                    aria-label={`Letra do livro antigo, linha ${i + 1}`}
+                    placeholder={i === 0 ? "" : "ABC"[i - 1]}
                     className="w-20 bg-background"
                   />
                 </td>
@@ -99,11 +99,12 @@ export function ProtocolVolumesForm() {
         </output>
       )}
       <p className="text-xs text-muted-foreground">
-        Diga só os números de cada livro. A data de abertura sai do primeiro
-        título lançado nele e a de encerramento, do último. O livro em uso fica
-        aberto. Livro que já está aberto fica como está. Depois, ajuste datas e
-        folhas em Livros e assinatura, se o termo do livro físico disser outra
-        coisa.
+        Todos são o Livro 1; a letra que o livro antigo tinha (A, B…) fica só
+        como referência. Diga os números de cada um. A data de abertura sai do
+        primeiro título lançado nele e a de encerramento, do último. O livro em
+        uso fica aberto. Livro que já está aberto fica como está. Depois, ajuste
+        datas e folhas em Livros e assinatura, se o termo do livro físico disser
+        outra coisa.
       </p>
     </form>
   );
