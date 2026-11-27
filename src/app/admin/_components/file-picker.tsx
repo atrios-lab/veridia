@@ -18,12 +18,15 @@ export function FilePicker({
   label,
   hint,
   required,
+  multiple,
 }: {
   name: string;
   accept: string;
   label: string;
   hint?: string;
   required?: boolean;
+  /** Several files at once: their names, and how many. */
+  multiple?: boolean;
 }) {
   const id = useId();
   const [file, setFile] = useState<{ name: string; size: number } | null>(null);
@@ -80,10 +83,21 @@ export function FilePicker({
           type="file"
           accept={accept}
           required={required}
+          multiple={multiple}
           className="sr-only"
           onChange={(event) => {
-            const chosen = event.target.files?.[0];
-            setFile(chosen ? { name: chosen.name, size: chosen.size } : null);
+            const chosen = [...(event.target.files ?? [])];
+            setFile(
+              chosen.length
+                ? {
+                    name:
+                      chosen.length === 1
+                        ? (chosen[0]?.name ?? "")
+                        : `${chosen.length} arquivos: ${chosen.map((f) => f.name).join(", ")}`,
+                    size: chosen.reduce((n, f) => n + f.size, 0),
+                  }
+                : null,
+            );
           }}
         />
       </label>

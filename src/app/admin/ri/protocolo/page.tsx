@@ -258,8 +258,8 @@ export default async function ProtocolListPage({
                         Folha {faceLabel(next.sheet, next.side)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        linha {next.line + 1} de {SHEET_LAYOUT.linesPerSide};
-                        cabem mais {fitsHere}{" "}
+                        linha {next.line + 1} de {SHEET_LAYOUT.linesPerSide}.
+                        Cabem mais {fitsHere}{" "}
                         {fitsHere === 1 ? "título" : "títulos"} nesta face
                       </p>
                     </div>
@@ -465,7 +465,7 @@ export default async function ProtocolListPage({
       {riCan(session, "ri.books") && (
         <Panel
           title="Abrir os livros do Protocolo"
-          description="Para o Protocolo que veio do livro físico: o sistema abre cada livro (1, 1-A, 1-B…) pelos números e tira as datas dos títulos importados."
+          description="Para o Protocolo que veio do livro físico: todos são o Livro 1, e a letra que o livro antigo tinha (A, B…) fica à parte. Preencha um livro por linha e use “Adicionar outro livro” para os demais; o sistema tira as datas dos títulos importados."
         >
           <ProtocolVolumesForm />
         </Panel>

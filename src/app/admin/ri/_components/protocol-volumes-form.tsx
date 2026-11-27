@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Button } from "../../_ui/button.tsx";
 import { Input } from "../../_ui/input.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
@@ -8,7 +8,8 @@ import { openProtocolVolumesAction, type RiState } from "../actions.ts";
 import { useRiToast } from "./client.tsx";
 
 const IDLE: RiState = { status: "idle" };
-const ROWS = [0, 1, 2, 3];
+/** The action reads up to six lines. */
+const MAX_ROWS = 6;
 
 /**
  * Opens the volumes of the Livro 1 (1, 1-A, 1-B…) from their números: the
@@ -20,6 +21,9 @@ export function ProtocolVolumesForm() {
     IDLE,
   );
   useRiToast(state);
+  // One line to start; the staff adds the others (decision of 27/11/2026).
+  const next = useRef(1);
+  const [rows, setRows] = useState<number[]>([0]);
   return (
     <form action={dispatch} className="flex flex-col gap-3">
       <div className="overflow-x-auto">
@@ -31,16 +35,19 @@ export function ProtocolVolumesForm() {
               <th className="pb-1 font-medium">Ao nº (vazio: em uso)</th>
               <th className="pb-1 font-medium">Forma</th>
               <th className="pb-1 font-medium">Folhas</th>
+              <th className="pb-1">
+                <span className="sr-only">Remover</span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            {ROWS.map((i) => (
-              <tr key={i}>
+            {rows.map((key, i) => (
+              <tr key={key}>
                 <td className="py-1 pr-2">
                   <Input
                     name={`livro-${i}`}
                     aria-label={`Letra do livro antigo, linha ${i + 1}`}
-                    placeholder={i === 0 ? "" : "ABC"[i - 1]}
+                    placeholder="vazio, A, B…"
                     className="w-20 bg-background"
                   />
                 </td>
@@ -81,12 +88,35 @@ export function ProtocolVolumesForm() {
                     className="w-20 bg-background"
                   />
                 </td>
+                <td className="py-1 pl-2">
+                  {rows.length > 1 && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Remover a linha ${i + 1}`}
+                      onClick={() => setRows(rows.filter((r) => r !== key))}
+                    >
+                      Remover
+                    </Button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div>
+      <div className="flex flex-wrap gap-2">
+        {rows.length < MAX_ROWS && (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setRows([...rows, next.current++])}
+          >
+            Adicionar outro livro
+          </Button>
+        )}
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "Abrindo..." : "Abrir os livros"}
         </Button>

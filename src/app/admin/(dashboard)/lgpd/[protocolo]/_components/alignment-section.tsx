@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { FilePicker } from "@/app/admin/_components/file-picker.tsx";
 import { segmentAnswer } from "@/core/dpo/citations.ts";
 import type { SourceView } from "@/lib/dpo/assistant.ts";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
@@ -184,21 +185,13 @@ export function AlignmentSection({
             pesquisa a lei e traz as primeiras perguntas.
           </p>
         )}
-        <label className="relative flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-input px-3 py-2 text-xs transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          <span className="font-medium text-primary">
-            Anexar documento para o Assistente Virtual ler (opcional)
-          </span>
-          <span className="text-muted-foreground">
-            lido e descartado, não fica guardado
-          </span>
-          <input
-            type="file"
-            name="paraAssistente"
-            multiple
-            accept="application/pdf,image/jpeg,image/png,image/webp,.docx,.txt"
-            className="sr-only"
-          />
-        </label>
+        <FilePicker
+          name="paraAssistente"
+          multiple
+          accept="application/pdf,image/jpeg,image/png,image/webp,.docx,.txt"
+          label="Anexar documento para o Assistente Virtual ler (opcional)"
+          hint="Lido e descartado, não fica guardado."
+        />
         <div className="flex flex-wrap gap-2">
           <Button
             type="submit"
@@ -337,17 +330,11 @@ export function AttachForTitular({ requestId }: { requestId: string }) {
         ]}
         placeholder="Nome do documento"
       />
-      <label className="relative flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-input px-4 py-3 text-center transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-        <span className="text-sm font-medium text-primary">
-          Escolher arquivo para o titular
-        </span>
-        <input
-          type="file"
-          name="paraTitular"
-          accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
-          className="sr-only"
-        />
-      </label>
+      <FilePicker
+        name="paraTitular"
+        accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
+        label="Escolher arquivo para o titular"
+      />
       <div>
         <Button type="submit" size="sm" variant="outline" disabled={pending}>
           {pending ? "Enviando..." : "Enviar ao titular"}
