@@ -1403,3 +1403,50 @@ export function protocolVolumeOf(value: string): string | null {
   if (!m) return null;
   return m[1] ? `1-${m[1]}` : "1";
 }
+
+/**
+ * After a whole lot comes in (decision of 27/11/2026): the Livros 2 and 3
+ * that have matrículas or registros but were never opened in the system
+ * open by themselves, in fichas, from the first número. The date is the
+ * day of the import; the office adjusts it to the termo of the book.
+ */
+export async function openBooksForAcervoWith(
+  database: Database,
+  tenantSlug: string,
+  actor: Actor,
+  today = officeToday(),
+): Promise<string[]> {
+  const books = (await listBooksWith(database, tenantSlug)).filter(
+    (b) => !b.deletedAt,
+  );
+  const acervo = await loadAcervoWith(database, tenantSlug);
+  const opened: string[] = [];
+  for (const book of [2, 3] as const) {
+    if (books.some((b) => b.book === book)) continue;
+    const numbers = acervo.properties
+      .filter((p) => !p.deletedAt && p.book === book)
+      .map((p) => p.number);
+    if (!numbers.length) continue;
+    await openBookWith(
+      database,
+      tenantSlug,
+      {
+        ...readBookInput(
+          {
+            book,
+            volume: String(book),
+            form: "fichas",
+            firstItem: String(Math.min(...numbers)),
+            openedOn: "",
+          },
+          today,
+        ),
+        openingNotes:
+          "Livro aberto pelo sistema na importação do acervo; confira a data e os dados com o termo de abertura do livro.",
+      },
+      actor,
+    );
+    opened.push(`Livro ${book}`);
+  }
+  return opened;
+}

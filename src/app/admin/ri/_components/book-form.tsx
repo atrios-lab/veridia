@@ -204,6 +204,34 @@ export function BookForm({
           className="field-sizing-fixed bg-background"
         />
       </div>
+      {!value && (
+        <fieldset className="flex flex-col gap-2 rounded-lg border bg-background p-3">
+          <legend className="px-1 text-sm font-medium">
+            Este livro já tem lançamentos para importar?
+          </legend>
+          {[
+            ["agora", "Sim, importar agora (abre o livro já na importação)"],
+            [
+              "depois",
+              "Sim, importar depois (o botão fica na página do livro)",
+            ],
+            ["nao", "Não, o livro começa vazio"],
+          ].map(([v, label]) => (
+            <label key={v} className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="importar"
+                value={v}
+                defaultChecked={v === "nao"}
+              />
+              {label}
+            </label>
+          ))}
+          <p className="text-xs text-muted-foreground">
+            Exportar (planilha ou CSV) fica sempre na página do livro.
+          </p>
+        </fieldset>
+      )}
       {state.status === "error" && (
         <p role="alert" className="text-sm font-medium text-destructive">
           {state.message}

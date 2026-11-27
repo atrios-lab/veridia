@@ -12,6 +12,7 @@ import {
   closeBookWith,
   historyOf,
   listBooksWith,
+  openBooksForAcervoWith,
   openBookWith,
   openIndexBooksWith,
   openProtocolVolumesWith,
@@ -309,4 +310,21 @@ test("Livro 1: abre os volumes pelos números, com as datas dos títulos", async
     "2026-11-27",
   );
   assert.deepEqual(again, { opened: [], kept: ["1"] });
+});
+
+test("lote importado: o Livro 2 nunca aberto abre sozinho, uma vez só", async () => {
+  const T = "cartorio-teste-lote";
+  for (const number of [12, 10, 11]) {
+    await createPropertyWith(db, T, { ...base, number }, ACTOR);
+  }
+  assert.deepEqual(await openBooksForAcervoWith(db, T, ACTOR, "2026-11-27"), [
+    "Livro 2",
+  ]);
+  const [book] = (await listBooksWith(db, T)).filter((b) => b.book === 2);
+  assert.equal(book?.firstItem, 10);
+  assert.equal(book?.form, "fichas");
+  assert.deepEqual(
+    await openBooksForAcervoWith(db, T, ACTOR, "2026-11-27"),
+    [],
+  );
 });

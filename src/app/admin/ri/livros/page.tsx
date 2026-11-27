@@ -174,15 +174,30 @@ export default async function BooksPage({
                               Termo de encerramento
                             </a>
                           ) : (
-                            r.form !== "folhas" && (
-                              <span
-                                className="text-xs text-muted-foreground"
-                                title="Livro em fichas ou eletrônico não se encerra por estar cheio: cada ficha continua. O encerramento só é feito se o livro for substituído ou por determinação da Corregedoria."
-                              >
-                                Encerramento: só se for substituído
-                              </span>
-                            )
+                            <Link
+                              href={`/admin/ri/livros/${r.id}#encerrar`}
+                              className={buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                              })}
+                              title={
+                                r.form === "folhas" || r.form === "hibrido"
+                                  ? "Encerre o livro e o termo de encerramento sai dele."
+                                  : "Livro em fichas ou eletrônico não se encerra por estar cheio: cada ficha continua. O encerramento só é feito se o livro for substituído ou por determinação da Corregedoria."
+                              }
+                            >
+                              Termo de encerramento (encerrar)
+                            </Link>
                           )}
+                          <Link
+                            href={`/admin/ri/livros/${r.id}#importar`}
+                            className={buttonVariants({
+                              size: "sm",
+                              variant: "outline",
+                            })}
+                          >
+                            Importar e exportar
+                          </Link>
                           <Badge variant={r.closedOn ? "secondary" : "default"}>
                             {r.deletedAt
                               ? "Apagado"

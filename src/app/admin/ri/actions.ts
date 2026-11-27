@@ -63,6 +63,7 @@ import {
   closeBookWith,
   fichaLegalPdfWith,
   listBooksWith,
+  openBooksForAcervoWith,
   openBookWith,
   openIndexBooksWith,
   openProtocolVolumesWith,
@@ -706,7 +707,7 @@ export type TransferState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | ({ status: "preview"; fileName: string } & TransferPreview)
-  | ({ status: "done" } & TransferResult);
+  | ({ status: "done"; booksOpened?: string[] } & TransferResult);
 
 const TRANSFER_MAX_BYTES = 40 * 1024 * 1024;
 
@@ -775,8 +776,14 @@ export async function transferImportAction(
       { complete: text(formData, "completar") === "1" },
       ok.actor,
     );
+    // The whole lot goes to its books: a Livro 2 or 3 never opened opens.
+    const booksOpened = await openBooksForAcervoWith(
+      db,
+      ok.tenant.slug,
+      ok.actor,
+    );
     revalidatePath("/admin/ri", "layout");
-    return { status: "done", ...result };
+    return { status: "done", ...result, booksOpened };
   } catch (error) {
     const state = failure(error, "ri.transfer");
     return {
@@ -1614,7 +1621,15 @@ export async function saveBookAction(
     return failure(error, "ri.book.save");
   }
   revalidatePath("/admin/ri", "layout");
-  if (!id) redirect(bookPath(target));
+  if (!id) {
+    // "Importar agora" or "depois": the book opens on its import field.
+    const later = text(formData, "importar");
+    redirect(
+      later === "agora" || later === "depois"
+        ? `${bookPath(target)}?importar=${later}#importar`
+        : bookPath(target),
+    );
+  }
   return {
     status: "success",
     message: "Livro alterado. Os dados anteriores ficaram no histórico.",
