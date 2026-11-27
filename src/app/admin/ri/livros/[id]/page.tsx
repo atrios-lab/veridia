@@ -380,6 +380,7 @@ export default async function BookPage({
       {canManage && !row.deletedAt && (
         <>
           <Panel
+            id="encerrar"
             title={row.closedOn ? "Encerramento" : "Encerrar o livro"}
             description={
               row.closedOn

@@ -76,35 +76,101 @@ export const PROTOCOL_IMPORT_COLUMNS = [
   "Situação",
 ];
 
+const MONTHS: Record<string, string> = {
+  janeiro: "01",
+  fevereiro: "02",
+  marco: "03",
+  abril: "04",
+  maio: "05",
+  junho: "06",
+  julho: "07",
+  agosto: "08",
+  setembro: "09",
+  outubro: "10",
+  novembro: "11",
+  dezembro: "12",
+};
+
 /**
- * The Protocolo kept elsewhere. A título with atos is "registrado" unless
- * the Situação says otherwise; without atos, "cessado". The old book is
- * history: none of it starts the prazos again.
+ * The dates an old Protocolo is typed with: dd/mm/aaaa, dd-mm-aaaa,
+ * dd-mm-aa (19aa when past this year's two digits) and dd-mês-aaaa.
+ */
+export function protocolDate(value: string, today: string): string | null {
+  // The first date of the cell, without notes: "13-09-81 [sic]", "30-08-82 / 03-09-82".
+  const first =
+    value.replace(/\[[\s\S]*?\]/g, " ").split(/\s+\/\s+|\s+e\s+/)[0] ?? "";
+  const v = fold(first).replace(/[\s/.]+/g, "-");
+  const m = /^(\d{1,2})-([a-z]+|\d{1,2})-(\d{2,4})$/.exec(v);
+  if (!m) return isoOf(first);
+  const [, d = "", mo = "", y = ""] = m;
+  const month = /^\d+$/.test(mo)
+    ? mo.padStart(2, "0")
+    : (MONTHS[mo] ??
+      Object.entries(MONTHS).find(
+        ([name]) => mo.length >= 3 && name.startsWith(mo),
+      )?.[1]);
+  if (!month) return null;
+  let year = y;
+  if (y.length < 4) {
+    // "81" is 1981; "003" and "03" are 2003 (past this year: 19..).
+    const n = Number(y);
+    const cut = Number(today.slice(2, 4));
+    year = String(n > cut && y.length === 2 ? 1900 + n : 2000 + n);
+  }
+  return isoOf(`${d.padStart(2, "0")}/${month}/${year}`);
+}
+
+/** "1.234", "104 [sic - repetido]", "1.234-A": the number, its letter, the note. */
+export function protocolNumber(value: string): {
+  number: number;
+  suffix: string;
+  note: string;
+} | null {
+  const note = /\[([\s\S]*)\]/.exec(value)?.[1]?.trim() ?? "";
+  const head = value.replace(/\[[\s\S]*\]/, "").trim();
+  const m = /^(\d{1,3}(?:\.\d{3})*|\d+)\s*-?\s*([A-Za-z])?$/.exec(head);
+  if (!m?.[1]) return null;
+  const number = Number(m[1].replace(/\./g, ""));
+  return number ? { number, suffix: (m[2] ?? "").toUpperCase(), note } : null;
+}
+
+const CANCELLED =
+  /cancelad|anulad|sem lancamento|nao consta|nao constam|lacuna|omissao|riscad/;
+
+/**
+ * The Protocolo kept elsewhere, as the office typed it. The old book is
+ * history: none of it starts the prazos again. What the book has twice
+ * (a repeated number, a number with letter) goes into the anotações of the
+ * first, so nothing is lost; a cancelled number or a gap comes in voided,
+ * dated with the line before it when it has no date of its own.
  */
 export function readProtocolImport(
   rows: string[][],
   today: string,
-): Reading<ProtocolImport> {
+): Reading<ProtocolImport> & { merged: number } {
   const [header = [], ...body] = rows;
   const at = {
-    number: column(header, "nº de ordem", "numero", "n "),
+    number: column(header, "nº de ordem", "numero de ordem", "numero", "n "),
     date: column(header, "data"),
-    presenter: column(header, "apresentante"),
+    presenter: column(header, "apresentante", "nome do apresentante"),
     title: column(header, "natureza"),
-    acts: column(header, "atos", "anotacoes"),
+    acts: column(header, "atos", "anotacoes", "anotacao"),
     status: column(header, "situacao"),
   };
-  const errors: string[] = [];
   if (at.number < 0 || at.date < 0 || at.presenter < 0 || at.title < 0) {
     return {
       items: [],
+      merged: 0,
       errors: [
         `A planilha precisa das colunas ${PROTOCOL_IMPORT_COLUMNS.slice(0, 4).join(", ")}.`,
       ],
     };
   }
-  const seen = new Set<number>();
+  const errors: string[] = [];
+  const byNumber = new Map<number, ProtocolImport>();
   const items: ProtocolImport[] = [];
+  let merged = 0;
+  let lastDate: string | null = null;
   const statusByLabel = new Map(
     Object.entries(PROTOCOL_STATUS_LABELS).map(([k, label]) => [
       fold(label.split(":")[0] ?? label),
@@ -115,42 +181,93 @@ export function readProtocolImport(
     const line = i + 2;
     const cell = (j: number) => (j >= 0 ? String(row[j] ?? "").trim() : "");
     if (row.every((c) => !String(c ?? "").trim())) return;
-    const number = Number(cell(at.number).replace(/\D/g, ""));
-    if (!number) {
-      errors.push(`Linha ${line}: sem o número de ordem.`);
-      return;
-    }
-    if (seen.has(number)) {
-      errors.push(`Linha ${line}: o nº ${number} se repete na planilha.`);
-      return;
-    }
-    const presentedOn = isoOf(cell(at.date));
-    if (!presentedOn || presentedOn > today) {
-      errors.push(`Linha ${line}: data inválida (use dd/mm/aaaa).`);
+    const parsed = protocolNumber(cell(at.number));
+    if (!parsed) {
+      errors.push(
+        `Linha ${line}: número de ordem "${cell(at.number)}" ilegível; corrija na planilha e importe de novo (o que já entrou fica como está).`,
+      );
       return;
     }
     const presenter = cell(at.presenter).slice(0, 300);
     const titleKind = cell(at.title).slice(0, 300);
-    if (!presenter || !titleKind) {
-      errors.push(`Linha ${line}: falta o apresentante ou a natureza.`);
+    const annotations = cell(at.acts);
+    const text = fold(
+      `${presenter} ${titleKind} ${annotations} ${parsed.note}`,
+    );
+    const voided = CANCELLED.test(text) || /anulad/.test(fold(cell(at.status)));
+    const typedDate = cell(at.date);
+    let presentedOn = typedDate ? protocolDate(typedDate, today) : null;
+    if (presentedOn && presentedOn > today) presentedOn = null;
+    const notes: string[] = [];
+    // A date written with a note, two dates or a date that does not exist
+    // keeps its text in the anotações, word for word.
+    if (typedDate && (!presentedOn || /[[/]|\se\s/.test(typedDate))) {
+      notes.push(`Data no livro original: "${typedDate}".`);
+    }
+    if (!presentedOn) {
+      if (!lastDate) {
+        // A gap before any dated line: dated with the first date that comes.
+        const next = body
+          .slice(i + 1)
+          .map((r) => protocolDate(String(r[at.date] ?? ""), today))
+          .find(Boolean);
+        presentedOn = next ?? null;
+      } else {
+        presentedOn = lastDate;
+      }
+      if (!presentedOn) {
+        errors.push(`Linha ${line} (nº ${parsed.number}): sem data.`);
+        return;
+      }
+      notes.push(
+        "Data não consta do livro original (usada a do lançamento vizinho).",
+      );
+    } else {
+      lastDate = presentedOn;
+    }
+    if (parsed.note) notes.push(`Observação: ${parsed.note}`);
+    const acts = [annotations, ...notes]
+      .filter(Boolean)
+      .join(" ")
+      .slice(0, 2000);
+    const first = byNumber.get(parsed.number);
+    if (first) {
+      // The book has this number again (repeated, or with a letter): kept
+      // in the anotações of the first, word for word.
+      merged++;
+      first.acts =
+        `${first.acts} | Também lançado sob o nº ${parsed.number}${parsed.suffix ? `-${parsed.suffix}` : ""} em ${presentedOn.split("-").reverse().join("/")}: ${presenter || "sem apresentante"}, ${titleKind || "sem natureza"}${annotations ? `; ${annotations}` : ""}${parsed.note ? ` [${parsed.note}]` : ""}`.slice(
+          0,
+          4000,
+        );
       return;
     }
-    const acts = cell(at.acts).slice(0, 2000);
-    const voided =
-      /anulad|engano/i.test(acts) || /anulad/i.test(cell(at.status));
     const named = statusByLabel.get(fold(cell(at.status)));
-    seen.add(number);
-    items.push({
-      number,
+    const item: ProtocolImport = {
+      number: parsed.number,
       presentedOn,
-      presenter,
-      titleKind,
-      acts: voided ? "" : acts,
-      status: named ?? (acts && !voided ? "registrado" : "cessado"),
+      presenter: presenter || (voided ? "Não consta" : ""),
+      titleKind: titleKind || (voided ? "Não consta" : ""),
+      acts,
+      status:
+        named ??
+        (voided
+          ? "cessado"
+          : /registrad|averbad/.test(fold(annotations)) || annotations
+            ? "registrado"
+            : "cessado"),
       voided,
-    });
+    };
+    if (!item.presenter || !item.titleKind) {
+      item.presenter ||= "Não consta";
+      item.titleKind ||= "Não consta";
+      item.acts =
+        `${item.acts} Apresentante ou natureza não constam do livro original.`.trim();
+    }
+    byNumber.set(parsed.number, item);
+    items.push(item);
   });
-  return { items, errors };
+  return { items, errors, merged };
 }
 
 // ── Livro de Cadastro de Aquisição por Estrangeiro ──────────────────────

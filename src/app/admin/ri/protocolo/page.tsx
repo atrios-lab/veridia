@@ -1,15 +1,19 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { brDate } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
+import { listBooksWith } from "@/lib/ri-books.ts";
 import {
   countersOf,
   listProtocolsWith,
   officeToday,
 } from "@/lib/ri-protocols.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
+import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
+import { importProtocolBookAction } from "../actions.ts";
 import { dueOf, statusText } from "./_shared.ts";
 
 export const metadata = { title: "Protocolo (Livro 1)" };
@@ -39,6 +43,12 @@ export default async function ProtocolListPage({
     voided: view === "apagados",
   });
   const counters = countersOf(all, today);
+  const books1 = (await listBooksWith(db, tenant.slug)).filter(
+    (b) => b.book === 1 && !b.deletedAt,
+  );
+  const book1 =
+    books1.find((b) => !b.closedOn) ??
+    books1.sort((a, b) => b.openedOn.localeCompare(a.openedOn))[0];
   const rows = all
     .filter((r) =>
       view === "exame"
@@ -80,6 +90,121 @@ export default async function ProtocolListPage({
         </>
       }
     >
+      <Panel
+        title="O livro do Protocolo"
+        description="Imprimir o Livro 1, os termos de abertura e de encerramento, encerrar o livro, exportar e importar."
+      >
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="flex flex-col gap-3">
+            {book1 ? (
+              <>
+                <p className="text-sm">
+                  <span className="font-medium">Livro {book1.volume}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · aberto em {brDate(book1.openedOn)}
+                    {book1.closedOn
+                      ? ` · encerrado em ${brDate(book1.closedOn)}`
+                      : " · em uso"}
+                  </span>
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Imprimir o livro (assinar digitalmente ou à mão)
+                  </p>
+                  <SignOrPrint
+                    pdfHref={`/admin/ri/livros/${book1.id}/pdf`}
+                    title={`Livro ${book1.volume} (Protocolo)`}
+                    size="sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Termo de abertura
+                  </p>
+                  <SignOrPrint
+                    pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=abertura`}
+                    title={`Termo de abertura do Livro ${book1.volume}`}
+                    size="sm"
+                  />
+                </div>
+                {book1.closedOn ? (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Termo de encerramento
+                    </p>
+                    <SignOrPrint
+                      pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=encerramento`}
+                      title={`Termo de encerramento do Livro ${book1.volume}`}
+                      size="sm"
+                    />
+                  </div>
+                ) : (
+                  <Link
+                    href={`/admin/ri/livros/${book1.id}#encerrar`}
+                    className={buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                    })}
+                  >
+                    Encerrar o livro
+                  </Link>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  O encerramento de cada dia (art. 184) fica em
+                  &quot;Encerramento dos dias&quot;, acima.
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                O Livro 1 ainda não foi lançado no sistema, por isso não há
+                termos para imprimir.{" "}
+                <Link
+                  href="/admin/ri/livros"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Abrir o Livro 1 em Livros e assinatura
+                </Link>{" "}
+                (com o número e a data do livro em uso). A exportação e a
+                importação ao lado já funcionam.
+              </p>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-medium text-muted-foreground">
+                Exportar todos os títulos
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href="/admin/ri/protocolo/tabela?formato=xlsx"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  Planilha (Excel)
+                </a>
+                <a
+                  href="/admin/ri/protocolo/tabela?formato=csv"
+                  className={buttonVariants({ size: "sm", variant: "outline" })}
+                >
+                  CSV
+                </a>
+              </div>
+            </div>
+            {riCan(session, "ri.import") && (
+              <ImportSheetForm
+                action={importProtocolBookAction}
+                label="Importar o Protocolo que o cartório já tem (.xlsx, .csv ou .ods)"
+              />
+            )}
+            <p className="text-xs text-muted-foreground">
+              Colunas: Nº de ordem, Data, Apresentante, Natureza do título, Atos
+              (anotações) e, se quiser, Situação. Número que já existe fica como
+              está; título importado não volta a contar prazo.
+            </p>
+          </div>
+        </div>
+      </Panel>
+
       <div className="grid gap-3 sm:grid-cols-4">
         {[
           ["Em andamento", counters.open, ""],
