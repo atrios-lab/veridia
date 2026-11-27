@@ -3114,6 +3114,8 @@ export const officeStaff = pgTable(
     imageConsentAt: timestamp("image_consent_at", { withTimezone: true }),
     /** Listed in "Quem assina" (guias, ISS, declarações). */
     canSign: boolean("can_sign").notNull().default(false),
+    /** Encarregado de Dados (DPO): a function, shown on the LGPD page. */
+    isDpo: boolean("is_dpo").notNull().default(false),
     /**
      * The place in "Quem assina": the documents keep who signs by its place
      * in that list, so it is given once and kept, never the hierarchy's order.

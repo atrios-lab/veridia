@@ -12,6 +12,7 @@ import {
   importSignersWith,
   listStaffRowsWith,
   moveStaffWith,
+  publicDpoWith,
   publicTeamWith,
   restoreStaffWith,
   saveLevelsWith,
@@ -426,4 +427,31 @@ test("excluir tira da equipe, dos arquivados, do site e de Quem assina, sem apag
     (await listStaffRowsWith(db, office, { archived: true })).length,
     2,
   );
+});
+
+test("Encarregado de Dados (DPO): uma pessoa por vez, com o selo e a foto só autorizada", async () => {
+  const T = "cartorio-dpo";
+  const a = await createStaffWith(
+    db,
+    T,
+    input({ name: "Ana Fictícia Lopes", isDpo: true }),
+    ACTOR,
+  );
+  let dpo = await publicDpoWith(db, T);
+  assert.equal(dpo?.id, a);
+  assert.equal(dpo?.photo, false, "sem foto enviada, sem foto no site");
+  const b = await createStaffWith(
+    db,
+    T,
+    input({ name: "Bia Fictícia Souza", isDpo: true, imageConsent: false }),
+    ACTOR,
+  );
+  dpo = await publicDpoWith(db, T);
+  assert.equal(dpo?.id, b, "marcar outra pessoa tira a função de quem tinha");
+  const rows = await listStaffRowsWith(db, T);
+  assert.equal(rows.filter((r) => r.isDpo).length, 1);
+  const team = await publicTeamWith(db, T);
+  const people = team.groups.flatMap((g) => g.people);
+  assert.equal(people.find((p) => p.id === b)?.dpo, true);
+  assert.equal(people.find((p) => p.id === a)?.dpo, false);
 });

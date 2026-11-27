@@ -32,6 +32,7 @@ const person = (over: Partial<StaffRecord> = {}): StaffRecord => ({
   showOnSite: true,
   imageConsent: true,
   canSign: false,
+  isDpo: false,
   signerOrder: null,
   hasPhoto: true,
   hasPortaria: true,
@@ -119,8 +120,10 @@ test("o que o visitante vê: só quem for marcado, foto só com autorização, p
     portariaDate: "2024-05-20",
     photo: true,
     portaria: true,
+    dpo: false,
     frame: DEFAULT_FRAME,
   });
+  assert.equal(publicPerson(person({ isDpo: true }))?.dpo, true);
   // Not marked: nobody sees them.
   assert.equal(publicPerson(person({ showOnSite: false })), null);
   assert.equal(publicPerson(person({ archived: true })), null);

@@ -260,6 +260,12 @@ export const StaffInputSchema = z.object({
   showOnSite: z.boolean(),
   imageConsent: z.boolean(),
   canSign: z.boolean(),
+  /**
+   * Encarregado de Dados (DPO, Lei nº 13.709/2018, art. 41): a function on
+   * top of the level, shown on the team and on the LGPD page with the photo
+   * (decision of 27/11/2026). Optional: the forms before it leave it out.
+   */
+  isDpo: z.boolean().default(false),
   /** How the photo sits in its frame; the default is the centred circle. */
   frame: PhotoFrameSchema.default(DEFAULT_FRAME),
 });
@@ -281,6 +287,7 @@ export interface StaffRecord {
   showOnSite: boolean;
   imageConsent: boolean;
   canSign: boolean;
+  isDpo: boolean;
   signerOrder: number | null;
   hasPhoto: boolean;
   hasPortaria: boolean;
@@ -300,6 +307,8 @@ export interface PublicPerson {
   portariaDate: string | null;
   photo: boolean;
   portaria: boolean;
+  /** Encarregado de Dados (DPO). */
+  dpo: boolean;
   frame: PhotoFrame;
 }
 
@@ -317,6 +326,7 @@ export function publicPerson(person: StaffRecord): PublicPerson | null {
     portariaDate: person.hasPortaria ? person.portariaDate : null,
     photo: person.hasPhoto && person.imageConsent,
     portaria: person.hasPortaria,
+    dpo: person.isDpo,
     frame: person.frame,
   };
 }

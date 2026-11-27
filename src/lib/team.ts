@@ -46,6 +46,7 @@ export function toRecord(row: StaffRow): StaffRecord {
     showOnSite: row.showOnSite,
     imageConsent: row.imageConsent,
     canSign: row.canSign,
+    isDpo: row.isDpo,
     signerOrder: row.signerOrder,
     hasPhoto: Boolean(row.photoPath),
     hasPortaria: Boolean(row.portariaPath),
@@ -251,6 +252,7 @@ export async function createStaffWith(
       imageConsentAt: input.imageConsent ? now : null,
       photoFrame: input.frame,
       canSign: input.canSign,
+      isDpo: input.isDpo,
       signerOrder: input.canSign
         ? await nextSignerOrder(database, tenantSlug)
         : null,
@@ -266,7 +268,44 @@ export async function createStaffWith(
     targetType: "team",
     targetId: input.name,
   });
+  if (input.isDpo) await onlyDpoWith(database, tenantSlug, row.id, actorId);
   return row.id;
+}
+
+/**
+ * One Encarregado de Dados at a time: marking a person takes the function
+ * off whoever had it (the change goes to the audit; nothing is deleted).
+ */
+async function onlyDpoWith(
+  database: Database,
+  tenantSlug: string,
+  keepId: string,
+  actorId: string,
+): Promise<void> {
+  const others = await database
+    .select({ id: officeStaff.id, name: officeStaff.name })
+    .from(officeStaff)
+    .where(
+      and(eq(officeStaff.tenantSlug, tenantSlug), eq(officeStaff.isDpo, true)),
+    );
+  for (const other of others) {
+    if (other.id === keepId) continue;
+    await database
+      .update(officeStaff)
+      .set({ isDpo: false, updatedBy: actorId, updatedAt: new Date() })
+      .where(eq(officeStaff.id, other.id));
+    await recordAuditWith(database, {
+      tenantSlug,
+      actorId,
+      action: "team.update",
+      targetType: "team",
+      targetId:
+        `${other.name} · deixou de ser o Encarregado de Dados (DPO)`.slice(
+          0,
+          200,
+        ),
+    });
+  }
 }
 
 export async function updateStaffWith(
@@ -302,6 +341,7 @@ export async function updateStaffWith(
         : null,
       photoFrame: input.frame,
       canSign: input.canSign,
+      isDpo: input.isDpo,
       // Given once and kept: a person who stops signing and comes back
       // returns to the same place.
       signerOrder:
@@ -323,6 +363,7 @@ export async function updateStaffWith(
         200,
       ),
   });
+  if (input.isDpo) await onlyDpoWith(database, tenantSlug, row.id, actorId);
 }
 
 /** Puts a file on a person; returns the path it replaced, for the caller to remove. */
@@ -639,6 +680,53 @@ export async function publicTeam(tenantSlug: string): Promise<PublicTeam> {
     return await publicTeamWith(db, tenantSlug);
   } catch {
     return { levels: levelsFrom(null), groups: [] };
+  }
+}
+
+/**
+ * The Encarregado de Dados as the LGPD page shows them (decision of
+ * 27/11/2026): the person of the team marked as DPO, in force. The photo
+ * only with the image authorization and for a person marked for the site,
+ * the same rule as the team page (the photo route checks it again).
+ */
+export interface PublicDpo {
+  id: string;
+  name: string;
+  photo: boolean;
+  frame: PublicPerson["frame"];
+}
+
+export async function publicDpoWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<PublicDpo | null> {
+  const [row] = await database
+    .select()
+    .from(officeStaff)
+    .where(
+      and(
+        eq(officeStaff.tenantSlug, tenantSlug),
+        eq(officeStaff.isDpo, true),
+        isNull(officeStaff.archivedAt),
+        isNull(officeStaff.deletedAt),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    photo: Boolean(row.photoPath) && row.imageConsent && row.showOnSite,
+    frame: frameFrom(row.photoFrame),
+  };
+}
+
+/** The DPO for the site; null when none is marked or the base is down. */
+export async function publicDpo(tenantSlug: string): Promise<PublicDpo | null> {
+  try {
+    return await publicDpoWith(db, tenantSlug);
+  } catch {
+    return null;
   }
 }
 
