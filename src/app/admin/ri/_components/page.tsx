@@ -44,18 +44,24 @@ export function RiPage({
 
 /** A white block of the screen with its heading. */
 export function Panel({
+  id,
   title,
   description,
   actions,
   children,
 }: {
+  /** The anchor a link can point at ("#encerrar"). */
+  id?: string;
   title?: string;
   description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border bg-card px-4 py-4 shadow-xs md:px-5">
+    <section
+      id={id}
+      className="scroll-mt-20 rounded-xl border bg-card px-4 py-4 shadow-xs md:px-5"
+    >
       {(title || actions) && (
         <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
