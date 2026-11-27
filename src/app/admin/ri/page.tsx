@@ -68,15 +68,23 @@ export default async function RiDeskPage() {
   const canImport = riCan(session, "ri.import");
   const canExport = riCan(session, "ri.export");
 
+  // How many títulos the Livro 1 has, imported ones included.
+  const prenotations = protocols.filter((p) => p.kind === "prenotacao");
+  const lastNumber = prenotations.reduce((n, p) => Math.max(n, p.number), 0);
+  const inBook = prenotations.length
+    ? `${prenotations.length.toLocaleString("pt-BR")} títulos no livro; próximo nº ${(lastNumber + 1).toLocaleString("pt-BR")}. `
+    : "";
   const tiles = [
     {
       label: "Protocolo em andamento",
       value: counters.open,
-      detail: late
-        ? `${counters.qualifyLate} qualificação vencida, ${counters.prenotationEnding} prenotação no fim`
-        : counters.qualifyToday
-          ? `${counters.qualifyToday} vence(m) hoje`
-          : "nenhum prazo vencido",
+      detail: `${inBook}${
+        late
+          ? `${counters.qualifyLate} qualificação vencida, ${counters.prenotationEnding} prenotação no fim`
+          : counters.qualifyToday
+            ? `${counters.qualifyToday} vence(m) hoje`
+            : "Nenhum prazo vencido."
+      }`,
       href: "/admin/ri/protocolo",
       icon: ClipboardList,
       tone: late ? "warning" : counters.qualifyToday ? "info" : "success",
