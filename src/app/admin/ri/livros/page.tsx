@@ -7,15 +7,13 @@ import {
   shortDate,
 } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
-import { listBooksWith } from "@/lib/ri-books.ts";
+import { listBooksWith, openIndexBooksWith } from "@/lib/ri-books.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { Badge } from "../../_ui/badge.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { BookForm, ProtocolDay } from "../_components/book-form.tsx";
-import { ActionButton } from "../_components/client.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
-import { openIndexBooksAction } from "../actions.ts";
 
 export const metadata = { title: "Livros e assinatura" };
 
@@ -31,6 +29,11 @@ export default async function BooksPage({
 }) {
   const { session, tenant } = await requireRi();
   const showDeleted = (await searchParams).apagados === "1";
+  // The Livros 4 and 5 open by themselves with the Livro 2 in use: one
+  // of each for the whole acervo (decision of 27/11/2026).
+  if (riCan(session, "ri.books")) {
+    await openIndexBooksWith(db, tenant.slug, { id: session.user.id });
+  }
   const rows = await listBooksWith(db, tenant.slug);
   const canManage = riCan(session, "ri.books");
   const visible = rows.filter((r) => Boolean(r.deletedAt) === showDeleted);
@@ -44,7 +47,6 @@ export default async function BooksPage({
     ]),
   );
   const deletedCount = rows.filter((r) => r.deletedAt).length;
-  const book2 = rows.find((r) => r.book === 2 && !r.deletedAt && !r.closedOn);
   return (
     <RiPage
       wide
@@ -91,17 +93,10 @@ export default async function BooksPage({
                           nº 6.015/1973, art. {n === 4 ? "179" : "180"}). Falta
                           só lançar o livro, para ter o termo de abertura.
                         </p>
-                        {book2 && canManage && (
-                          <div>
-                            <ActionButton
-                              action={openIndexBooksAction}
-                              fields={{}}
-                              label={`Abrir com o Livro 2 (${shortDate(book2.openedOn)}, ${formLabel(book2.form).toLowerCase()})`}
-                              pendingLabel="Abrindo..."
-                              variant="default"
-                            />
-                          </div>
-                        )}
+                        <p className="text-muted-foreground">
+                          Ele abre sozinho, uma vez só, na data do Livro 2 em
+                          uso, assim que o Livro 2 for aberto aqui.
+                        </p>
                       </div>
                     )}
                   </div>
