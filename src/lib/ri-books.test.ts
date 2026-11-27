@@ -246,6 +246,7 @@ test("Livro 1: volume pelo número, com 1, 1-B e Livro 1-C", () => {
   assert.equal(protocolVolumeOf("01"), "1");
   assert.equal(protocolVolumeOf("Livro 1-b"), "1-B");
   assert.equal(protocolVolumeOf("livro nº 1 - C"), "1-C");
+  assert.equal(protocolVolumeOf("b"), "1-B");
   assert.equal(protocolVolumeOf("2"), null);
 });
 

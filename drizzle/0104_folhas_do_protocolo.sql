@@ -1,0 +1,1 @@
+ALTER TABLE "ri_books" ADD COLUMN "paging" jsonb DEFAULT '{}'::jsonb NOT NULL;

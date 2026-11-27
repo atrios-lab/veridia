@@ -38,7 +38,7 @@ export function protocolTable(
       "Apresentante",
       "Natureza do título",
       "Atos (anotações)",
-      ...(volumeOf ? ["Livro"] : []),
+      ...(volumeOf ? ["Letra (livro antigo)"] : []),
     ],
     rows: [...lines]
       .sort((a, b) => a.number - b.number)

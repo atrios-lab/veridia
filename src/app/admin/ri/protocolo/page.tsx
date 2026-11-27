@@ -1,10 +1,18 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
-import { volumeOfNumber } from "@/core/ri/books.ts";
+import { volumeLetter, volumeName, volumeOfNumber } from "@/core/ri/books.ts";
 import { brDate } from "@/core/ri/property.ts";
+import {
+  capacityOf,
+  faceLabel,
+  fullFaces,
+  pagingOf,
+  SHEET_LAYOUT,
+} from "@/core/ri/protocol-sheets.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
+import { bookSheetsWith } from "@/lib/ri-protocol-sheets.ts";
 import {
   countersOf,
   listProtocolsWith,
@@ -13,6 +21,7 @@ import {
 import { buttonVariants } from "../../_ui/button.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
+import { ProtocolPagingForm } from "../_components/protocol-paging-form.tsx";
 import { ProtocolPeriodPrint } from "../_components/protocol-period-print.tsx";
 import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
@@ -52,6 +61,10 @@ export default async function ProtocolListPage({
   const book1 =
     books1.find((b) => !b.closedOn) ??
     books1.sort((a, b) => b.openedOn.localeCompare(a.openedOn))[0];
+  // The folhas the system prints (book in folhas or hybrid).
+  const paged =
+    book1 && ["folhas", "hibrido"].includes(book1.form) ? book1 : null;
+  const sheets = paged ? await bookSheetsWith(db, tenant, paged.id) : null;
   const rows = all
     .filter((r) =>
       view === "exame"
@@ -102,7 +115,9 @@ export default async function ProtocolListPage({
             {book1 ? (
               <>
                 <p className="text-sm">
-                  <span className="font-medium">Livro {book1.volume}</span>
+                  <span className="font-medium">
+                    {volumeName(book1.volume)}
+                  </span>
                   <span className="text-muted-foreground">
                     {" "}
                     · aberto em {brDate(book1.openedOn)}
@@ -117,7 +132,7 @@ export default async function ProtocolListPage({
                   </p>
                   <SignOrPrint
                     pdfHref={`/admin/ri/livros/${book1.id}/pdf`}
-                    title={`Livro ${book1.volume} (Protocolo)`}
+                    title={`${volumeName(book1.volume)} (Protocolo)`}
                     size="sm"
                   />
                 </div>
@@ -137,7 +152,7 @@ export default async function ProtocolListPage({
                   </p>
                   <SignOrPrint
                     pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=abertura`}
-                    title={`Termo de abertura do Livro ${book1.volume}`}
+                    title={`Termo de abertura do ${volumeName(book1.volume)}`}
                     size="sm"
                   />
                 </div>
@@ -148,7 +163,7 @@ export default async function ProtocolListPage({
                     </p>
                     <SignOrPrint
                       pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=encerramento`}
-                      title={`Termo de encerramento do Livro ${book1.volume}`}
+                      title={`Termo de encerramento do ${volumeName(book1.volume)}`}
                       size="sm"
                     />
                   </div>
@@ -214,10 +229,159 @@ export default async function ProtocolListPage({
         </div>
       </Panel>
 
-      {books1.length > 1 && (
+      {paged && (
+        <Panel
+          title="Folhas do livro"
+          description="O Livro 1 corre como no livro de papel: um título depois do outro, com uma linha entre eles, e o termo de encerramento de cada dia logo abaixo do último título do dia, na mesma folha (Lei nº 6.015/1973, arts. 175 e 184; Provimento nº 156/2016-CGJ/RN, arts. 260, parágrafo único, e 261). O dia seguinte continua embaixo. Título ou termo que não cabe no resto da face vai inteiro para a próxima, e o espaço que sobra é inutilizado com um traço."
+        >
+          {sheets ? (
+            (() => {
+              const cap = capacityOf(sheets.paging);
+              const next = sheets.pagination.next;
+              const free = SHEET_LAYOUT.linesPerSide - next.line;
+              const fitsHere = Math.floor(free / sheets.paging.entryLines);
+              const full = fullFaces(sheets.pagination);
+              const lastFull = full.at(-1);
+              const left = paged.sheetCount
+                ? paged.sheetCount -
+                  next.sheet +
+                  (next.side === "frente" ? 1 : 0)
+                : null;
+              return (
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        O próximo protocolo cai na
+                      </p>
+                      <p className="text-lg font-semibold">
+                        Folha {faceLabel(next.sheet, next.side)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        linha {next.line + 1} de {SHEET_LAYOUT.linesPerSide};
+                        cabem mais {fitsHere}{" "}
+                        {fitsHere === 1 ? "título" : "títulos"} nesta face
+                      </p>
+                    </div>
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Quantos cabem
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {cap.perSide} por face · {cap.perSheet} por folha
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {SHEET_LAYOUT.linesPerSide} linhas por face,{" "}
+                        {sheets.paging.entryLines} por título (mais, se o texto
+                        pedir); o termo do dia ocupa {SHEET_LAYOUT.termLines}{" "}
+                        linhas. Num dia com termo, cabem {cap.perSideWithTerm}{" "}
+                        títulos na face.
+                      </p>
+                    </div>
+                    <div className="rounded-md border p-3">
+                      <p className="text-xs text-muted-foreground">
+                        Folhas do livro
+                      </p>
+                      <p className="text-lg font-semibold">
+                        {left === null
+                          ? "Sem limite informado"
+                          : `${left} ${left === 1 ? "folha restante" : "folhas restantes"}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {paged.sheetCount
+                          ? `de ${paged.sheetCount}; quando acabar, abra o próximo livro (Lei nº 6.015/1973, art. 6º).`
+                          : "Informe o número de folhas em Livros e assinatura."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Folhas completas (prontas para o livro)
+                      </p>
+                      {lastFull ? (
+                        <SignOrPrint
+                          pdfHref={`/admin/ri/livros/${paged.id}/folhas?ate_folha=${lastFull.side === "verso" || !sheets.paging.bothSides ? lastFull.sheet : lastFull.sheet - 1}`}
+                          title="Livro 1 (Protocolo), folhas completas"
+                          size="sm"
+                        />
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          Nenhuma folha completa ainda.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Folha em andamento ({faceLabel(next.sheet, next.side)})
+                      </p>
+                      <SignOrPrint
+                        pdfHref={`/admin/ri/livros/${paged.id}/folhas?folha=${next.sheet}&ate_folha=${next.sheet}`}
+                        title={`Livro 1 (Protocolo), folha ${next.sheet}`}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Folhas de hoje
+                      </p>
+                      <SignOrPrint
+                        pdfHref={`/admin/ri/livros/${paged.id}/folhas?de=${today}&ate=${today}`}
+                        title="Livro 1 (Protocolo), folhas de hoje"
+                        size="sm"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    O termo de cada dia é lavrado no sistema ao encerrar o dia e
+                    pode ser assinado digitalmente (Provimento nº
+                    156/2016-CGJ/RN, art. 259, § 3º). No papel, a folha entra no
+                    livro quando completa; a folha em andamento pode ser
+                    impressa para conferência.
+                  </p>
+                  {riCan(session, "ri.books") && (
+                    <details>
+                      <summary className="cursor-pointer text-sm font-medium">
+                        Alterar onde começam as folhas
+                      </summary>
+                      <div className="pt-3">
+                        <ProtocolPagingForm
+                          bookId={paged.id}
+                          value={sheets.paging}
+                          suggestedItem={paged.firstItem}
+                        />
+                      </div>
+                    </details>
+                  )}
+                </div>
+              );
+            })()
+          ) : riCan(session, "ri.books") ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm">
+                Diga a partir de qual número o sistema imprime as folhas e em
+                que folha começa (por exemplo, o nº seguinte ao último lançado à
+                mão, na folha seguinte). Daí em diante, cada protocolo novo já
+                sai com a sua folha.
+              </p>
+              <ProtocolPagingForm
+                bookId={paged.id}
+                value={pagingOf(paged.paging)}
+                suggestedItem={paged.firstItem}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              As folhas ainda não foram definidas por quem cuida dos livros.
+            </p>
+          )}
+        </Panel>
+      )}
+
+      {books1.length > 0 && (
         <Panel
           title="Os livros do Protocolo"
-          description="Cada livro com os seus números, termos e PDF."
+          description="Todos são o Livro 1; a letra do livro antigo fica entre parênteses. Cada um com os seus números, o PDF e os termos de abertura e de encerramento (Lei nº 6.015/1973, art. 4º)."
         >
           <ul className="divide-y text-sm">
             {[...books1]
@@ -236,7 +400,7 @@ export default async function ProtocolListPage({
                       href={`/admin/ri/livros/${b.id}`}
                       className="font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      Livro {b.volume}
+                      {volumeName(b.volume)}
                     </Link>
                     <span className="text-muted-foreground">
                       {b.firstItem ? ` · nº ${b.firstItem}` : ""}
@@ -251,11 +415,47 @@ export default async function ProtocolListPage({
                         : " · em uso"}
                     </span>
                   </span>
-                  <SignOrPrint
-                    pdfHref={`/admin/ri/livros/${b.id}/pdf`}
-                    title={`Livro ${b.volume} (Protocolo)`}
-                    size="sm"
-                  />
+                  <div className="flex w-full flex-col gap-2 sm:grid sm:grid-cols-3">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Livro
+                      </p>
+                      <SignOrPrint
+                        pdfHref={`/admin/ri/livros/${b.id}/pdf`}
+                        title={`${volumeName(b.volume)} (Protocolo)`}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Termo de abertura
+                      </p>
+                      <SignOrPrint
+                        pdfHref={`/admin/ri/livros/${b.id}/termo?tipo=abertura`}
+                        title={`Termo de abertura do ${volumeName(b.volume)}`}
+                        size="sm"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Termo de encerramento
+                      </p>
+                      {b.closedOn ? (
+                        <SignOrPrint
+                          pdfHref={`/admin/ri/livros/${b.id}/termo?tipo=encerramento`}
+                          title={`Termo de encerramento do ${volumeName(b.volume)}`}
+                          size="sm"
+                        />
+                      ) : (
+                        <Link
+                          href={`/admin/ri/livros/${b.id}#encerrar`}
+                          className="text-xs text-primary underline-offset-4 hover:underline"
+                        >
+                          Em uso. Encerrar o livro
+                        </Link>
+                      )}
+                    </div>
+                  </div>
                 </li>
               ))}
           </ul>
@@ -366,9 +566,14 @@ export default async function ProtocolListPage({
                         {r.number.toLocaleString("pt-BR")}
                       </Link>
                       {r.kind === "prenotacao" &&
-                        volumeOfNumber(r.number, books1) && (
+                        volumeLetter(
+                          volumeOfNumber(r.number, books1) ?? "",
+                        ) && (
                           <span className="block text-xs text-muted-foreground">
-                            Livro {volumeOfNumber(r.number, books1)}
+                            Letra{" "}
+                            {volumeLetter(
+                              volumeOfNumber(r.number, books1) ?? "",
+                            )}
                           </span>
                         )}
                     </td>

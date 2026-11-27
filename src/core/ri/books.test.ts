@@ -11,7 +11,9 @@ import {
   protocolDay,
   readItem,
   volumeLabel,
+  volumeLetter,
   volumeLetters,
+  volumeName,
   volumeOfNumber,
 } from "./books.ts";
 
@@ -166,4 +168,11 @@ test("Livro 1: impressão diária, mensal, semestral e anual", () => {
     to: "2025-12-31",
   });
   assert.equal(periodRange("mes", "", "x", 0, 1), null);
+});
+
+test("todos são o Livro 1; a letra antiga fica à parte", () => {
+  assert.equal(volumeLetter("1"), "");
+  assert.equal(volumeLetter("1-B"), "B");
+  assert.equal(volumeName("1"), "Livro 1");
+  assert.equal(volumeName("1-B"), "Livro 1 (letra B)");
 });

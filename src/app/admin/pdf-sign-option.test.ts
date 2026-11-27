@@ -38,6 +38,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   "ri/estrangeiros/trimestre",
   "ri/livros/[id]/pdf",
   "ri/livros/[id]/termo",
+  "ri/livros/[id]/folhas",
   "ri/livros/protocolo-do-dia",
   // Signed on its own screen (Auditoria › notificação › assinar).
   "(dashboard)/auditoria/notificacao/[id]/pdf",

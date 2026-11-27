@@ -1375,7 +1375,7 @@ export async function openProtocolVolumesWith(
   return { opened, kept };
 }
 
-/** "1", "1-b", "Livro 1-B", "livro nº 1 - B" → "1-B"; anything else null. */
+/** "1", "B", "1-b", "Livro 1-B", "livro nº 1 - B" → "1" or "1-B"; else null. */
 export function protocolVolumeOf(value: string): string | null {
   const v = value
     .toUpperCase()
@@ -1383,6 +1383,8 @@ export function protocolVolumeOf(value: string): string | null {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/LIVRO|N[º°O]\.?|\s+/g, "")
     .replace(/^0+(?=\d)/, "");
+  // Only the letter of the old volume ("B"): it is the Livro 1 all the same.
+  if (/^[A-Z]{1,3}$/.test(v)) return `1-${v}`;
   const m = /^1-?([A-Z0-9]{1,9})?$/.exec(v);
   if (!m) return null;
   return m[1] ? `1-${m[1]}` : "1";

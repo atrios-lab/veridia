@@ -3715,6 +3715,12 @@ export const riBooks = pgTable(
     lastSheet: integer("last_sheet"),
     openingNotes: text("opening_notes").notNull().default(""),
     closingNotes: text("closing_notes").notNull().default(""),
+    /**
+     * Livro 1 in folhas or hybrid: from which número the system lays out
+     * the folhas, the folha and face it begins on, frente e verso, the lines
+     * each título reserves (core/ri/protocol-sheets.ts).
+     */
+    paging: jsonb("paging").notNull().default(sql`'{}'::jsonb`),
     history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })

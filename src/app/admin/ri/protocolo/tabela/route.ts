@@ -1,5 +1,5 @@
 import { can } from "@/core/auth/roles.ts";
-import { volumeOfNumber } from "@/core/ri/books.ts";
+import { volumeLetter, volumeOfNumber } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
 import { protocolTable } from "@/lib/ri-book-tables.ts";
 import { listBooksWith, protocolDaysWith } from "@/lib/ri-books.ts";
@@ -38,7 +38,9 @@ export async function GET(request: Request): Promise<Response> {
   // Each título with the letter of the volume it was written in.
   const table = protocolTable(
     [...days.values()].flat(),
-    volumes.length ? (n) => volumeOfNumber(n, volumes) : undefined,
+    volumes.length
+      ? (n) => volumeLetter(volumeOfNumber(n, volumes) ?? "")
+      : undefined,
   );
   const rows = [table.columns, ...table.rows];
   const name = "Protocolo - Livro 1";
