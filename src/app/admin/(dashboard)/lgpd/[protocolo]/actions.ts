@@ -10,6 +10,7 @@ import {
 import { DPO_COPY } from "@/core/dpo/copy.ts";
 import { parseDetails } from "@/core/request/kinds.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   alignDataRightsWith,
@@ -191,6 +192,12 @@ export async function deleteAttachmentAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "lgpd.attachment",
+    formData,
+    "Anexo do requerimento LGPD",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 

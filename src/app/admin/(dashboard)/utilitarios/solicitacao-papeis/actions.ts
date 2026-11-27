@@ -18,6 +18,7 @@ import {
 import type { ModelReading } from "@/core/paper-orders/docx-model.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   addStarterSuppliersWith,
@@ -234,6 +235,12 @@ export async function removeSupplier(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "paper-orders.supplier",
+    formData,
+    "Fornecedor de papel",
+  );
+  if (asked) return asked;
   try {
     await removeSupplierWith(
       db,
@@ -396,6 +403,12 @@ export async function removeOrder(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "paper-orders.order",
+    formData,
+    "Solicitação de papel",
+  );
+  if (asked) return asked;
   try {
     await removeOrderWith(
       db,

@@ -95,10 +95,13 @@ export async function requestDeletionWith(
   database: Database,
   tenantSlug: string,
   input: {
-    kind: OfficialKind;
+    /** An official kind, or the key of any other deletion of the platform. */
+    kind: string;
     targetId: string;
     label: string;
     reason: string;
+    /** The form to replay on approval (any other deletion). */
+    payload?: [string, string][];
   },
   actor: { id: string },
 ): Promise<void> {
@@ -114,7 +117,7 @@ export async function requestDeletionWith(
       ),
     )
     .limit(1);
-  if (open.length) {
+  if (open.length && input.targetId) {
     throw new DeletionRequestError(
       "Já existe um pedido de exclusão deste documento esperando o Tabelião.",
     );
@@ -124,9 +127,16 @@ export async function requestDeletionWith(
     kind: input.kind,
     targetId: input.targetId,
     label: (
-      (await labelForWith(database, tenantSlug, input.kind, input.targetId)) ||
-      input.label
+      (input.kind in OFFICIAL_KINDS
+        ? await labelForWith(
+            database,
+            tenantSlug,
+            input.kind as OfficialKind,
+            input.targetId,
+          )
+        : "") || input.label
     ).slice(0, 300),
+    payload: input.payload ?? null,
     reason: input.reason.slice(0, 5000),
     requestedBy: actor.id,
   });
@@ -227,6 +237,8 @@ export async function decideDeletionWith(
   approve: boolean,
   note: string,
   actor: { id: string },
+  /** Runs any other deletion (the form replayed); throws when it fails. */
+  replay?: (row: DeletionRequestRow) => Promise<void>,
 ): Promise<DeletionRequestRow> {
   const [row] = await database
     .select()
@@ -242,7 +254,15 @@ export async function decideDeletionWith(
   if (row.status !== "pendente") {
     throw new DeletionRequestError("Este pedido já foi decidido.");
   }
-  if (approve) await execute(database, tenantSlug, row, actor);
+  if (approve) {
+    if (row.kind in OFFICIAL_KINDS) {
+      await execute(database, tenantSlug, row, actor);
+    } else if (replay) {
+      await replay(row);
+    } else {
+      throw new DeletionRequestError("Não há como executar este pedido.");
+    }
+  }
   await database
     .update(deletionRequests)
     .set({

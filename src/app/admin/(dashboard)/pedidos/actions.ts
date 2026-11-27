@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { deactivateServiceRequests } from "@/lib/service-request.ts";
 import { getSession } from "@/lib/session.ts";
@@ -23,6 +24,12 @@ export async function deactivateServiceRequestsAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "requests.bulk",
+    formData,
+    "Pedidos desativados em lote",
+  );
+  if (asked) return asked;
   const session = await getSession();
   if (
     !session ||

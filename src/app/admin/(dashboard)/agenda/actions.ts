@@ -56,6 +56,7 @@ import {
   saveAgendaConfig,
   takenTimesByDay,
 } from "@/lib/appointments.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   sendAgendaDayClosedEmails,
@@ -185,6 +186,12 @@ export async function removeAppointmentAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "agenda.appointment",
+    formData,
+    "Agendamento",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 

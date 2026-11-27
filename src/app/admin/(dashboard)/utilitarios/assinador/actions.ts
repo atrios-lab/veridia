@@ -6,6 +6,7 @@ import { can } from "@/core/auth/roles.ts";
 import { buildSignatureManifest } from "@/core/signature/manifest.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument } from "@/lib/pdf.ts";
@@ -152,6 +153,12 @@ export async function setDocumentRemoved(
     // Sensitive: says why, and the reason goes to the audit.
     const why = justify(formData);
     if (why) return { status: "error", message: why };
+    const asked = await askApproval(
+      "signer.document",
+      formData,
+      "Documento assinado",
+    );
+    if (asked) return asked;
   }
   await setSignedDocumentRemovedWith(
     db,

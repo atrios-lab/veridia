@@ -17,6 +17,7 @@ import { formatTaxId, isValidTaxId } from "@/core/tax-id.ts";
 import { parseMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { pdfTableText } from "@/lib/fee-tables.ts";
@@ -344,6 +345,8 @@ export async function removeIssDeclaration(
 ): Promise<RemoveIssState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval("iss", formData, "Declaração de ISS");
+  if (asked) return asked;
   const ok = await access("iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {

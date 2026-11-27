@@ -1,0 +1,1 @@
+ALTER TABLE "deletion_requests" ADD COLUMN "payload" jsonb;

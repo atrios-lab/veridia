@@ -6,6 +6,7 @@ import { can } from "@/core/auth/roles.ts";
 import { parseAnswer, progress } from "@/core/compliance/answers.ts";
 import { findSection, SECTIONS } from "@/core/compliance/sections.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   addAttachments,
@@ -206,6 +207,12 @@ export async function deleteAttachmentAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "compliance.attachment",
+    formData,
+    "Anexo da Adequação",
+  );
+  if (asked) return asked;
   const auth = await authorize();
   if (!auth) return { status: "error", message: NO_PERMISSION };
 
@@ -281,6 +288,12 @@ export async function withdrawComplianceDoneAction(
 ): Promise<DoneState> {
   const why = justify(_formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "compliance.done",
+    _formData,
+    '"Já cumpri" da Adequação',
+  );
+  if (asked) return asked;
   const auth = await authorize();
   if (!auth) return { status: "error", message: NO_PERMISSION };
   try {

@@ -19,6 +19,7 @@ import {
   checkOfficialSource,
   transcribeToMarkdown,
 } from "@/lib/ai.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import {
@@ -448,6 +449,12 @@ export async function removeAction(
 ): Promise<KnowledgeState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "knowledge.remove",
+    formData,
+    "Documento da base jurídica",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {
@@ -520,6 +527,12 @@ export async function dismissRequestAction(
 ): Promise<KnowledgeState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "knowledge.request",
+    formData,
+    "Pedido de inclusão na base jurídica",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {

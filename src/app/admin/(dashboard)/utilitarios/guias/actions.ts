@@ -13,6 +13,7 @@ import {
   guideStatusInputSchema,
 } from "@/core/guides/status.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   type GuideAlertItem,
@@ -245,6 +246,8 @@ export async function deleteGuideAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval("guide", formData, "Guia imobiliária");
+  if (asked) return asked;
   const session = await getSession();
   if (
     !session ||
@@ -441,6 +444,8 @@ export async function withdrawGuideStatusAction(
 ): Promise<GuideStatusFormState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why, fieldErrors: {} };
+  const asked = await askApproval("guide.status", formData, "Situação da guia");
+  if (asked) return asked;
   const auth = await guideManager();
   const guideId = String(formData.get("guideId") ?? "");
   if (!auth || !guideId) {

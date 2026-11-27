@@ -6,6 +6,7 @@ import { can } from "@/core/auth/roles.ts";
 import { attachmentAvailableUntil } from "@/core/publications/attachment-retention.ts";
 import { publicationFormSchema } from "@/core/publications/publication.ts";
 import { noticeSectors } from "@/core/tenant/gating.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import {
@@ -196,6 +197,8 @@ export async function deletePublicationAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval("publication.delete", formData, "Publicação");
+  if (asked) return asked;
   const session = await getSession();
   const role = session?.user.role ?? "";
   const granted = session?.user.permissions;
@@ -237,6 +240,12 @@ export async function archivePublicationAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "publication.archive",
+    formData,
+    "Publicação arquivada",
+  );
+  if (asked) return asked;
   const session = await getSession();
   if (
     !session ||

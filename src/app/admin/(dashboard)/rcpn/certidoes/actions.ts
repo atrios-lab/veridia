@@ -6,6 +6,7 @@ import { can } from "@/core/auth/roles.ts";
 import { type CertidaoForm, isCertidaoForm } from "@/core/rcpn/certidao.ts";
 import type { RcpnKind } from "@/core/rcpn/record.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import {
   attachCertidaoWith,
@@ -190,6 +191,12 @@ export async function removeCertidaoAction(
 ): Promise<CertidaoState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "rcpn.certidao",
+    formData,
+    "Certidão do Registro Civil",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {

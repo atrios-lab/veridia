@@ -167,6 +167,10 @@ export const OFFICE_PERMISSIONS = [
   // may sign and conclude, and the line the citizen reads. Derived from
   // nothing: the Tabelião/Registrador grants it.
   "routing.settings",
+  // Approving the deletions asked by the staff (decision of 27/11/2026:
+  // "o tabelião pode liberar para outros aprovar como substituto"). The
+  // Tabelião holds it; he grants it in Perfis e permissões.
+  "deletion.decide",
 ] as const;
 
 /**
@@ -221,6 +225,7 @@ export const GRANTABLE_PERMISSIONS = [
   "lgpd.decide",
   "qualificacao.validate",
   "routing.settings",
+  "deletion.decide",
 ] as const;
 export type GrantablePermission = (typeof GRANTABLE_PERMISSIONS)[number];
 
@@ -397,6 +402,7 @@ export const DEMO_OPEN_PERMISSIONS = [
   "ri.books",
   "attributions.view",
   "lgpd.decide",
+  "deletion.decide",
 ] as const satisfies readonly OfficePermission[];
 
 type OfficePermission = (typeof OFFICE_PERMISSIONS)[number];
@@ -652,4 +658,6 @@ export const GRANTABLE_LABELS: Record<GrantablePermission, string> = {
     "Qualificação: validar a nota com exigência do Assistente Virtual antes de ir ao cliente",
   "routing.settings":
     "Direcionamento: setores, quem pode assinar e concluir os pedidos e a linha do setor para o cidadão",
+  "deletion.decide":
+    "Autorizações de exclusão: aprovar ou recusar, no lugar do Tabelião, o que os outros pedem para apagar",
 };

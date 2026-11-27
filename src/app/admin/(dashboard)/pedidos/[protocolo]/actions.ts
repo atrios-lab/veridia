@@ -65,6 +65,7 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { db } from "@/db/index.ts";
 import { aiBlockedWith } from "@/lib/ai.ts";
 import { getAiPlatformWith } from "@/lib/ai-platform.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { notifyCitizen, sendAccessKey } from "@/lib/email/service-request.ts";
@@ -1138,6 +1139,12 @@ export async function deleteAttachmentAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "request.attachment",
+    formData,
+    "Anexo do pedido",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
@@ -1256,6 +1263,8 @@ export async function deleteRequestAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval("request.delete", formData, "Pedido");
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
@@ -1356,6 +1365,12 @@ export async function deleteRequirementAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "request.requirement",
+    formData,
+    "Exigência do pedido",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 

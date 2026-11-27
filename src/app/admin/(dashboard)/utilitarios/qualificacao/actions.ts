@@ -33,6 +33,7 @@ import {
   transcribeToMarkdown,
 } from "@/lib/ai.ts";
 import { getAiPlatformWith } from "@/lib/ai-platform.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { notifyCitizen } from "@/lib/email/service-request.ts";
@@ -249,6 +250,12 @@ export async function removeNoteAction(
 ): Promise<QualificationState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "qualificacao.note",
+    formData,
+    "Nota de qualificação",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   let id = "";

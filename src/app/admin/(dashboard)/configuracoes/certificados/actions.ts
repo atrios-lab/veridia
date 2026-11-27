@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import {
@@ -122,6 +123,12 @@ export async function disableCertificate(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "certificate",
+    formData,
+    "Certificado digital",
+  );
+  if (asked) return asked;
   const session = await admin();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();

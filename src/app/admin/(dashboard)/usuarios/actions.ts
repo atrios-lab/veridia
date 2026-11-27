@@ -16,6 +16,7 @@ import {
   user as userTable,
 } from "@/db/auth-schema.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { auth } from "@/lib/auth.ts";
@@ -357,6 +358,12 @@ export async function deactivateAccount(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "users.deactivate",
+    formData,
+    "Desativar conta de usuário",
+  );
+  if (asked) return asked;
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (
@@ -670,6 +677,12 @@ export async function deleteAccount(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "users.delete",
+    formData,
+    "Excluir conta de usuário",
+  );
+  if (asked) return asked;
   const userId = String(formData.get("userId") ?? "");
   const session = await getSession();
   if (
