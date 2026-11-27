@@ -48,7 +48,7 @@ const acervo = {
   people: new Map(),
 } as unknown as Acervo;
 
-test("Livros 4 e 5 saem nas colunas do Provimento nº 223/2020", () => {
+test("Livros 4 e 5 saem nas colunas do modelo anexo à Lei nº 6.015/1973", () => {
   const real = realIndicatorTable(acervo);
   assert.deepEqual(real.columns, [
     "Nº de ordem",

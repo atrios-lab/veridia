@@ -478,7 +478,7 @@ export function termOffice(tenant: Tenant): TermOffice {
   };
 }
 
-async function signerLines(tenant: Tenant, withImage: boolean) {
+export async function signerLines(tenant: Tenant, withImage: boolean) {
   const { signer, settings } = await riSignerFor(tenant);
   return {
     signee: signer?.name,
@@ -737,8 +737,8 @@ export async function bookDocumentsFor(
         });
       }
     } else {
-      // Livros 4 and 5 in the columns of the Provimento nº 223/2020 da
-      // CGJ/RN, with the year of the book in the header.
+      // Livros 4 and 5 in the columns of the models annexed to the Lei nº
+      // 6.015/1973, with the year of the book in the header.
       const isReal = record.book === 4;
       const table = isReal
         ? realIndicatorTable(acervo)
@@ -747,7 +747,7 @@ export async function bookDocumentsFor(
       documents.push({
         eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
         title: isReal ? "Indicador Real" : "Indicador Pessoal",
-        subtitle: `Livro nº ${record.book} · Ano: ${year} · ${table.rows.length} ${isReal ? (table.rows.length === 1 ? "imóvel" : "imóveis") : table.rows.length === 1 ? "nome" : "nomes"} (Lei nº 6.015/1973, art. ${isReal ? "179" : "180"}; Prov. nº 223/2020 CGJ/RN)`,
+        subtitle: `Livro nº ${record.book} · Ano: ${year} · ${table.rows.length} ${isReal ? (table.rows.length === 1 ? "imóvel" : "imóveis") : table.rows.length === 1 ? "nome" : "nomes"} (Lei nº 6.015/1973, art. ${isReal ? "179" : "180"}; modelo anexo à lei)`,
         office: [officialName(tenant), tenant.subtitle],
         sections: [
           {

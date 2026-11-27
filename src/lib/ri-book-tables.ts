@@ -7,8 +7,8 @@ import { formatTaxId } from "@/core/tax-id.ts";
 import type { Acervo } from "./ri.ts";
 
 /**
- * Each book as a table, in the columns of the models of the Provimento nº
- * 223/2020 da CGJ/RN (Livros 4 and 5: Nº de ordem, Identificação do imóvel
+ * Each book as a table, in the columns of the models annexed to the Lei
+ * nº 6.015/1973 (Livros 4 and 5: Nº de ordem, Identificação do imóvel
  * or Pessoas, Referência aos demais livros, Anotações) and of the arts. 175
  * (Livro 1) and 176 (Livros 2 and 3) of the Lei nº 6.015/1973. The same rows
  * go to the PDF of the book and to the spreadsheet the office exports
@@ -73,7 +73,7 @@ export function registryTable(acervo: Acervo, book: 2 | 3): BookTable {
   };
 }
 
-/** Livro 4, Indicador Real (art. 179), in the model of the Prov. 223/2020. */
+/** Livro 4, Indicador Real (art. 179), in the model annexed to the Lei nº 6.015/1973. */
 export function realIndicatorTable(acervo: Acervo): BookTable {
   const rows = acervo.properties
     .filter((p) => !p.deletedAt && p.book === 2 && p.status !== 4)
@@ -116,7 +116,7 @@ export function realIndicatorTable(acervo: Acervo): BookTable {
   };
 }
 
-/** Livro 5, Indicador Pessoal (art. 180), alphabetical, Prov. 223/2020. */
+/** Livro 5, Indicador Pessoal (art. 180), alphabetical, in the model annexed to the law. */
 export function personalIndicatorTable(acervo: Acervo): BookTable {
   const people = new Map<
     string,
