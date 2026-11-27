@@ -109,7 +109,11 @@ import {
 } from "@/lib/ri-onr-images.ts";
 import { markPendencyWith } from "@/lib/ri-pendencies.ts";
 import { importPgvReturnWith, savePgvCredentialWith } from "@/lib/ri-pgv.ts";
-import { closeDaysWith, reopenDayWith } from "@/lib/ri-protocol-days.ts";
+import {
+  closeDaysWith,
+  closePhysicalDaysWith,
+  reopenDayWith,
+} from "@/lib/ri-protocol-days.ts";
 import {
   createProtocolWith,
   fulfillRequirementWith,
@@ -2035,6 +2039,33 @@ export async function closeProtocolDaysAction(
   }
 }
 
+/**
+ * Marks the days up to a date as kept in the physical book: the Protocolo
+ * brought in by the import was closed on paper (decision of 27/11/2026).
+ */
+export async function closePhysicalDaysAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const to = isoDate(text(formData, "ate"));
+  if (!to) return { status: "error", message: "Informe a data (dd/mm/aaaa)." };
+  try {
+    const n = await closePhysicalDaysWith(db, ok.tenant.slug, to, ok.actor);
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message:
+        n === 0
+          ? "Não havia dias abertos até essa data."
+          : `${n.toLocaleString("pt-BR")} dias marcados como encerrados no livro físico. Eles não geram termo novo.`,
+    };
+  } catch (error) {
+    return failure(error, "ri.protocol-day.physical");
+  }
+}
+
 /** Reopens a closed day, with the reason. */
 export async function reopenProtocolDayAction(
   _previous: RiState,
@@ -2259,6 +2290,15 @@ export async function importProtocolBookAction(
       reading.items,
       ok.actor,
     );
+    // The imported days were closed in the physical book: they ask for no
+    // termo (decision of 27/11/2026).
+    const lastDay = reading.items
+      .map((i) => i.presentedOn)
+      .sort()
+      .at(-1);
+    if (lastDay && lastDay < officeToday()) {
+      await closePhysicalDaysWith(db, ok.tenant.slug, lastDay, ok.actor);
+    }
     revalidatePath("/admin/ri", "layout");
     const summary = importSummary(created, skipped, reading.errors, "títulos");
     if (summary.status === "idle") return summary;

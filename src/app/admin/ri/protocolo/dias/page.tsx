@@ -4,7 +4,11 @@ import { closingReason, weekdayName } from "@/core/ri/protocol-days.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
-import { closedDaysWith, pendingDaysWith } from "@/lib/ri-protocol-days.ts";
+import {
+  closedDaysWith,
+  lastImportedDayWith,
+  pendingDaysWith,
+} from "@/lib/ri-protocol-days.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { SignOrPrint } from "../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../_ui/button.tsx";
@@ -13,6 +17,7 @@ import { Panel, RiPage } from "../../_components/page.tsx";
 import { CloseDaysForm } from "../../_components/protocol-days-form.tsx";
 import { requireRi, riCan } from "../../_lib.ts";
 import {
+  closePhysicalDaysAction,
   closeProtocolDaysAction,
   reopenProtocolDayAction,
 } from "../../actions.ts";
@@ -24,6 +29,7 @@ const KIND_LABELS: Record<string, string> = {
   "sem-movimento": "sem movimento",
   feriado: "feriado",
   "fim-de-semana": "fim de semana",
+  "livro-fisico": "no livro físico",
 };
 
 /**
@@ -34,10 +40,11 @@ const KIND_LABELS: Record<string, string> = {
 export default async function ProtocolDaysPage() {
   const { session, tenant } = await requireRi();
   const today = officeToday();
-  const [pending, closed, books] = await Promise.all([
+  const [pending, closed, books, lastImported] = await Promise.all([
     pendingDaysWith(db, tenant.slug, today),
     closedDaysWith(db, tenant.slug),
     listBooksWith(db, tenant.slug),
+    lastImportedDayWith(db, tenant.slug),
   ]);
   const canClose = riCan(session, "ri.books");
   const holidays = officeHolidays(tenant);
@@ -82,6 +89,30 @@ export default async function ProtocolDaysPage() {
           </p>
         ) : (
           <div className="flex flex-col gap-3">
+            {canClose &&
+              lastImported &&
+              pending[0] &&
+              pending[0] <= lastImported && (
+                <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm">
+                  <p>
+                    <span className="font-medium">
+                      Protocolo importado do livro físico:
+                    </span>{" "}
+                    os dias até {shortDate(lastImported)} já foram encerrados no
+                    próprio livro de papel. Marque-os como encerrados no livro
+                    físico; eles não geram termo novo e saem deste aviso.
+                  </p>
+                  <div>
+                    <ActionButton
+                      action={closePhysicalDaysAction}
+                      fields={{ ate: lastImported }}
+                      label={`Marcar os dias até ${shortDate(lastImported)} como encerrados no livro físico`}
+                      pendingLabel="Marcando…"
+                      variant="default"
+                    />
+                  </div>
+                </div>
+              )}
             {canClose && (
               <div className="flex flex-wrap gap-2">
                 <ActionButton
