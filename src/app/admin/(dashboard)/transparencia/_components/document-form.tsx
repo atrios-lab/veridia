@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { DOCUMENT_CATEGORIES } from "@/core/transparency/documents.ts";
+import { FilePicker } from "../../../_components/file-picker.tsx";
 import { Button } from "../../../_ui/button.tsx";
 import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
@@ -102,20 +103,13 @@ export function DocumentForm() {
       </div>
 
       <div className="mt-3.5">
-        <span className="mb-1.5 block text-sm font-medium text-foreground">
-          Arquivo (PDF)
-        </span>
-        <label className="relative flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input px-4 py-4 text-center text-sm font-medium text-foreground hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          Escolher PDF ou arrastar para cá
-          <input
-            type="file"
-            name="arquivo"
-            accept="application/pdf"
-            className="sr-only"
-          />
-        </label>
+        <FilePicker
+          name="arquivo"
+          accept="application/pdf"
+          label="Arquivo (PDF)"
+          hint="Só PDF, até 8 MB."
+        />
         <FieldError message={fieldErrors.arquivo} />
-        <p className="mt-2 text-xs text-muted-foreground">Só PDF, até 8 MB.</p>
       </div>
 
       {state.status === "error" && !Object.keys(fieldErrors).length && (

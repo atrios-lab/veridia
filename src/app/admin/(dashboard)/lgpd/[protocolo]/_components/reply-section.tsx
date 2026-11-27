@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { FilePicker } from "@/app/admin/_components/file-picker.tsx";
 import { DocumentNameField } from "../../../../../_components/document-name-field.tsx";
 import { useEmailWarning } from "../../../../_components/use-email-warning.ts";
 import { Button } from "../../../../_ui/button.tsx";
@@ -190,17 +191,13 @@ export function ReplySection({
             placeholder="Relatório de dados"
           />
         </div>
-        <label className="relative mt-1 flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-dashed border-input px-4 py-3.5 text-center transition-colors hover:bg-muted/50 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-          <span className="text-sm font-medium text-primary">
-            Anexar relatório de dados (opcional)
-          </span>
-          <input
-            type="file"
+        <div className="mt-1">
+          <FilePicker
             name="relatorio"
             accept="application/pdf,image/jpeg,image/png,image/webp,image/heic"
-            className="sr-only"
+            label="Anexar relatório de dados (opcional)"
           />
-        </label>
+        </div>
 
         <div className="mt-3 flex items-center gap-2.5">
           <Button type="submit" disabled={pending || !reply.trim()}>
