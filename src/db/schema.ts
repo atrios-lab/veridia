@@ -3116,6 +3116,8 @@ export const officeStaff = pgTable(
     canSign: boolean("can_sign").notNull().default(false),
     /** Encarregado de Dados (DPO): a function, shown on the LGPD page. */
     isDpo: boolean("is_dpo").notNull().default(false),
+    /** The Encarregado is from outside the team: no level on the site. */
+    dpoExternal: boolean("dpo_external").notNull().default(false),
     /**
      * The place in "Quem assina": the documents keep who signs by its place
      * in that list, so it is given once and kept, never the hierarchy's order.

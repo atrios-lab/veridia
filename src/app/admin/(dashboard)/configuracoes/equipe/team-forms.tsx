@@ -62,6 +62,7 @@ export interface PersonView {
   imageConsent: boolean;
   canSign: boolean;
   isDpo: boolean;
+  dpoExternal: boolean;
   hasPhoto: boolean;
   hasPortaria: boolean;
   portariaName: string;
@@ -557,6 +558,27 @@ export function PersonForm({
                 aparece com o selo no quadro da equipe e com a foto na área LGPD
                 do site. Só uma pessoa por vez; marcar aqui tira de quem tinha.
                 A foto segue a autorização de imagem.
+              </span>
+            </span>
+          </label>
+          <label className="ml-6 flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="dpoExternal"
+              value="1"
+              defaultChecked={person?.dpoExternal ?? false}
+              className="mt-1"
+            />
+            <span>
+              <span className="font-medium">
+                Não faz parte da equipe (só a função de DPO)
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Para o encarregado contratado ou externo: no site aparece só
+                &quot;Encarregado de Dados (DPO)&quot;, sem cargo, fora da
+                hierarquia. A foto vai para a área LGPD com a autorização de
+                imagem, mesmo sem &quot;Mostrar no site&quot;. Vale só com a
+                opção acima marcada.
               </span>
             </span>
           </label>

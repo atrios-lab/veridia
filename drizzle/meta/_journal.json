@@ -722,6 +722,13 @@
       "when": 1795799750303,
       "tag": "0102_equipe_funcao_dpo",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1795800959763,
+      "tag": "0103_dpo_externo",
+      "breakpoints": true
     }
   ]
 }

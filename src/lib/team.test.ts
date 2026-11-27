@@ -455,3 +455,53 @@ test("Encarregado de Dados (DPO): uma pessoa por vez, com o selo e a foto só au
   assert.equal(people.find((p) => p.id === b)?.dpo, true);
   assert.equal(people.find((p) => p.id === a)?.dpo, false);
 });
+
+test("DPO de fora da equipe: sem cargo, fora da hierarquia, foto na LGPD só com autorização", async () => {
+  const T = "cartorio-dpo-externo";
+  const id = await createStaffWith(
+    db,
+    T,
+    input({
+      name: "Carla Fictícia Dias",
+      isDpo: true,
+      dpoExternal: true,
+      showOnSite: false,
+    }),
+    ACTOR,
+  );
+  await setFileWith(
+    db,
+    T,
+    id,
+    "photo",
+    { path: "equipe/carla.jpg", mime: "image/jpeg", name: "carla.jpg" },
+    ACTOR,
+  );
+  const dpo = await publicDpoWith(db, T);
+  assert.equal(dpo?.photo, true, "foto na área LGPD mesmo fora do quadro");
+  assert.ok(
+    await staffFileWith(db, T, id, "photo", { publicOnly: true }),
+    "a rota pública serve a foto do DPO autorizado",
+  );
+  let team = await publicTeamWith(db, T);
+  assert.equal(team.outsideDpo, null, "fora do quadro sem Mostrar no site");
+  await updateStaffWith(
+    db,
+    T,
+    id,
+    input({
+      name: "Carla Fictícia Dias",
+      isDpo: true,
+      dpoExternal: true,
+      showOnSite: true,
+    }),
+    ACTOR,
+  );
+  team = await publicTeamWith(db, T);
+  assert.equal(team.outsideDpo?.id, id);
+  assert.equal(
+    team.groups.flatMap((g) => g.people).some((p) => p.id === id),
+    false,
+    "não entra na hierarquia",
+  );
+});
