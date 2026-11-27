@@ -26,10 +26,12 @@ import {
   ForeignForm,
   ForeignReportForm,
 } from "../_components/foreign-forms.tsx";
+import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 import {
   deleteForeignReportAction,
+  importForeignAction,
   setForeignDeletedAction,
 } from "../actions.ts";
 
@@ -298,6 +300,31 @@ export default async function ForeignPage({
                   Baixar CSV
                 </a>
               </div>
+              {riCan(session, "ri.import") && !showDeleted && (
+                <div className="flex flex-col gap-2 rounded-lg border p-3">
+                  <p className="text-sm font-medium">
+                    Importar o livro que o cartório já tem
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Baixe o modelo, preencha uma linha por assento e envie.
+                    Número que já existe fica como está; cada linha é conferida
+                    com os dados que a lei pede.
+                  </p>
+                  <a
+                    href="/admin/ri/estrangeiros/tabela?formato=modelo"
+                    className={buttonVariants({
+                      size: "sm",
+                      variant: "outline",
+                    })}
+                  >
+                    Baixar o modelo de planilha
+                  </a>
+                  <ImportSheetForm
+                    action={importForeignAction}
+                    label="Planilha preenchida (.xlsx, .csv ou .ods)"
+                  />
+                </div>
+              )}
             </div>
           </Panel>
           {canEdit && !showDeleted && (

@@ -8,6 +8,7 @@ import {
   createForeignWith,
   entriesOfQuarter,
   entryOf,
+  importForeignWith,
   listForeignReportsWith,
   listForeignWith,
   recordForeignReportWith,
@@ -95,4 +96,24 @@ test("registra o envio do trimestre", async () => {
   const reports = await listForeignReportsWith(db, T);
   assert.equal(reports.length, 1);
   assert.equal(reports[0]?.quarter, 2);
+});
+
+test("importar não sobrescreve número que já existe", async () => {
+  const T2 = "cartorio-teste-estrangeiro-import";
+  await createForeignWith(db, T2, input, ACTOR);
+  const result = await importForeignWith(
+    db,
+    T2,
+    [
+      { ...input, number: 1 },
+      { ...input, number: 5 },
+      { ...input, number: null },
+    ],
+    ACTOR,
+  );
+  assert.deepEqual(result, { created: 2, skipped: 1 });
+  assert.deepEqual(
+    (await listForeignWith(db, T2)).map((r) => r.number),
+    [1, 5, 6],
+  );
 });

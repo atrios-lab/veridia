@@ -10,6 +10,10 @@ import {
 } from "@/core/deletion/official.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
 import {
+  readForeignImport,
+  readProtocolImport,
+} from "@/core/ri/book-import.ts";
+import {
   ForeignError,
   foreignWarnings,
   readForeignInput,
@@ -84,6 +88,7 @@ import {
 import {
   addForeignAverbacaoWith,
   createForeignWith,
+  importForeignWith,
   recordForeignReportWith,
   setForeignDeletedWith,
   setForeignReportDeletedWith,
@@ -108,6 +113,7 @@ import { closeDaysWith, reopenDayWith } from "@/lib/ri-protocol-days.ts";
 import {
   createProtocolWith,
   fulfillRequirementWith,
+  importProtocolsWith,
   issueRequirementsWith,
   officeToday,
   readProtocolInput,
@@ -118,7 +124,7 @@ import {
   setProtocolVoidedWith,
   updateProtocolWith,
 } from "@/lib/ri-protocols.ts";
-import { SheetFileError, transferFile } from "@/lib/ri-sheet.ts";
+import { SheetFileError, sheetRows, transferFile } from "@/lib/ri-sheet.ts";
 import {
   applyTransferWith,
   previewTransferWith,
@@ -2215,4 +2221,76 @@ export async function deleteForeignReportAction(
   }
   revalidatePath("/admin/ri/estrangeiros");
   return { status: "success", message: "Registro de envio desfeito." };
+}
+
+/** What an import says when done: what came in, what was left, the errors. */
+function importSummary(
+  created: number,
+  skipped: number,
+  errors: string[],
+  what: string,
+): RiState {
+  const parts = [`${created} ${what} importados.`];
+  if (skipped) parts.push(`${skipped} já existiam e ficaram como estavam.`);
+  if (errors.length) {
+    parts.push(
+      `${errors.length} linhas com problema: ${errors.slice(0, 5).join(" ")}${errors.length > 5 ? " ..." : ""}`,
+    );
+  }
+  return {
+    status: created || !errors.length ? "success" : "error",
+    message: parts.join(" "),
+  };
+}
+
+/** Imports the Livro 1 (Protocolo) from a spreadsheet (.xlsx, .csv, .ods). */
+export async function importProtocolBookAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.import");
+  if (!ok) return denied("ri.import");
+  try {
+    const rows = await sheetRows(formData.get("arquivo") as File);
+    const reading = readProtocolImport(rows, officeToday());
+    const { created, skipped } = await importProtocolsWith(
+      db,
+      ok.tenant.slug,
+      reading.items,
+      ok.actor,
+    );
+    revalidatePath("/admin/ri", "layout");
+    return importSummary(created, skipped, reading.errors, "títulos");
+  } catch (error) {
+    if (error instanceof SheetFileError) {
+      return { status: "error", message: error.message };
+    }
+    return failure(error, "ri.protocol.import");
+  }
+}
+
+/** Imports assentos of the livro de estrangeiro from the model spreadsheet. */
+export async function importForeignAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.import");
+  if (!ok) return denied("ri.import");
+  try {
+    const rows = await sheetRows(formData.get("arquivo") as File);
+    const reading = readForeignImport(rows, officeToday());
+    const { created, skipped } = await importForeignWith(
+      db,
+      ok.tenant.slug,
+      reading.items,
+      ok.actor,
+    );
+    revalidatePath("/admin/ri/estrangeiros");
+    return importSummary(created, skipped, reading.errors, "assentos");
+  } catch (error) {
+    if (error instanceof SheetFileError) {
+      return { status: "error", message: error.message };
+    }
+    return foreignFailure(error, "ri.foreign.import");
+  }
 }

@@ -1,3 +1,4 @@
+import { FOREIGN_IMPORT_COLUMNS } from "@/core/ri/book-import.ts";
 import { FOREIGN_COLUMNS, foreignRow } from "@/core/ri/foreign.ts";
 import { db } from "@/db/index.ts";
 import { entryOf, listForeignWith } from "@/lib/ri-foreign.ts";
@@ -12,6 +13,24 @@ export async function GET(request: Request): Promise<Response> {
   if (!(await canReadForeign())) {
     return new Response("Não autorizado", { status: 403 });
   }
+  const format = new URL(request.url).searchParams.get("formato");
+  if (format === "modelo") {
+    // The model to fill and import: one column per field of the assento.
+    return new Response(
+      new Uint8Array(
+        await xlsxOf([FOREIGN_IMPORT_COLUMNS.map((c) => c.label)], "Modelo"),
+      ),
+      {
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition":
+            'attachment; filename="Modelo para importar estrangeiros.xlsx"',
+          "Cache-Control": "private, no-store",
+        },
+      },
+    );
+  }
   const tenant = await getTenant();
   const rows = (await listForeignWith(db, tenant.slug)).map((r) => [
     ...foreignRow(entryOf(r)).map((cell) => cell.replace(/\n/g, " · ")),
@@ -19,7 +38,7 @@ export async function GET(request: Request): Promise<Response> {
   ]);
   const table = [[...FOREIGN_COLUMNS, "Data do registro"], ...rows];
   const name = "Livro de aquisicao por estrangeiro";
-  if (new URL(request.url).searchParams.get("formato") === "csv") {
+  if (format === "csv") {
     return new Response(new Uint8Array(csvOf(table)), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   BOOKS,
@@ -24,9 +25,14 @@ import { Label } from "../../../_ui/label.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { BookForm, CloseBookForm } from "../../_components/book-form.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
+import { ImportSheetForm } from "../../_components/import-sheet.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
-import { reopenBookAction, setBookDeletedAction } from "../../actions.ts";
+import {
+  importProtocolBookAction,
+  reopenBookAction,
+  setBookDeletedAction,
+} from "../../actions.ts";
 
 export const metadata = { title: "Livro do Registro de Imóveis" };
 
@@ -208,6 +214,38 @@ export default async function BookPage({
                 Baixar CSV
               </a>
             </div>
+          </div>
+          <div className="flex flex-col gap-2 rounded-lg border bg-background p-3">
+            <p className="text-sm font-medium text-foreground">
+              Importar o que o cartório já tem
+            </p>
+            {row.book === 1 ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Planilha com as colunas Nº de ordem, Data, Apresentante,
+                  Natureza do título, Atos (anotações) e, se quiser, Situação: a
+                  mesma que &quot;Baixar planilha&quot; gera. Número que já
+                  existe fica como está; nenhum título importado volta a contar
+                  prazo.
+                </p>
+                <ImportSheetForm
+                  action={importProtocolBookAction}
+                  label="Planilha do Protocolo (.xlsx, .csv ou .ods)"
+                />
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {row.book === 4 || row.book === 5
+                  ? "O indicador se forma sozinho com as matrículas, os atos e as pessoas importados."
+                  : "As matrículas, os registros, os atos e as pessoas entram por planilha, JSON ou arquivo da ONR."}{" "}
+                <Link
+                  href="/admin/ri/importar-exportar"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Abrir Importar e exportar
+                </Link>
+              </p>
+            )}
           </div>
           <form
             method="get"
