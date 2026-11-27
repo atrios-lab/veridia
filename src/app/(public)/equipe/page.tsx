@@ -79,7 +79,7 @@ function branches<T>(items: readonly T[], size: number): T[][] {
 
 export default async function TeamPage() {
   const tenant = await requireSection("equipe");
-  const { groups } = await publicTeam(tenant.slug);
+  const { groups, outsideDpo } = await publicTeam(tenant.slug);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 md:px-10">
@@ -94,7 +94,7 @@ export default async function TeamPage() {
         portarias de nomeação, quando publicadas, podem ser abertas em PDF.
       </p>
 
-      {groups.length === 0 ? (
+      {groups.length === 0 && !outsideDpo ? (
         <p className="mt-10 rounded-2xl border border-brand-border bg-brand-surface px-5 py-6 text-sm text-brand-muted">
           A equipe ainda não foi publicada nesta página. Para falar com o
           cartório, use a página de contato.
@@ -218,6 +218,49 @@ export default async function TeamPage() {
             );
           })}
         </div>
+      )}
+      {outsideDpo && (
+        <section
+          aria-labelledby="encarregado-dpo"
+          className="mx-auto mt-12 flex max-w-sm flex-col items-center rounded-2xl border border-brand-border bg-white px-5 py-6 text-center shadow-sm"
+        >
+          <h2
+            id="encarregado-dpo"
+            className="text-xs font-bold uppercase tracking-[0.16em] text-brand-accent-ink"
+          >
+            Encarregado de Dados (DPO)
+          </h2>
+          {outsideDpo.photo ? (
+            // biome-ignore lint/performance/noImgElement: served by its own route, which checks what may be public
+            <img
+              src={`/equipe/foto/${outsideDpo.id}`}
+              alt={`Foto de ${outsideDpo.name}`}
+              width={96}
+              height={96}
+              loading="lazy"
+              className="mt-4 size-24 rounded-full border border-brand-border object-cover"
+            />
+          ) : (
+            <span
+              aria-hidden="true"
+              className="mt-4 flex size-24 items-center justify-center rounded-full bg-brand-tint font-serif text-3xl font-semibold text-brand-primary"
+            >
+              {initialsOf(outsideDpo.name)}
+            </span>
+          )}
+          <p className="mt-3 font-serif text-lg font-semibold text-brand-primary">
+            {outsideDpo.name}
+          </p>
+          {outsideDpo.profession && (
+            <p className="mt-1 text-xs text-brand-muted">
+              {outsideDpo.profession}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-brand-muted">
+            Responsável pelo tratamento de dados pessoais (Lei nº 13.709/2018,
+            art. 41).
+          </p>
+        </section>
       )}
     </div>
   );

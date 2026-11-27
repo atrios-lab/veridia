@@ -266,6 +266,11 @@ export const StaffInputSchema = z.object({
    * (decision of 27/11/2026). Optional: the forms before it leave it out.
    */
   isDpo: z.boolean().default(false),
+  /**
+   * The Encarregado is not of the team (an outside DPO): no level on the
+   * site, apart from the hierarchy (decision of 27/11/2026).
+   */
+  dpoExternal: z.boolean().default(false),
   /** How the photo sits in its frame; the default is the centred circle. */
   frame: PhotoFrameSchema.default(DEFAULT_FRAME),
 });
@@ -288,6 +293,7 @@ export interface StaffRecord {
   imageConsent: boolean;
   canSign: boolean;
   isDpo: boolean;
+  dpoExternal: boolean;
   signerOrder: number | null;
   hasPhoto: boolean;
   hasPortaria: boolean;
@@ -309,6 +315,8 @@ export interface PublicPerson {
   portaria: boolean;
   /** Encarregado de Dados (DPO). */
   dpo: boolean;
+  /** Only the DPO function, not of the team: shown without a level. */
+  dpoOnly: boolean;
   frame: PhotoFrame;
 }
 
@@ -327,6 +335,7 @@ export function publicPerson(person: StaffRecord): PublicPerson | null {
     photo: person.hasPhoto && person.imageConsent,
     portaria: person.hasPortaria,
     dpo: person.isDpo,
+    dpoOnly: person.isDpo && person.dpoExternal,
     frame: person.frame,
   };
 }

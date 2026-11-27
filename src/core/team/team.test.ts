@@ -33,6 +33,7 @@ const person = (over: Partial<StaffRecord> = {}): StaffRecord => ({
   imageConsent: true,
   canSign: false,
   isDpo: false,
+  dpoExternal: false,
   signerOrder: null,
   hasPhoto: true,
   hasPortaria: true,
@@ -121,6 +122,7 @@ test("o que o visitante vê: só quem for marcado, foto só com autorização, p
     photo: true,
     portaria: true,
     dpo: false,
+    dpoOnly: false,
     frame: DEFAULT_FRAME,
   });
   assert.equal(publicPerson(person({ isDpo: true }))?.dpo, true);

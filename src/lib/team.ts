@@ -47,6 +47,7 @@ export function toRecord(row: StaffRow): StaffRecord {
     imageConsent: row.imageConsent,
     canSign: row.canSign,
     isDpo: row.isDpo,
+    dpoExternal: row.dpoExternal,
     signerOrder: row.signerOrder,
     hasPhoto: Boolean(row.photoPath),
     hasPortaria: Boolean(row.portariaPath),
@@ -253,6 +254,7 @@ export async function createStaffWith(
       photoFrame: input.frame,
       canSign: input.canSign,
       isDpo: input.isDpo,
+      dpoExternal: input.isDpo && input.dpoExternal,
       signerOrder: input.canSign
         ? await nextSignerOrder(database, tenantSlug)
         : null,
@@ -342,6 +344,7 @@ export async function updateStaffWith(
       photoFrame: input.frame,
       canSign: input.canSign,
       isDpo: input.isDpo,
+      dpoExternal: input.isDpo && input.dpoExternal,
       // Given once and kept: a person who stops signing and comes back
       // returns to the same place.
       signerOrder:
@@ -658,6 +661,8 @@ export async function moveStaffWith(
 export interface PublicTeam {
   levels: TeamLevel[];
   groups: TeamGroup<PublicPerson>[];
+  /** The Encarregado from outside the team, shown apart from the levels. */
+  outsideDpo: PublicPerson | null;
 }
 
 /** What the visitor sees: the people marked for the site, by level. */
@@ -671,7 +676,15 @@ export async function publicTeamWith(
     const shown = publicPerson(toRecord(row));
     return shown ? [{ ...shown, position: row.position }] : [];
   });
-  return { levels, groups: groupByLevel(levels, people) };
+  const outsideDpo = people.find((p) => p.dpoOnly) ?? null;
+  return {
+    levels,
+    groups: groupByLevel(
+      levels,
+      people.filter((p) => !p.dpoOnly),
+    ),
+    outsideDpo,
+  };
 }
 
 /** The visitor's view of the team; empty if the database cannot be read. */
@@ -679,7 +692,7 @@ export async function publicTeam(tenantSlug: string): Promise<PublicTeam> {
   try {
     return await publicTeamWith(db, tenantSlug);
   } catch {
-    return { levels: levelsFrom(null), groups: [] };
+    return { levels: levelsFrom(null), groups: [], outsideDpo: null };
   }
 }
 
@@ -716,7 +729,9 @@ export async function publicDpoWith(
   return {
     id: row.id,
     name: row.name,
-    photo: Boolean(row.photoPath) && row.imageConsent && row.showOnSite,
+    // On the LGPD page the photo needs only the image authorization: an
+    // outside Encarregado is not on the team page.
+    photo: Boolean(row.photoPath) && row.imageConsent,
     frame: frameFrom(row.photoFrame),
   };
 }
@@ -756,7 +771,11 @@ export async function staffFileWith(
     .limit(1);
   if (!row) return null;
   if (options.publicOnly) {
-    if (!row.showOnSite || row.archivedAt || row.deletedAt) return null;
+    if (row.archivedAt || row.deletedAt) return null;
+    // The Encarregado's photo is public on the LGPD page with the image
+    // authorization alone, even when the person is not on the team page.
+    const dpoPhoto = kind === "photo" && row.isDpo && row.imageConsent;
+    if (!row.showOnSite && !dpoPhoto) return null;
     if (kind === "word") return null;
     if (kind === "photo" && !row.imageConsent) return null;
   }

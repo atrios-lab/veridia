@@ -57,7 +57,7 @@ export default async function DpoSettingsPage() {
                 <p className="text-muted-foreground">
                   {person.photo
                     ? "Marcada como Encarregado de Dados na Equipe: a foto aparece na área LGPD e no quadro da equipe."
-                    : 'Marcada como Encarregado de Dados, mas a foto não aparece: envie a foto, registre a autorização de imagem e marque "Mostrar no site" na Equipe.'}
+                    : "Marcada como Encarregado de Dados, mas a foto não aparece: envie a foto e registre a autorização de imagem na Equipe."}
                 </p>
               </div>
             </div>

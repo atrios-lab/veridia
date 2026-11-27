@@ -45,6 +45,7 @@ const viewOf = (row: StaffRow): PersonView => ({
   imageConsent: row.imageConsent,
   canSign: row.canSign,
   isDpo: row.isDpo,
+  dpoExternal: row.dpoExternal,
   hasPhoto: Boolean(row.photoPath),
   hasPortaria: Boolean(row.portariaPath),
   portariaName: row.portariaName ?? "",
@@ -239,7 +240,9 @@ export default async function TeamPage({
                       )}
                       {row.isDpo && (
                         <Badge className="bg-primary text-primary-foreground">
-                          Encarregado de Dados (DPO)
+                          {row.dpoExternal
+                            ? "Só DPO (fora da equipe)"
+                            : "Encarregado de Dados (DPO)"}
                         </Badge>
                       )}
                       {row.portariaPath && (

@@ -137,6 +137,7 @@ export async function savePersonAction(
     imageConsent: formData.get("imageConsent") === "1",
     canSign: formData.get("canSign") === "1",
     isDpo: formData.get("isDpo") === "1",
+    dpoExternal: formData.get("dpoExternal") === "1",
     frame: {
       shape: text("frameShape") === "square" ? "square" : "circle",
       fit: text("frameFit") === "contain" ? "contain" : "cover",
