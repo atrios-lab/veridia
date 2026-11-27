@@ -27,6 +27,7 @@ import {
 import { parseNotarisReport } from "@/core/iss/notaris-report.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   addEntryWith,
@@ -492,6 +493,12 @@ export async function removeEntry(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "daily-book.entry",
+    formData,
+    "Lançamento do Livro Diário",
+  );
+  if (asked) return asked;
   if (await isFcrcpnLine(ok.tenant.slug, field(formData, "id", 40))) {
     return { status: "error", message: FCRCPN_LINE };
   }
@@ -621,6 +628,12 @@ export async function removeReport(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "daily-book.report",
+    formData,
+    "Relatório do Livro Diário",
+  );
+  if (asked) return asked;
   try {
     await removeBookReportWith(
       db,

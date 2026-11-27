@@ -20,6 +20,7 @@ import {
 } from "@/core/security-paper/stock.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   addLotWith,
@@ -179,6 +180,12 @@ export async function voidLot(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "paper.lot",
+    formData,
+    "Lote de papel de segurança",
+  );
+  if (asked) return asked;
   const reason = String(formData.get("justificativa") ?? "").trim();
   try {
     await voidLotWith(
@@ -310,6 +317,12 @@ export async function voidMovement(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "paper.movement",
+    formData,
+    "Lançamento de papel de segurança",
+  );
+  if (asked) return asked;
   const reason = String(formData.get("justificativa") ?? "").trim();
   try {
     await voidMovementWith(
@@ -555,6 +568,12 @@ export async function removeReport(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "paper.report",
+    formData,
+    "Ofício de papel de segurança",
+  );
+  if (asked) return asked;
   try {
     await removeReportWith(
       db,

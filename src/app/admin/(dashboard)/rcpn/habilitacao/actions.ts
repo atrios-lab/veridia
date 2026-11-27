@@ -12,6 +12,7 @@ import {
 } from "@/core/rcpn/habilitacao.ts";
 import { editalForSite } from "@/core/rcpn/habilitacao-docs.ts";
 import { noticeSectors } from "@/core/tenant/gating.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import { notifyIndexNow } from "@/lib/notify-indexnow.ts";
 import { createPublication } from "@/lib/publications.ts";
@@ -234,6 +235,12 @@ export async function cancelHabilitacaoAction(
 ): Promise<HabilitacaoState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "rcpn.habilitacao",
+    formData,
+    "Habilitação de casamento",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const id = text(formData, "id");

@@ -11,6 +11,7 @@ import {
   transferToForm,
 } from "@/core/titularidade/titularidade.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
@@ -178,6 +179,12 @@ export async function removeTransferAction(
 ): Promise<TitularidadeState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "titularidade.transfer",
+    formData,
+    "Comunicação de titularidade",
+  );
+  if (asked) return asked;
   const ok = await access(true);
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const mes = String(formData.get("mes") ?? "");
@@ -271,6 +278,12 @@ export async function removeFilingAction(
 ): Promise<TitularidadeState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "titularidade.filing",
+    formData,
+    "Ofício de titularidade à prefeitura",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {

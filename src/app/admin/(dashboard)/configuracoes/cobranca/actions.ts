@@ -8,6 +8,7 @@ import type { PixKeyType } from "@/core/tenant/pix.ts";
 import { normalizePixKey } from "@/core/tenant/pix.ts";
 import { db } from "@/db/index.ts";
 import { tenantContent } from "@/db/schema.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { setPrenotationChargeSettingWith } from "@/lib/prenotation-charge.ts";
@@ -133,6 +134,8 @@ export async function removePixKey(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return fail(why, { type: "", key: "" });
+  const asked = await askApproval("pix", formData, "Chave Pix do cartório");
+  if (asked) return fail(asked.message, { type: "", key: "" });
   const session = await getSession();
   if (
     !session ||

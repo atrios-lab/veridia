@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   changeSectorsWith,
@@ -73,6 +74,8 @@ export async function changeSectorAction(
   if (op === "hide") {
     const why = justify(formData);
     if (why) return { status: "error", message: why };
+    const asked = await askApproval("sector", formData, "Setor");
+    if (asked) return asked;
   }
   const id = String(formData.get("id") ?? "");
   const label = String(formData.get("label") ?? "");

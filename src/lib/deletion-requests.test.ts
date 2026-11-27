@@ -68,3 +68,73 @@ test("documento oficial só sai com o Tabelião; recusar mantém; nada é tirado
     }),
   );
 });
+
+test("qualquer outra exclusão guarda o formulário e só roda quando aprovada", async () => {
+  await requestDeletionWith(
+    db,
+    T,
+    {
+      kind: "guide",
+      targetId: "guia-ficticia-1",
+      label: "Guia imobiliária",
+      reason: "Emitida por engano",
+      payload: [
+        ["id", "guia-ficticia-1"],
+        ["justificativa", "Emitida por engano"],
+      ],
+    },
+    { id: "u-escrevente" },
+  );
+  const [row] = (await listDeletionRequestsWith(db, T)).filter(
+    (r) => r.kind === "guide",
+  );
+  assert.deepEqual(row?.payload, [
+    ["id", "guia-ficticia-1"],
+    ["justificativa", "Emitida por engano"],
+  ]);
+  let ran = 0;
+  await decideDeletionWith(
+    db,
+    T,
+    row?.id as string,
+    true,
+    "Confere",
+    { id: "u-substituto" },
+    async (r) => {
+      assert.equal(r.targetId, "guia-ficticia-1");
+      ran++;
+    },
+  );
+  assert.equal(ran, 1);
+  const [after1] = (await listDeletionRequestsWith(db, T)).filter(
+    (r) => r.kind === "guide",
+  );
+  assert.equal(after1?.status, "aprovado");
+});
+
+test("se a exclusão falha ao aprovar, o pedido continua esperando", async () => {
+  await requestDeletionWith(
+    db,
+    T,
+    {
+      kind: "iss",
+      targetId: "iss-ficticio",
+      label: "Declaração de ISS",
+      reason: "Duplicada",
+      payload: [["id", "iss-ficticio"]],
+    },
+    { id: "u-escrevente" },
+  );
+  const [row] = (await listDeletionRequestsWith(db, T)).filter(
+    (r) => r.kind === "iss",
+  );
+  await assert.rejects(
+    decideDeletionWith(db, T, row?.id as string, true, "", { id: "u" }, () =>
+      Promise.reject(new Error("não existe mais")),
+    ),
+  );
+  const [still] = (await listDeletionRequestsWith(db, T)).filter(
+    (r) => r.kind === "iss",
+  );
+  assert.equal(still?.status, "pendente");
+});

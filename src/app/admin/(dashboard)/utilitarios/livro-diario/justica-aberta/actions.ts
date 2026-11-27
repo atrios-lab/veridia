@@ -6,6 +6,7 @@ import { parseSemester } from "@/core/daily-book/justica-aberta.ts";
 import { LONG_TEXT_MAX } from "@/core/text-limits.ts";
 import { parseMoneyBRL } from "@/core/transparency/bulletin.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { DailyBookError } from "@/lib/daily-book.ts";
 import {
@@ -105,6 +106,12 @@ export async function removeFcrcpn(
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const problem = justify(formData);
   if (problem) return { status: "error", message: problem };
+  const asked = await askApproval(
+    "daily-book.fcrcpn",
+    formData,
+    "Repasse FCRCPN",
+  );
+  if (asked) return asked;
   try {
     await removeFcrcpnRepasseWith(
       db,

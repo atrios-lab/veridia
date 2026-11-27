@@ -3874,6 +3874,11 @@ export const deletionRequests = pgTable(
     decidedBy: text("decided_by"),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
     decisionNote: text("decision_note").notNull().default(""),
+    /**
+     * Any other deletion of the platform (decision of 27/11/2026): the
+     * form as it was sent, replayed by whoever approves it.
+     */
+    payload: jsonb("payload").$type<[string, string][]>(),
   },
   (t) => [index("deletion_requests_tenant").on(t.tenantSlug, t.status)],
 );

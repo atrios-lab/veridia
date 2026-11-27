@@ -8,7 +8,11 @@ import { getTenant } from "@/lib/tenant.ts";
 /** Tells the Tabelião there are deletions waiting for a decision. */
 export async function PendingDeletionsBanner() {
   const session = await getSession();
-  if (!session || !decidesDeletions(session.user.role ?? "")) return null;
+  if (
+    !session ||
+    !decidesDeletions(session.user.role ?? "", session.user.permissions)
+  )
+    return null;
   const tenant = await getTenant();
   const count = await pendingDeletionCountWith(db, tenant.slug);
   if (count === 0) return null;

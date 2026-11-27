@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { NUMBER_SERIES, type NumberSeries } from "@/core/numbering/series.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   clearNumberingFloorWith,
@@ -198,6 +199,12 @@ export async function removeIssued(
 ): Promise<NumberingState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "numbering.issued",
+    formData,
+    "Número emitido",
+  );
+  if (asked) return asked;
   const series = editableSeries(formData);
   const ok = await manager(series === "guia" ? "guides.manage" : "iss.manage");
   if (!ok) return { status: "error", message: NO_PERMISSION };

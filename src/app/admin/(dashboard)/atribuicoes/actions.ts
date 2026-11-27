@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import {
   AttributionFileError,
   addAttributionFileWith,
@@ -113,6 +114,12 @@ export async function removeAttributionFileAction(
 ): Promise<FileState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "attributions.file",
+    formData,
+    "Arquivo de atribuição",
+  );
+  if (asked) return asked;
   const ok = await importer();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   try {

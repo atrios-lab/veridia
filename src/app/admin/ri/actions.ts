@@ -22,6 +22,7 @@ import {
 } from "@/core/ri/transfer.ts";
 import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAuditWith } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { requestDeletionWith } from "@/lib/deletion-requests.ts";
@@ -157,7 +158,8 @@ async function askTabeliao(
   label: string,
   formData: FormData,
 ): Promise<RiState | null> {
-  if (decidesDeletions(ok.session.user.role ?? "")) return null;
+  if (decidesDeletions(ok.session.user.role ?? "", ok.session.user.permissions))
+    return null;
   try {
     await requestDeletionWith(
       db,
@@ -394,6 +396,12 @@ export async function forgetLearnedActAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.learned",
+    formData,
+    "Modelo aprendido de ato (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   try {
@@ -634,6 +642,12 @@ export async function setPersonDeletedAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.person",
+    formData,
+    "Pessoa do Indicador Pessoal (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   const deleted = text(formData, "op") !== "restore";
@@ -814,6 +828,12 @@ export async function withdrawExportAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.export",
+    formData,
+    "Carga gerada para a ONR (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.export");
   if (!ok) return denied("ri.export");
   try {
@@ -999,6 +1019,12 @@ export async function setFileDeletedAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.file",
+    formData,
+    "Anexo da matrícula (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   const deleted = text(formData, "op") !== "restore";
@@ -1417,6 +1443,12 @@ export async function setAnnotationDeletedAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.annotation",
+    formData,
+    "Anotação da matrícula (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   const propertyId = text(formData, "propertyId");
@@ -1498,6 +1530,12 @@ export async function setGeometryDeletedAction(
 ): Promise<RiState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "ri.geometry",
+    formData,
+    "Georreferenciamento do imóvel (RI)",
+  );
+  if (asked) return asked;
   const ok = await access("ri.edit");
   if (!ok) return denied("ri.edit");
   const deleted = text(formData, "op") !== "restore";

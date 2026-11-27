@@ -13,6 +13,7 @@ import {
 import { actFromForm } from "@/core/censec/form.ts";
 import { transferProblems } from "@/core/titularidade/titularidade.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { currentJustification, justify } from "@/lib/audit-reason.ts";
 import {
   CensecError,
@@ -278,6 +279,12 @@ export async function removeActAction(
 ): Promise<CensecState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "censec.act",
+    formData,
+    "Ato da carga CENSEC",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   let quinzena = "";
@@ -331,6 +338,12 @@ export async function removeClosingAction(
 ): Promise<CensecState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "censec.closing",
+    formData,
+    "Fechamento da carga CENSEC",
+  );
+  if (asked) return asked;
   const ok = await access();
   if (!ok) return { status: "error", message: NO_PERMISSION };
   const quinzena = String(formData.get("quinzena") ?? "");

@@ -32,6 +32,7 @@ import {
 } from "@/core/transparency/documents.ts";
 import { FUNDS_BY_STATE } from "@/core/transparency/rubrics.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { recordAudit } from "@/lib/audit.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { bulletinFingerprint, renderBulletinPdf } from "@/lib/bulletin-pdf.ts";
@@ -349,6 +350,12 @@ export async function deleteDocumentAction(
   // Sensitive: says why, and the reason goes to the audit.
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "transparency.document",
+    formData,
+    "Documento da Transparência",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
 
@@ -915,6 +922,12 @@ export async function removeBulletinAction(
 ): Promise<ActionState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "transparency.bulletin",
+    formData,
+    "Boletim da Transparência",
+  );
+  if (asked) return asked;
   const session = await authorize();
   if (!session) return { status: "error", message: NO_PERMISSION };
   const tenant = await getTenant();

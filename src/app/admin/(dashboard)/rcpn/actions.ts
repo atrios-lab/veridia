@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import {
   RcpnImportError,
@@ -248,6 +249,12 @@ export async function hideImportAction(
 ): Promise<ImportMetaState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "rcpn.import.hide",
+    formData,
+    "Importação do Registro Civil",
+  );
+  if (asked) return asked;
   return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
     await hideImportWith(db, tenantSlug, id, actorId);
     return "Arquivo tirado da lista. Os registros continuam no índice.";
@@ -271,6 +278,12 @@ export async function purgeImportFileAction(
 ): Promise<ImportMetaState> {
   const why = justify(formData);
   if (why) return { status: "error", message: why };
+  const asked = await askApproval(
+    "rcpn.import.file",
+    formData,
+    "Arquivo importado do Registro Civil",
+  );
+  if (asked) return asked;
   return withImporter(formData, async ({ tenantSlug, actorId, id }) => {
     await purgeImportFileWith(db, tenantSlug, id, actorId);
     return "Arquivo apagado. Ficaram só os dados lidos.";

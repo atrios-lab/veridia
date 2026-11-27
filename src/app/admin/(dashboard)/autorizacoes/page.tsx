@@ -17,15 +17,20 @@ const STATUS: Record<string, string> = {
   cancelado: "Cancelado",
 };
 
+import { APPROVABLE } from "./registry.ts";
+
 /**
- * The requests to delete official documents (decision of 26/11/2026): the
+ * The requests to delete anything on the platform (decision of 26/11/2026): the
  * Tabelião approves or refuses each, confirming the reason.
  */
 export default async function DeletionRequestsPage() {
   const session = await getSession();
   if (!session) notFound();
   const tenant = await getTenant();
-  const decides = decidesDeletions(session.user.role ?? "");
+  const decides = decidesDeletions(
+    session.user.role ?? "",
+    session.user.permissions,
+  );
   const all = await listDeletionRequestsWith(db, tenant.slug);
   const rows = decides
     ? all
@@ -37,10 +42,13 @@ export default async function DeletionRequestsPage() {
       <AdminPageHeader title="Autorizações de exclusão" maxWidth={900} />
       <main className="flex max-w-[900px] flex-col gap-6 px-4 pt-6 pb-8 md:px-8">
         <p className="text-sm text-muted-foreground">
-          Documento oficial (matrícula, ato, protocolo, livro, imagem da ONR) só
-          é apagado com a aprovação do Tabelião. Quem pede escreve o motivo; o
-          Tabelião confirma o motivo ao aprovar ou diz por que recusou. Nada sai
-          do banco: o documento aprovado fica guardado e pode ser recuperado.
+          Toda exclusão na plataforma (documento, ato, anexo, lançamento, guia,
+          certidão, conta…) só é feita com a aprovação do Tabelião. Quem pede
+          escreve o motivo; quem decide confirma o motivo ao aprovar ou diz por
+          que recusou. O Tabelião pode autorizar um substituto a decidir em
+          Configurações › Perfis e permissões (item &quot;Autorizações de
+          exclusão&quot;). Nada sai do banco: o que foi aprovado fica guardado e
+          pode ser recuperado.
         </p>
         <section className="flex flex-col gap-3">
           <h2 className="text-base font-semibold">
@@ -55,9 +63,14 @@ export default async function DeletionRequestsPage() {
                 className="flex flex-col gap-2 rounded-xl border bg-card p-4 shadow-xs"
               >
                 <p className="text-sm font-semibold">
-                  {OFFICIAL_KINDS[r.kind as keyof typeof OFFICIAL_KINDS] ??
-                    r.kind}
-                  : {r.label}
+                  {r.kind in OFFICIAL_KINDS ? (
+                    <>
+                      {OFFICIAL_KINDS[r.kind as keyof typeof OFFICIAL_KINDS]}:{" "}
+                      {r.label}
+                    </>
+                  ) : (
+                    (APPROVABLE[r.kind]?.label ?? r.label)
+                  )}
                 </p>
                 <p className="text-sm">
                   <span className="font-medium">Motivo:</span> {r.reason}

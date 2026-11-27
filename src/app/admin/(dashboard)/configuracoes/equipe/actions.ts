@@ -14,6 +14,7 @@ import {
   uniqueLevelId,
 } from "@/core/team/team.ts";
 import { db } from "@/db/index.ts";
+import { askApproval } from "@/lib/approval.ts";
 import { justify } from "@/lib/audit-reason.ts";
 import { getSession } from "@/lib/session.ts";
 import { getLegacySigners } from "@/lib/tax-guides.ts";
@@ -250,6 +251,12 @@ export async function deletePersonAction(
   if (!session) return { status: "error", message: NO_PERMISSION };
   const missing = justify(formData);
   if (missing) return { status: "error", message: missing };
+  const asked = await askApproval(
+    "team.person",
+    formData,
+    "Pessoa da equipe do site",
+  );
+  if (asked) return asked;
   try {
     const tenant = await getTenant();
     await deleteStaffWith(
