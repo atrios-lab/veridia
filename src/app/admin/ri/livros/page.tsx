@@ -12,8 +12,10 @@ import { officeToday } from "@/lib/ri-protocols.ts";
 import { Badge } from "../../_ui/badge.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { BookForm, ProtocolDay } from "../_components/book-form.tsx";
+import { ActionButton } from "../_components/client.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
+import { openIndexBooksAction } from "../actions.ts";
 
 export const metadata = { title: "Livros e assinatura" };
 
@@ -42,6 +44,7 @@ export default async function BooksPage({
     ]),
   );
   const deletedCount = rows.filter((r) => r.deletedAt).length;
+  const book2 = rows.find((r) => r.book === 2 && !r.deletedAt && !r.closedOn);
   return (
     <RiPage
       wide
@@ -74,11 +77,34 @@ export default async function BooksPage({
                 description={`${info.purpose[0]?.toUpperCase()}${info.purpose.slice(1)} (${info.source}).`}
               >
                 {list.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    {showDeleted
-                      ? "Nenhum livro apagado."
-                      : "Nenhum livro aberto no sistema ainda."}
-                  </p>
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {showDeleted
+                        ? "Nenhum livro apagado."
+                        : "Nenhum livro aberto no sistema ainda."}
+                    </p>
+                    {!showDeleted && (n === 4 || n === 5) && (
+                      <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm">
+                        <p>
+                          Este indicador já está em uso: o sistema o alimenta
+                          sozinho com as matrículas e as pessoas lançadas (Lei
+                          nº 6.015/1973, art. {n === 4 ? "179" : "180"}). Falta
+                          só lançar o livro, para ter o termo de abertura.
+                        </p>
+                        {book2 && canManage && (
+                          <div>
+                            <ActionButton
+                              action={openIndexBooksAction}
+                              fields={{}}
+                              label={`Abrir com o Livro 2 (${shortDate(book2.openedOn)}, ${formLabel(book2.form).toLowerCase()})`}
+                              pendingLabel="Abrindo..."
+                              variant="default"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <ul className="flex flex-col divide-y">
                     {list.map((r) => (
@@ -103,13 +129,48 @@ export default async function BooksPage({
                               : ""}
                           </p>
                         </div>
-                        <Badge variant={r.closedOn ? "secondary" : "default"}>
-                          {r.deletedAt
-                            ? "Apagado"
-                            : r.closedOn
-                              ? "Encerrado"
-                              : "Em uso"}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <a
+                            href={`/admin/ri/livros/${r.id}/termo?tipo=abertura`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={buttonVariants({
+                              size: "sm",
+                              variant: "outline",
+                            })}
+                          >
+                            Termo de abertura
+                          </a>
+                          {r.closedOn ? (
+                            <a
+                              href={`/admin/ri/livros/${r.id}/termo?tipo=encerramento`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                              })}
+                            >
+                              Termo de encerramento
+                            </a>
+                          ) : (
+                            r.form !== "folhas" && (
+                              <span
+                                className="text-xs text-muted-foreground"
+                                title="Livro em fichas ou eletrônico não se encerra por estar cheio: cada ficha continua. O encerramento só é feito se o livro for substituído ou por determinação da Corregedoria."
+                              >
+                                Encerramento: só se for substituído
+                              </span>
+                            )
+                          )}
+                          <Badge variant={r.closedOn ? "secondary" : "default"}>
+                            {r.deletedAt
+                              ? "Apagado"
+                              : r.closedOn
+                                ? "Encerrado"
+                                : "Em uso"}
+                          </Badge>
+                        </div>
                       </li>
                     ))}
                   </ul>

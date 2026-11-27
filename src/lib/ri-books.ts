@@ -212,6 +212,47 @@ export async function openBookWith(
   return row?.id ?? "";
 }
 
+/**
+ * The Indicador Real (Livro 4) and the Indicador Pessoal (Livro 5) are
+ * kept by the system from the matrículas and the people: when they were
+ * never opened, they open with the Livro 2 in use, on the same day and in
+ * the same form (decision of 27/11/2026). Returns how many were opened.
+ */
+export async function openIndexBooksWith(
+  database: Database,
+  tenantSlug: string,
+  actor: Actor,
+): Promise<number> {
+  const rows = (await listBooksWith(database, tenantSlug)).filter(
+    (r) => !r.deletedAt,
+  );
+  const base = rows
+    .filter((r) => r.book === 2 && !r.closedOn)
+    .sort((a, b) => a.openedOn.localeCompare(b.openedOn))[0];
+  if (!base) return 0;
+  let opened = 0;
+  for (const book of [4, 5] as const) {
+    if (rows.some((r) => r.book === book)) continue;
+    await openBookWith(
+      database,
+      tenantSlug,
+      {
+        book,
+        volume: String(book),
+        form: base.form as BookForm,
+        sheetCount: 0,
+        firstItem: null,
+        lastItem: null,
+        openedOn: base.openedOn,
+        openingNotes: `Aberto junto com o Livro ${base.volume}; alimentado pelas matrículas e pessoas lançadas (Lei nº 6.015/1973, arts. 179 e 180).`,
+      },
+      actor,
+    );
+    opened++;
+  }
+  return opened;
+}
+
 const snapshot = (row: BookRow): Partial<BookInput> => ({
   volume: row.volume,
   form: row.form as BookForm,
