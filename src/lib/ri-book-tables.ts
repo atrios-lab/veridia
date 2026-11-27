@@ -27,7 +27,10 @@ const shortIso = (iso: string | null | undefined) => {
 };
 
 /** Livro 1: the columns of the art. 175, in the order apontados. */
-export function protocolTable(lines: ProtocolLine[]): BookTable {
+export function protocolTable(
+  lines: ProtocolLine[],
+  volumeOf?: (number: number) => string | null,
+): BookTable {
   return {
     columns: [
       "Nº de ordem",
@@ -35,6 +38,7 @@ export function protocolTable(lines: ProtocolLine[]): BookTable {
       "Apresentante",
       "Natureza do título",
       "Atos (anotações)",
+      ...(volumeOf ? ["Livro"] : []),
     ],
     rows: [...lines]
       .sort((a, b) => a.number - b.number)
@@ -44,6 +48,7 @@ export function protocolTable(lines: ProtocolLine[]): BookTable {
         l.presenter,
         l.titleKind,
         l.voided ? "Lançado por engano (anulado)" : l.acts,
+        ...(volumeOf ? [volumeOf(l.number) ?? ""] : []),
       ]),
   };
 }

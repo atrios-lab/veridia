@@ -2431,7 +2431,9 @@ export async function openProtocolVolumesAction(
       first,
       last,
       form:
-        text(formData, `forma-${i}`) === "eletronico" ? "eletronico" : "folhas",
+        (["eletronico", "hibrido"] as const).find(
+          (f) => f === text(formData, `forma-${i}`),
+        ) ?? "folhas",
       sheetCount: Number(text(formData, `folhas-${i}`).replace(/\D/g, "")) || 0,
     });
   }

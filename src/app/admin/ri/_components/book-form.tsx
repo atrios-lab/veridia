@@ -150,6 +150,10 @@ export function BookForm({
             <option value="eletronico">
               Meio eletrônico (arts. 1º, § 3º, e 7º-A)
             </option>
+            <option value="hibrido">
+              Híbrido: meio eletrônico e impresso em folhas (arts. 1º, § 3º, e
+              3º, § 2º)
+            </option>
           </NativeSelect>
         </div>
         <Field

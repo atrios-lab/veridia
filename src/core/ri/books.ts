@@ -102,7 +102,7 @@ export function isBookNumber(value: number): value is BookNumber {
 }
 
 /** How the book is kept. */
-export type BookForm = "fichas" | "folhas" | "eletronico";
+export type BookForm = "fichas" | "folhas" | "eletronico" | "hibrido";
 export const BOOK_FORMS: { id: BookForm; label: string; source: string }[] = [
   {
     id: "fichas",
@@ -119,7 +119,36 @@ export const BOOK_FORMS: { id: BookForm; label: string; source: string }[] = [
     label: "Meio eletrônico",
     source: "Lei nº 6.015/1973, arts. 1º, § 3º, e 7º-A",
   },
+  {
+    id: "hibrido",
+    label: "Híbrido (escriturado em meio eletrônico e impresso em folhas)",
+    source: "Lei nº 6.015/1973, arts. 1º, § 3º, e 3º, § 2º",
+  },
 ];
+
+/**
+ * The volume a número de ordem belongs to (1, 1-A, 1-B…): the Livro 1 is
+ * one book, and each título keeps the letter of the volume it was written
+ * in (decision of 27/11/2026). Null when no volume has its range.
+ */
+export function volumeOfNumber(
+  number: number,
+  volumes: {
+    volume: string;
+    firstItem: number | null;
+    lastItem: number | null;
+  }[],
+): string | null {
+  const found = volumes
+    .filter(
+      (v) =>
+        v.firstItem !== null &&
+        number >= v.firstItem &&
+        (v.lastItem === null || number <= v.lastItem),
+    )
+    .sort((a, b) => (b.firstItem ?? 0) - (a.firstItem ?? 0))[0];
+  return found?.volume ?? null;
+}
 
 export function formLabel(form: string): string {
   return BOOK_FORMS.find((f) => f.id === form)?.label ?? form;
@@ -246,9 +275,12 @@ export function openingTerm(r: BookRecord, office: TermOffice): TermText {
   const electronic = r.form === "eletronico";
   const size = r.sheetCount ? `${counted(r.sheetCount)} ${units(r.form)}` : "";
   const named = `${info.name.replace(" · ", ", ")}${r.volume === String(r.book) ? "" : `, volume ${r.volume}`}`;
-  const body = electronic
-    ? `Fica aberto, em meio eletrônico, o ${named}, da serventia ${office.name}, CNS ${office.cns}. Os atos serão escriturados e conservados em meio eletrônico e assinados com certificado digital ICP-Brasil, na forma do art. 1º, § 3º, da Lei nº 6.015/1973. Finalidade: ${info.purpose} (${info.source}).`
-    : `Fica aberto o ${named}, da serventia ${office.name}, CNS ${office.cns}. ${size ? `Contém ${size}, numeradas e autenticadas pelo oficial.` : "Suas folhas ou fichas serão numeradas e autenticadas pelo oficial à medida que forem usadas."} Finalidade: ${info.purpose} (${info.source}).`;
+  const body =
+    r.form === "hibrido"
+      ? `Fica aberto o ${named}, da serventia ${office.name}, CNS ${office.cns}, em forma híbrida: os atos são escriturados em meio eletrônico, assinados com certificado digital ICP-Brasil (art. 1º, § 3º, da Lei nº 6.015/1973), e impressos em folhas numeradas e autenticadas pelo oficial (art. 3º, § 2º), que formam o livro físico. Finalidade: ${info.purpose} (${info.source}).`
+      : electronic
+        ? `Fica aberto, em meio eletrônico, o ${named}, da serventia ${office.name}, CNS ${office.cns}. Os atos serão escriturados e conservados em meio eletrônico e assinados com certificado digital ICP-Brasil, na forma do art. 1º, § 3º, da Lei nº 6.015/1973. Finalidade: ${info.purpose} (${info.source}).`
+        : `Fica aberto o ${named}, da serventia ${office.name}, CNS ${office.cns}. ${size ? `Contém ${size}, numeradas e autenticadas pelo oficial.` : "Suas folhas ou fichas serão numeradas e autenticadas pelo oficial à medida que forem usadas."} Finalidade: ${info.purpose} (${info.source}).`;
   const rows = [
     { label: "Livro", value: `${info.name} · ${r.volume}` },
     { label: "Forma de escrituração", value: formLabel(r.form) },
@@ -402,4 +434,40 @@ export function batches<T>(items: readonly T[], size: number): T[][] {
     out.push(items.slice(i, i + size));
   }
   return out;
+}
+
+export type Period = "dia" | "mes" | "semestre" | "ano";
+
+const pad = (n: number) => String(n).padStart(2, "0");
+const lastDay = (y: number, m: number) =>
+  new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+/** Livro 1 printed by period: the first and last day of the period, AAAA-MM-DD (no time zone). */
+export function periodRange(
+  period: Period,
+  day: string,
+  month: string,
+  year: number,
+  half: 1 | 2,
+): { from: string; to: string } | null {
+  if (period === "dia") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) ? { from: day, to: day } : null;
+  }
+  if (period === "mes") {
+    const m = /^(\d{4})-(\d{2})$/.exec(month);
+    if (!m) return null;
+    const y = Number(m[1]);
+    const mo = Number(m[2]);
+    return {
+      from: `${m[1]}-${m[2]}-01`,
+      to: `${m[1]}-${m[2]}-${pad(lastDay(y, mo))}`,
+    };
+  }
+  if (!year || year < 1900) return null;
+  if (period === "semestre") {
+    return half === 1
+      ? { from: `${year}-01-01`, to: `${year}-06-30` }
+      : { from: `${year}-07-01`, to: `${year}-12-31` };
+  }
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
 }

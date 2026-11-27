@@ -1,7 +1,8 @@
 import { can } from "@/core/auth/roles.ts";
+import { volumeOfNumber } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
 import { protocolTable } from "@/lib/ri-book-tables.ts";
-import { protocolDaysWith } from "@/lib/ri-books.ts";
+import { listBooksWith, protocolDaysWith } from "@/lib/ri-books.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { csvOf, xlsxOf } from "@/lib/ri-sheet.ts";
 import { getSession } from "@/lib/session.ts";
@@ -31,7 +32,14 @@ export async function GET(request: Request): Promise<Response> {
     iso(query.get("de")) ?? "1900-01-01",
     iso(query.get("ate")) ?? officeToday(),
   );
-  const table = protocolTable([...days.values()].flat());
+  const volumes = (await listBooksWith(db, tenant.slug)).filter(
+    (b) => b.book === 1 && !b.deletedAt && b.firstItem !== null,
+  );
+  // Each título with the letter of the volume it was written in.
+  const table = protocolTable(
+    [...days.values()].flat(),
+    volumes.length ? (n) => volumeOfNumber(n, volumes) : undefined,
+  );
   const rows = [table.columns, ...table.rows];
   const name = "Protocolo - Livro 1";
   if (query.get("formato") === "csv") {
