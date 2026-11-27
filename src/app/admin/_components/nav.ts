@@ -101,6 +101,32 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     permission: "requests.manage",
   },
   {
+    // The qualificação de títulos (change qualificacao-de-titulos): the
+    // nota devolutiva, the reexame and the qualificação positiva, for every
+    // attribution. In Operação, next to the pedidos, where the daily work
+    // is (decision of 27/11/2026: it was hidden among the Utilitários).
+    group: "Operação",
+    label: "Qualificação de títulos",
+    href: "/admin/utilitarios/qualificacao",
+    icon: "gavel",
+    permission: "qualificacao.manage",
+    children: [
+      {
+        label: "Títulos em qualificação",
+        href: "/admin/utilitarios/qualificacao",
+      },
+      {
+        label: "Nova qualificação",
+        href: "/admin/utilitarios/qualificacao/nova",
+      },
+      {
+        label: "Biblioteca de exigências",
+        href: "/admin/utilitarios/qualificacao/biblioteca",
+      },
+      { label: "Prazos", href: "/admin/utilitarios/qualificacao/prazos" },
+    ],
+  },
+  {
     group: "Operação",
     label: "Email corporativo",
     // The office's institutional mailbox. One address for every serventia
@@ -344,31 +370,6 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
         label: "Lançar escritura ou registro",
         href: "/admin/utilitarios/doi/nova",
       },
-    ],
-  },
-  {
-    // The qualificação de títulos (change qualificacao-de-titulos): the
-    // nota devolutiva, the reexame and the qualificação positiva, for every
-    // attribution, starting with the Registro Civil.
-    group: "Utilitários",
-    label: "Qualificação de títulos",
-    href: "/admin/utilitarios/qualificacao",
-    icon: "gavel",
-    permission: "qualificacao.manage",
-    children: [
-      {
-        label: "Títulos em qualificação",
-        href: "/admin/utilitarios/qualificacao",
-      },
-      {
-        label: "Nova qualificação",
-        href: "/admin/utilitarios/qualificacao/nova",
-      },
-      {
-        label: "Biblioteca de exigências",
-        href: "/admin/utilitarios/qualificacao/biblioteca",
-      },
-      { label: "Prazos", href: "/admin/utilitarios/qualificacao/prazos" },
     ],
   },
   {

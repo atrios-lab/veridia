@@ -5,6 +5,7 @@ import { LIBRARY_SEEDS, seedsOf, servesAct } from "./biblioteca.ts";
 import { buildNote, buildPositive } from "./documents.ts";
 import {
   ACTS,
+  actOfName,
   emptyQualification,
   emptyRequirement,
   noteProblems,
@@ -12,6 +13,7 @@ import {
   positiveProblems,
   providencias,
   type QualificationData,
+  qualificationFromRequest,
   qualificationProblems,
   reexamView,
   statusOf,
@@ -344,4 +346,27 @@ test("o Assistente Virtual não inventa: exigência sem fundamento conferido fic
     ["Da biblioteca", "Na base", "Site oficial"],
   );
   assert.deepEqual(setAside, ["Sem fonte", "Sem norma", "Blog"]);
+});
+
+test("o ato vem do nome do serviço pedido no balcão online", () => {
+  assert.equal(actOfName("ri", "CERTIDAO NEGATIVA"), "certidao");
+  assert.equal(actOfName("ri", "Certidão de ônus reais"), "certidao");
+  assert.equal(actOfName("ri", "Averbação de construção"), "averbacao");
+  assert.equal(actOfName("ri", "Registro de compra e venda"), "registro");
+  assert.equal(actOfName("ri", "Usucapião extrajudicial"), "outro");
+  const fromRequest = qualificationFromRequest({
+    protocol: "REQ.2026.000001",
+    applicantName: "Pessoa Fictícia",
+    contact: "",
+    receivedOn: "2026-11-19",
+    attribution: "RI",
+    actName: "CERTIDAO NEGATIVA",
+  });
+  assert.equal(fromRequest.act, "certidao");
+  // The library of the act has the exigências of a certidão.
+  assert.ok(
+    LIBRARY_SEEDS.filter((s) => s.attribution === "ri").some((s) =>
+      s.acts.includes("certidao"),
+    ),
+  );
 });

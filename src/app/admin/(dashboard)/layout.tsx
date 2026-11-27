@@ -22,6 +22,7 @@ import {
   lingeringStatusesWith,
 } from "@/lib/messages.ts";
 import { getOfficeAlerts } from "@/lib/office-alerts.ts";
+import { openQualificationCountWith } from "@/lib/qualificacao.ts";
 import { routedToMeWith, waitingOnMe } from "@/lib/routing.ts";
 import { pendingDutyCount } from "@/lib/security-paper.ts";
 import { sendSecurityPaperRemindersInBackground } from "@/lib/security-paper-reminders.ts";
@@ -174,6 +175,15 @@ export default async function DashboardLayout({
           // Appointments still ahead, from today on: the agenda moved to
           // its own table, and the old count read the retired kind.
           "/admin/agenda": await bookedCountFrom(tenant.slug, officeNow().date),
+        }
+      : {}),
+    // The qualificações waiting for a nota or a positiva.
+    ...(can(role, "qualificacao.manage", granted)
+      ? {
+          "/admin/utilitarios/qualificacao": await openQualificationCountWith(
+            db,
+            tenant.slug,
+          ).catch(() => 0),
         }
       : {}),
     ...(can(role, "chat.manage", granted)

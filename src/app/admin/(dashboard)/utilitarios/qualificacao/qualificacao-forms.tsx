@@ -579,7 +579,12 @@ export function RoundEditor({
   const choices = library.filter(
     (l) =>
       !round.requirements.some((r) => r.libraryId === l.id) &&
-      (!onlyAct || l.acts.length === 0 || l.acts.includes(data.act)),
+      (!onlyAct ||
+        // No act chosen, or "outro": the whole library of the attribution.
+        !data.act ||
+        data.act === "outro" ||
+        l.acts.length === 0 ||
+        l.acts.includes(data.act)),
   );
   const add = (from?: LibraryChoice) => {
     const base = emptyRequirement(newId(), round.n);
@@ -786,7 +791,9 @@ export function IssueForm({
       <div>
         <Button
           type="submit"
-          variant={kind === "devolutiva" ? "default" : "outline"}
+          // The one that can go out is the main button (the other is
+          // disabled): a positive with no exigência must not look like text.
+          variant={problems.length === 0 ? "default" : "outline"}
           disabled={pending || problems.length > 0}
         >
           {pending ? "Emitindo..." : label}
@@ -1231,7 +1238,20 @@ export function AiProposeForm({
         </p>
       ) : null}
       {blocked ? (
-        <p className="text-sm text-muted-foreground">{blocked}</p>
+        <div className="flex flex-col gap-2 rounded-lg border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning-text">
+          <p>{blocked}</p>
+          <p>
+            Sem o Assistente Virtual, a qualificação continua: escolha as
+            exigências na biblioteca abaixo ou, se não houver nenhuma, emita a
+            qualificação positiva.{" "}
+            <a
+              href="/admin/configuracoes/assistente-virtual"
+              className="font-medium underline underline-offset-4"
+            >
+              Ligar o Assistente Virtual
+            </a>
+          </p>
+        </div>
       ) : (
         <>
           <div className="flex min-w-0 flex-col gap-1.5">

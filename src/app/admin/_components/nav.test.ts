@@ -13,7 +13,7 @@ test("every group heading appears once: items of a group stay adjacent", () => {
   assert.deepEqual(headings, [...new Set(headings)]);
 });
 
-test("Direcionados a mim follows the request queue, then Email corporativo and Mensagens, inside Operação", () => {
+test("Direcionados a mim follows the request queue, then Qualificação, Email corporativo and Mensagens, inside Operação", () => {
   const operation = navGroups(ADMIN_NAV).find(
     (entry) => entry.group === "Operação",
   );
@@ -22,6 +22,8 @@ test("Direcionados a mim follows the request queue, then Email corporativo and M
     "Visão geral",
     "Pedidos de serviço",
     "Direcionados a mim",
+    // Out of the Utilitários, where it was hidden (decision of 27/11/2026).
+    "Qualificação de títulos",
     "Email corporativo",
     "Mensagens internas",
   ]);
@@ -128,10 +130,10 @@ test("Utilitários é um tópico só, com os utilitários como subtópicos", () 
     (entry) => entry.group === "Utilitários",
   );
   // Guias, ISS, titularidade à prefeitura, cargas da CENSEC, carga da
-  // DOI, qualificação de títulos, análise de cédulas, base jurídica da
-  // IA, Livro Diário, papel de segurança, solicitação de papéis e
-  // assinador.
-  assert.equal(group?.items.length, 12);
+  // DOI, análise de cédulas, base jurídica da IA, Livro Diário, papel de
+  // segurança, solicitação de papéis e assinador (the qualificação de
+  // títulos moved to Operação on 27/11/2026).
+  assert.equal(group?.items.length, 11);
 });
 
 test("Atribuições é um tópico só: Registro Civil, as outras seis e o Caixa", () => {

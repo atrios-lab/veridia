@@ -1155,3 +1155,15 @@ export async function noteValidatedAtWith(
     .limit(1);
   return row?.at ?? null;
 }
+
+/**
+ * The qualificações waiting for a decision (the round open, no nota or
+ * positiva yet): the badge of the menu (decision of 27/11/2026).
+ */
+export async function openQualificationCountWith(
+  database: Database,
+  tenantSlug: string,
+): Promise<number> {
+  const rows = await listQualificationsWith(database, tenantSlug);
+  return rows.filter((q) => currentRound(q.data).result === "aberta").length;
+}

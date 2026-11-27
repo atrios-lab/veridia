@@ -57,7 +57,12 @@ export function SuggestCard({
   const [openAt, setOpenAt] = useState("08:00");
   const [closeAt, setCloseAt] = useState("14:00");
   const [staff, setStaff] = useState(2);
-  const [lunchOn, setLunchOn] = useState(true);
+  // "turnos": the team takes turns and the counter stays open;
+  // "fechado": the office closes and everyone comes back at the same time.
+  const [lunchMode, setLunchMode] = useState<"turnos" | "fechado" | "nao">(
+    "turnos",
+  );
+  const lunchOn = lunchMode !== "nao";
   const [lunchFrom, setLunchFrom] = useState("12:00");
   const [lunchTo, setLunchTo] = useState("14:00");
   const [lunchMinutes, setLunchMinutes] = useState(60);
@@ -78,7 +83,12 @@ export function SuggestCard({
         close: closeAt,
         staff,
         lunch: lunchOn
-          ? { from: lunchFrom, to: lunchTo, minutes: lunchMinutes }
+          ? {
+              from: lunchFrom,
+              to: lunchTo,
+              minutes: lunchMinutes,
+              closed: lunchMode === "fechado",
+            }
           : undefined,
         quick: rows
           .filter((row) => row.included && row.quick)
@@ -87,7 +97,17 @@ export function SuggestCard({
           .filter((row) => row.included && !row.quick)
           .map(({ id, minutes }) => ({ id, minutes })),
       }),
-    [openAt, closeAt, staff, lunchOn, lunchFrom, lunchTo, lunchMinutes, rows],
+    [
+      openAt,
+      closeAt,
+      staff,
+      lunchOn,
+      lunchMode,
+      lunchFrom,
+      lunchTo,
+      lunchMinutes,
+      rows,
+    ],
   );
   const labelOf = new Map(services.map((s) => [s.id, s.label]));
   const total = Object.values(suggestion.capacity).reduce((a, b) => a + b, 0);
@@ -181,42 +201,55 @@ export function SuggestCard({
 
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground">
         <label className="flex items-center gap-2 font-medium">
-          <input
-            type="checkbox"
-            checked={lunchOn}
-            onChange={(e) => setLunchOn(e.target.checked)}
-            className="checkbox-admin"
-          />
-          Almoço em turnos, sem fechar o atendimento:
+          Almoço:
+          <select
+            value={lunchMode}
+            onChange={(e) =>
+              setLunchMode(e.target.value as "turnos" | "fechado" | "nao")
+            }
+            className={cn(inputClass, "w-auto")}
+          >
+            <option value="turnos">Em turnos, sem fechar o atendimento</option>
+            <option value="fechado">Fecha para almoço (todos param)</option>
+            <option value="nao">Sem pausa de almoço</option>
+          </select>
         </label>
         <span className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-          entre
+          {lunchMode === "fechado" ? "fecha às" : "entre"}
           <Input
             type="time"
             value={lunchFrom}
             onChange={(e) => setLunchFrom(e.target.value)}
             disabled={!lunchOn}
+            aria-label={lunchMode === "fechado" ? "Fecha às" : "Almoço de"}
             className={inputClass}
           />
-          e
+          {lunchMode === "fechado" ? "e todos voltam às" : "e"}
           <Input
             type="time"
             value={lunchTo}
             onChange={(e) => setLunchTo(e.target.value)}
             disabled={!lunchOn}
+            aria-label={
+              lunchMode === "fechado" ? "Todos voltam às" : "Almoço até"
+            }
             className={inputClass}
           />
-          , cada pessoa
-          <Input
-            type="number"
-            min={15}
-            step={15}
-            value={lunchMinutes}
-            onChange={(e) => setLunchMinutes(Number(e.target.value) || 60)}
-            disabled={!lunchOn}
-            className={cn(inputClass, "w-16")}
-          />
-          min
+          {lunchMode === "turnos" && (
+            <>
+              , cada pessoa
+              <Input
+                type="number"
+                min={15}
+                step={15}
+                value={lunchMinutes}
+                onChange={(e) => setLunchMinutes(Number(e.target.value) || 60)}
+                aria-label="Minutos de almoço de cada pessoa"
+                className={cn(inputClass, "w-16")}
+              />
+              min
+            </>
+          )}
         </span>
       </div>
 

@@ -166,7 +166,7 @@ export default async function QualificationPage({
           >
             {Number(ia) > 0
               ? `O Assistente Virtual propôs ${ia} ${Number(ia) === 1 ? "exigência" : "exigências"}, marcadas abaixo. Confira cada uma (o fato, o fundamento e a redação), corrija ou tire, e salve antes de emitir.`
-              : "O Assistente Virtual não propôs exigência. Confira o resumo abaixo antes de emitir."}
+              : "O Assistente Virtual não achou exigência: o título está apto. Confira o resumo abaixo e, estando certo, emita a qualificação positiva em Emitir, no fim da página."}
           </p>
         )}
         {due && (
