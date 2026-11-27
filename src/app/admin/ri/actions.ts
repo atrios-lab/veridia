@@ -2260,7 +2260,14 @@ export async function importProtocolBookAction(
       ok.actor,
     );
     revalidatePath("/admin/ri", "layout");
-    return importSummary(created, skipped, reading.errors, "títulos");
+    const summary = importSummary(created, skipped, reading.errors, "títulos");
+    if (reading.merged && summary.status !== "idle") {
+      return {
+        status: summary.status,
+        message: `${summary.message} ${reading.merged} lançamentos repetidos no livro original (mesmo número ou com letra) foram guardados nas anotações do primeiro.`,
+      };
+    }
+    return summary;
   } catch (error) {
     if (error instanceof SheetFileError) {
       return { status: "error", message: error.message };
