@@ -408,3 +408,51 @@ export function foreignQuarterDocument(
 }
 
 export { recipientsFor };
+
+/**
+ * Imports the assentos read from the model spreadsheet. An assento with a
+ * number already in the book stays out; without a number, it takes the
+ * next one. Returns how many came in and how many were left out.
+ */
+export async function importForeignWith(
+  database: Database,
+  tenantSlug: string,
+  items: (ForeignInput & { number: number | null })[],
+  actor: Actor,
+): Promise<{ created: number; skipped: number }> {
+  const taken = new Set(
+    (
+      await database
+        .select({ number: riForeignEntries.number })
+        .from(riForeignEntries)
+        .where(eq(riForeignEntries.tenantSlug, tenantSlug))
+    ).map((r) => r.number),
+  );
+  let next = Math.max(0, ...taken) + 1;
+  let created = 0;
+  let skipped = 0;
+  for (const { number, ...input } of items) {
+    if (number !== null && taken.has(number)) {
+      skipped++;
+      continue;
+    }
+    const n = number ?? next;
+    taken.add(n);
+    next = Math.max(next, n + 1);
+    await database.insert(riForeignEntries).values({
+      tenantSlug,
+      number: n,
+      ...valuesOf(input),
+      createdBy: actor.id,
+    });
+    created++;
+  }
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.foreign-import",
+    targetType: "ri-foreign",
+    reason: `${created} assentos importados, ${skipped} já existiam`,
+  });
+  return { created, skipped };
+}

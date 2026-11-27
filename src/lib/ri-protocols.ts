@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, isNull, max } from "drizzle-orm";
 import { deadlineDate } from "@/core/request/deadline.ts";
+import type { ProtocolImport } from "@/core/ri/book-import.ts";
 import { isoDate, matriculaNumber } from "@/core/ri/property.ts";
 import {
   deadlinesFor,
@@ -771,4 +772,63 @@ export function countersOf(
         r.prenotationEnds <= today,
     ).length,
   };
+}
+
+/**
+ * Imports the Protocolo the office kept elsewhere (Livro 1): each título
+ * with its own number and date. A number already in the system stays out,
+ * nothing is overwritten, and none of it starts a prazo: what was in the
+ * old book is history (decision of 27/11/2026).
+ */
+export async function importProtocolsWith(
+  database: Database,
+  tenantSlug: string,
+  items: ProtocolImport[],
+  actor: { id: string },
+): Promise<{ created: number; skipped: number }> {
+  const taken = new Set(
+    (
+      await database
+        .select({ number: riProtocols.number })
+        .from(riProtocols)
+        .where(
+          and(
+            eq(riProtocols.tenantSlug, tenantSlug),
+            eq(riProtocols.kind, "prenotacao"),
+          ),
+        )
+    ).map((r) => r.number),
+  );
+  let created = 0;
+  let skipped = 0;
+  for (const item of items) {
+    if (taken.has(item.number)) {
+      skipped++;
+      continue;
+    }
+    taken.add(item.number);
+    await database.insert(riProtocols).values({
+      tenantSlug,
+      kind: "prenotacao",
+      number: item.number,
+      presentedAt: new Date(`${item.presentedOn}T12:00:00-03:00`),
+      presentedOn: item.presentedOn,
+      presenterName: item.presenter,
+      titleKind: item.titleKind,
+      actsSummary: item.acts,
+      status: item.status,
+      createdBy: actor.id,
+      voidedAt: item.voided ? new Date() : null,
+      voidedBy: item.voided ? actor.id : null,
+    });
+    created++;
+  }
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.protocol-import",
+    targetType: "ri-protocol",
+    reason: `${created} títulos importados, ${skipped} já existiam`,
+  });
+  return { created, skipped };
 }

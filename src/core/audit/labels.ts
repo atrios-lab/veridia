@@ -477,6 +477,9 @@ const EXACT: Record<string, string> = {
     "Registrou o envio da comunicação trimestral de estrangeiros",
   "ri.foreign-report-delete":
     "Desfez o registro de envio da comunicação de estrangeiros",
+  "ri.protocol-import": "Importou títulos do Protocolo (Livro 1)",
+  "ri.foreign-import":
+    "Importou assentos do livro de aquisição por estrangeiro",
   "ri.book-open": "Abriu um livro do Registro de Imóveis (termo de abertura)",
   "ri.protocol-day-close": "Encerrou dias do Protocolo (Livro 1)",
   "ri.protocol-day-reopen": "Reabriu um dia encerrado do Protocolo (Livro 1)",
@@ -916,6 +919,10 @@ const EXPLANATIONS: Record<string, string> = {
     "A relação trimestral de aquisições por estrangeiros (ou a certidão negativa) foi registrada como enviada (Prov. 156/RN, art. 275).",
   "ri.foreign-report-delete":
     "O registro de envio de uma comunicação trimestral de estrangeiros foi desfeito, com o motivo.",
+  "ri.protocol-import":
+    "Títulos do Protocolo que o cartório já tinha foram importados por planilha. Número já existente ficou como estava; nenhum título importado conta prazo.",
+  "ri.foreign-import":
+    "Assentos do livro de aquisição por estrangeiro foram importados por planilha. Número já existente ficou como estava.",
   "ri.book-open":
     "Um livro do Registro de Imóveis foi aberto no sistema, com número, forma de escrituração e folhas. O termo de abertura sai dele, para assinar (Lei nº 6.015/1973, art. 4º).",
   "ri.book-edit":
