@@ -838,6 +838,11 @@ export async function bookPdfFor(
     seal?: "nenhum" | "numero" | "imagem";
     /** Word, for the office to adjust. */
     word?: boolean;
+    /**
+     * The Livro 1 in the model of the book (folhas with the termo of each
+     * day below its títulos), from lib/ri-protocol-sheets.ts.
+     */
+    protocolSheets?: (from: string, to: string) => Promise<Uint8Array | null>;
   } = {},
 ): Promise<{ bytes: Uint8Array; name: string; word?: boolean } | null> {
   const sealMode = options.seal ?? "numero";
@@ -866,7 +871,16 @@ export async function bookPdfFor(
   await addTerm(termDocument(tenant, openingTerm(record, office), signer));
   const footer = `${officialName(tenant)} · Livro nº ${row.volume}`;
   const year = `ANO: ${(row.closedOn ?? officeToday()).slice(0, 4)}`;
-  if (record.book === 1) {
+  const sheetsPdf =
+    record.book === 1 && !options.word && options.protocolSheets
+      ? await options.protocolSheets(
+          isoDate(range.from ?? "") ?? row.openedOn,
+          isoDate(range.to ?? "") ?? row.closedOn ?? officeToday(),
+        )
+      : null;
+  if (sheetsPdf) {
+    parts.push(sheetsPdf);
+  } else if (record.book === 1) {
     const from = isoDate(range.from ?? "") ?? row.openedOn;
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
     const days = await protocolDaysWith(database, tenant.slug, from, to);

@@ -66,6 +66,18 @@ Regras do dono do projeto (21/11/2026), para toda tela, documento ou texto do si
   saldo antigo com juros, não crédito suplementar. Então a cobrança é averbação sem conteúdo econômico
   (código ...)"), com o código da tabela vigente. Se o aditivo não diz, mande conferir ou abrir exigência.
 
+## Livros sempre no modelo da Lei 6.015
+
+Regra do dono do projeto (27/11/2026): todo livro do Registro de Imóveis que o sistema mostra,
+imprime ou exporta (tela, PDF, "Protocolo do dia", impressão por período, termos) segue o
+**modelo anexo à Lei nº 6.015/1973** do respectivo livro, conferido no texto oficial
+(planalto.gov.br). No Livro 1 (Protocolo): "REGISTRO DE IMÓVEIS · PROTOCOLO", "Livro nº 1",
+"ANO:", colunas Nº de ordem, Data, NOME DO APRESENTANTE, Natureza formal do título e ANOTAÇÕES
+(art. 175), títulos corridos com linha entre eles e o termo de encerramento de cada dia logo
+abaixo do último título do dia (art. 184; Prov. 156/2016-CGJ/RN, arts. 260 e 261). Nada de
+leiaute próprio quando a lei tem modelo. Depois de mexer num livro, gere o PDF com dados
+fictícios e confira a página antes da PR.
+
 ## Antes de abrir qualquer PR
 
 Rode a mesma bateria do CI (`.github/workflows/verify.yml`), nesta ordem, e só abra a PR com tudo
