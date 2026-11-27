@@ -2,6 +2,7 @@ import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
 import { renderingFor } from "@/lib/pdf.ts";
 import { BookTooLarge, bookPdfFor } from "@/lib/ri-books.ts";
+import { protocolPeriodPdfFor } from "@/lib/ri-protocol-sheets.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -27,11 +28,12 @@ async function handle(
   }
   const tenant = await getTenant();
   const query = new URL(request.url).searchParams;
+  const id = (await params).id;
   try {
     const book = await bookPdfFor(
       db,
       tenant,
-      (await params).id,
+      id,
       {
         from: query.get("de") ?? undefined,
         to: query.get("ate") ?? undefined,
@@ -45,6 +47,9 @@ async function handle(
               ? "imagem"
               : "numero",
         word: query.get("formato") === "word",
+        // The Livro 1 in the model of the book.
+        protocolSheets: (from, to) =>
+          protocolPeriodPdfFor(db, tenant, { bookId: id, from, to }),
       },
     );
     if (!book) return new Response("Não encontrado", { status: 404 });

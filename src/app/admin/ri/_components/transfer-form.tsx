@@ -127,6 +127,13 @@ export function TransferForm({
           <p className="font-semibold">Importação concluída.</p>
           <ul className="mt-1 list-disc pl-5">
             <li>{state.properties} matrícula(s) nova(s)</li>
+            {state.booksOpened && state.booksOpened.length > 0 && (
+              <li>
+                Aberto(s) no sistema com o que entrou:{" "}
+                {state.booksOpened.join(" e ")} (confira a data em Livros e
+                assinatura)
+              </li>
+            )}
             {state.completed > 0 && (
               <li>
                 {state.completed} matrícula(s) com campos vazios completados

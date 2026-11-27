@@ -47,10 +47,12 @@ export const DEFAULT_PAGING: PagingSettings = {
 };
 
 /**
- * The face of an A4 page, as the book the office used: ruled lines and the
- * columns Número de Ordem, Mês, Dia, Nome do Apresentante, Natureza do
- * Título and Anotações (art. 175). The termo of each day takes about four
- * lines, as the stamp did ("Declaro encerrado o expediente de hoje").
+ * The face of an A4 page in the model annexed to the Lei nº 6.015/1973
+ * (Modelo do Livro nº 1 · Protocolo): "REGISTRO DE IMÓVEIS · PROTOCOLO",
+ * "Livro nº 1", "ANO:", and the columns Nº de ordem, Data, NOME DO
+ * APRESENTANTE, Natureza formal do título and ANOTAÇÕES (art. 175). The
+ * models of the law are the rule for every book (decision of 27/11/2026).
+ * The termo of each day takes about four lines.
  */
 export const SHEET_LAYOUT = {
   /** Ruled lines on each face, below the heading. */
@@ -59,12 +61,16 @@ export const SHEET_LAYOUT = {
   termLines: 4,
   /** Characters per line of each column (conservative, so text never spills). */
   columns: [
-    { key: "number", label: "Número de Ordem", chars: 9, width: 54 },
-    { key: "month", label: "Mês", chars: 9, width: 54 },
-    { key: "day", label: "Dia", chars: 3, width: 26 },
-    { key: "presenter", label: "Nome do Apresentante", chars: 26, width: 140 },
-    { key: "titleKind", label: "Natureza do Título", chars: 18, width: 100 },
-    { key: "acts", label: "Anotações", chars: 29, width: 157 },
+    { key: "number", label: "Nº de ordem", chars: 9, width: 54 },
+    { key: "date", label: "Data", chars: 10, width: 62 },
+    { key: "presenter", label: "NOME DO APRESENTANTE", chars: 27, width: 150 },
+    {
+      key: "titleKind",
+      label: "Natureza formal do título",
+      chars: 18,
+      width: 104,
+    },
+    { key: "acts", label: "ANOTAÇÕES", chars: 29, width: 161 },
   ],
 } as const;
 
@@ -156,28 +162,11 @@ export function faceLabel(sheet: number, side: Side): string {
   return `${sheet.toLocaleString("pt-BR")}${side === "verso" ? "-v" : ""}`;
 }
 
-const MONTHS = [
-  "Janeiro",
-  "Fevereiro",
-  "Março",
-  "Abril",
-  "Maio",
-  "Junho",
-  "Julho",
-  "Agosto",
-  "Setembro",
-  "Outubro",
-  "Novembro",
-  "Dezembro",
-];
-
 /** The cells of a título, wrapped to its columns. */
 export function cellsOf(e: SheetEntry): Record<ColumnKey, string[]> {
-  const [y = "", m = "", d = ""] = e.presentedOn.split("-");
   const text: Record<ColumnKey, string> = {
     number: e.number.toLocaleString("pt-BR"),
-    month: `${MONTHS[Number(m) - 1] ?? m}\n${y}`,
-    day: String(Number(d) || d),
+    date: e.presentedOn.split("-").reverse().join("/"),
     presenter: e.presenter,
     titleKind: e.titleKind,
     acts: e.voided ? "Lançado por engano (anulado)." : e.acts,
@@ -194,7 +183,7 @@ export function entryLinesOf(e: SheetEntry, paging: PagingSettings): number {
   return Math.max(paging.entryLines, needed);
 }
 
-/** The termo is written across Nome do Apresentante and Natureza do Título. */
+/** The termo is written across NOME DO APRESENTANTE and Natureza formal do título. */
 export const TERM_CHARS = 44;
 
 export interface Pagination {

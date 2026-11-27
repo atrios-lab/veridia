@@ -19,13 +19,17 @@ import {
   officeToday,
 } from "@/lib/ri-protocols.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
+import { ActionButton } from "../_components/client.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { ProtocolPagingForm } from "../_components/protocol-paging-form.tsx";
 import { ProtocolPeriodPrint } from "../_components/protocol-period-print.tsx";
 import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
-import { importProtocolBookAction } from "../actions.ts";
+import {
+  importProtocolBookAction,
+  openProtocolVolumesAction,
+} from "../actions.ts";
 import { dueOf, statusText } from "./_shared.ts";
 
 export const metadata = { title: "Protocolo (Livro 1)" };
@@ -65,6 +69,12 @@ export default async function ProtocolListPage({
   const paged =
     book1 && ["folhas", "hibrido"].includes(book1.form) ? book1 : null;
   const sheets = paged ? await bookSheetsWith(db, tenant, paged.id) : null;
+  const prenotations = all.filter((r) => r.kind === "prenotacao");
+  const firstNumber = prenotations.reduce(
+    (n, r) => Math.min(n, r.number),
+    Number.MAX_SAFE_INTEGER,
+  );
+  const lastNumber = prenotations.reduce((n, r) => Math.max(n, r.number), 0);
   const rows = all
     .filter((r) =>
       view === "exame"
@@ -184,12 +194,30 @@ export default async function ProtocolListPage({
                 </p>
               </>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                O Livro 1 ainda não foi aberto no sistema, por isso não há
-                termos para imprimir. Abra os livros em &quot;Abrir os livros do
-                Protocolo&quot;, logo abaixo: basta dizer os números de cada um.
-                A exportação e a importação ao lado já funcionam.
-              </p>
+              <>
+                <p className="text-sm text-muted-foreground">
+                  O Livro 1 ainda não foi aberto no sistema, por isso não há
+                  termos para imprimir.
+                  {prenotations.length > 0 && riCan(session, "ri.books")
+                    ? ` Há ${prenotations.length.toLocaleString("pt-BR")} títulos no Protocolo, do nº ${firstNumber.toLocaleString("pt-BR")} ao ${lastNumber.toLocaleString("pt-BR")}. Abra o Livro 1 com eles (em uso, forma híbrida); se o livro antigo tinha letras, separe depois em "Abrir os livros do Protocolo".`
+                    : ' Abra os livros em "Abrir os livros do Protocolo", logo abaixo.'}
+                </p>
+                {prenotations.length > 0 && riCan(session, "ri.books") && (
+                  <ActionButton
+                    action={openProtocolVolumesAction}
+                    fields={{
+                      "livro-0": "",
+                      "de-0": String(firstNumber),
+                      "ate-0": "",
+                      "forma-0": "hibrido",
+                      "folhas-0": "",
+                    }}
+                    label="Abrir o Livro 1 com esses títulos"
+                    pendingLabel="Abrindo..."
+                    variant="default"
+                  />
+                )}
+              </>
             )}
           </div>
           <div className="flex flex-col gap-3">
@@ -471,8 +499,13 @@ export default async function ProtocolListPage({
         </Panel>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-5">
         {[
+          [
+            "Títulos no livro",
+            `${prenotations.length.toLocaleString("pt-BR")}${lastNumber ? ` (próximo nº ${(lastNumber + 1).toLocaleString("pt-BR")})` : ""}`,
+            "",
+          ],
           ["Em andamento", counters.open, ""],
           ["Qualificação vencida", counters.qualifyLate, "text-destructive"],
           [
@@ -529,7 +562,22 @@ export default async function ProtocolListPage({
       {rows.length === 0 ? (
         <Panel title="Nenhum protocolo aqui">
           <p className="text-sm text-muted-foreground">
-            Lance o título no balcão em Novo protocolo.
+            {view === "abertos" && prenotations.length ? (
+              <>
+                Nenhum título em andamento agora. Os{" "}
+                {prenotations.length.toLocaleString("pt-BR")} títulos do livro
+                (os importados já estão registrados ou cessados) estão em{" "}
+                <Link
+                  href="/admin/ri/protocolo?ver=todos"
+                  className="text-primary underline-offset-4 hover:underline"
+                >
+                  Todos
+                </Link>
+                .
+              </>
+            ) : (
+              "Lance o título no balcão em Novo protocolo."
+            )}
           </p>
         </Panel>
       ) : (

@@ -40,9 +40,12 @@ const display = (n: number | null) => (n === null ? "" : String(n));
 
 export default async function BookPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ importar?: string }>;
 }) {
+  const importing = (await searchParams).importar;
   const { session, tenant } = await requireRi();
   const row = await bookWith(db, tenant.slug, (await params).id);
   if (!row) notFound();
@@ -215,10 +218,24 @@ export default async function BookPage({
               </a>
             </div>
           </div>
-          <div className="flex flex-col gap-2 rounded-lg border bg-background p-3">
+          <div
+            id="importar"
+            className={`flex scroll-mt-24 flex-col gap-2 rounded-lg border bg-background p-3 ${importing === "agora" ? "border-primary ring-3 ring-primary/30" : ""}`}
+          >
             <p className="text-sm font-medium text-foreground">
               Importar o que o cartório já tem
             </p>
+            {importing === "agora" && (
+              <p className="text-xs font-medium text-primary">
+                Livro aberto. Escolha a planilha abaixo para importar agora.
+              </p>
+            )}
+            {importing === "depois" && (
+              <p className="text-xs font-medium text-primary">
+                Livro aberto. A importação ficou para depois: quando quiser, é
+                aqui, nesta página do livro.
+              </p>
+            )}
             {row.book === 1 ? (
               <>
                 <p className="text-xs text-muted-foreground">

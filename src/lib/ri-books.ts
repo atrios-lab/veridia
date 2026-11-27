@@ -838,6 +838,11 @@ export async function bookPdfFor(
     seal?: "nenhum" | "numero" | "imagem";
     /** Word, for the office to adjust. */
     word?: boolean;
+    /**
+     * The Livro 1 in the model of the book (folhas with the termo of each
+     * day below its títulos), from lib/ri-protocol-sheets.ts.
+     */
+    protocolSheets?: (from: string, to: string) => Promise<Uint8Array | null>;
   } = {},
 ): Promise<{ bytes: Uint8Array; name: string; word?: boolean } | null> {
   const sealMode = options.seal ?? "numero";
@@ -866,7 +871,16 @@ export async function bookPdfFor(
   await addTerm(termDocument(tenant, openingTerm(record, office), signer));
   const footer = `${officialName(tenant)} · Livro nº ${row.volume}`;
   const year = `ANO: ${(row.closedOn ?? officeToday()).slice(0, 4)}`;
-  if (record.book === 1) {
+  const sheetsPdf =
+    record.book === 1 && !options.word && options.protocolSheets
+      ? await options.protocolSheets(
+          isoDate(range.from ?? "") ?? row.openedOn,
+          isoDate(range.to ?? "") ?? row.closedOn ?? officeToday(),
+        )
+      : null;
+  if (sheetsPdf) {
+    parts.push(sheetsPdf);
+  } else if (record.book === 1) {
     const from = isoDate(range.from ?? "") ?? row.openedOn;
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
     const days = await protocolDaysWith(database, tenant.slug, from, to);
@@ -1388,4 +1402,51 @@ export function protocolVolumeOf(value: string): string | null {
   const m = /^1-?([A-Z0-9]{1,9})?$/.exec(v);
   if (!m) return null;
   return m[1] ? `1-${m[1]}` : "1";
+}
+
+/**
+ * After a whole lot comes in (decision of 27/11/2026): the Livros 2 and 3
+ * that have matrículas or registros but were never opened in the system
+ * open by themselves, in fichas, from the first número. The date is the
+ * day of the import; the office adjusts it to the termo of the book.
+ */
+export async function openBooksForAcervoWith(
+  database: Database,
+  tenantSlug: string,
+  actor: Actor,
+  today = officeToday(),
+): Promise<string[]> {
+  const books = (await listBooksWith(database, tenantSlug)).filter(
+    (b) => !b.deletedAt,
+  );
+  const acervo = await loadAcervoWith(database, tenantSlug);
+  const opened: string[] = [];
+  for (const book of [2, 3] as const) {
+    if (books.some((b) => b.book === book)) continue;
+    const numbers = acervo.properties
+      .filter((p) => !p.deletedAt && p.book === book)
+      .map((p) => p.number);
+    if (!numbers.length) continue;
+    await openBookWith(
+      database,
+      tenantSlug,
+      {
+        ...readBookInput(
+          {
+            book,
+            volume: String(book),
+            form: "fichas",
+            firstItem: String(Math.min(...numbers)),
+            openedOn: "",
+          },
+          today,
+        ),
+        openingNotes:
+          "Livro aberto pelo sistema na importação do acervo; confira a data e os dados com o termo de abertura do livro.",
+      },
+      actor,
+    );
+    opened.push(`Livro ${book}`);
+  }
+  return opened;
 }

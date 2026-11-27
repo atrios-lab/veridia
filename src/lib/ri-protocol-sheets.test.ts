@@ -11,6 +11,7 @@ import {
   bookSheetsPdf,
   bookSheetsWith,
   dayTermText,
+  protocolPeriodPdfFor,
   setBookPagingWith,
 } from "./ri-protocol-sheets.ts";
 import { importProtocolsWith } from "./ri-protocols.ts";
@@ -122,4 +123,35 @@ test("folhas do Livro 1: onde cai cada protocolo e o PDF das faces", async () =>
   assert.ok(pdf && pdf.length > 1000);
   assert.equal(Buffer.from(pdf.slice(0, 5)).toString(), "%PDF-");
   if (process.env.SHEETS_PDF) writeFileSync(process.env.SHEETS_PDF, pdf);
+});
+
+test("Protocolo do dia no modelo da Lei 6.015, mesmo sem folhas definidas", async () => {
+  const other = { ...tenant, slug: "cartorio-teste-dia" };
+  await importProtocolsWith(
+    db,
+    other.slug,
+    [
+      {
+        number: 7,
+        presentedOn: "2025-03-10",
+        presenter: "Pessoa Fictícia",
+        titleKind: "Escritura",
+        acts: "",
+        status: "prenotado",
+        voided: false,
+      },
+    ],
+    ACTOR,
+  );
+  const pdf = await protocolPeriodPdfFor(db, other, {
+    from: "2025-03-10",
+    to: "2025-03-10",
+  });
+  assert.equal(Buffer.from(pdf.slice(0, 5)).toString(), "%PDF-");
+  // An empty day still prints the face with its heading.
+  const empty = await protocolPeriodPdfFor(db, other, {
+    from: "2025-03-11",
+    to: "2025-03-11",
+  });
+  assert.ok(empty.length > 1000);
 });

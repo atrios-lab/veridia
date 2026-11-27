@@ -62,6 +62,8 @@ import {
 import {
   closeBookWith,
   fichaLegalPdfWith,
+  listBooksWith,
+  openBooksForAcervoWith,
   openBookWith,
   openIndexBooksWith,
   openProtocolVolumesWith,
@@ -123,6 +125,7 @@ import {
   fulfillRequirementWith,
   importProtocolsWith,
   issueRequirementsWith,
+  listProtocolsWith,
   officeToday,
   readProtocolInput,
   readRequirements,
@@ -704,7 +707,7 @@ export type TransferState =
   | { status: "idle" }
   | { status: "error"; message: string }
   | ({ status: "preview"; fileName: string } & TransferPreview)
-  | ({ status: "done" } & TransferResult);
+  | ({ status: "done"; booksOpened?: string[] } & TransferResult);
 
 const TRANSFER_MAX_BYTES = 40 * 1024 * 1024;
 
@@ -773,8 +776,14 @@ export async function transferImportAction(
       { complete: text(formData, "completar") === "1" },
       ok.actor,
     );
+    // The whole lot goes to its books: a Livro 2 or 3 never opened opens.
+    const booksOpened = await openBooksForAcervoWith(
+      db,
+      ok.tenant.slug,
+      ok.actor,
+    );
     revalidatePath("/admin/ri", "layout");
-    return { status: "done", ...result };
+    return { status: "done", ...result, booksOpened };
   } catch (error) {
     const state = failure(error, "ri.transfer");
     return {
@@ -1612,7 +1621,15 @@ export async function saveBookAction(
     return failure(error, "ri.book.save");
   }
   revalidatePath("/admin/ri", "layout");
-  if (!id) redirect(bookPath(target));
+  if (!id) {
+    // "Importar agora" or "depois": the book opens on its import field.
+    const later = text(formData, "importar");
+    redirect(
+      later === "agora" || later === "depois"
+        ? `${bookPath(target)}?importar=${later}#importar`
+        : bookPath(target),
+    );
+  }
   return {
     status: "success",
     message: "Livro alterado. Os dados anteriores ficaram no histórico.",
@@ -2335,7 +2352,40 @@ export async function importProtocolBookAction(
       if (opened.length) {
         books = `Livros abertos pela coluna "Livro": ${opened.join(", ")}.`;
       }
+    } else if (reading.items.length) {
+      // No "Livro" column and no Livro 1 open yet: the Livro 1 opens by
+      // itself with what came in (decision of 27/11/2026); the letters of
+      // an old book are separated afterwards, if there were any.
+      const hasBook = (await listBooksWith(db, ok.tenant.slug)).some(
+        (b) => b.book === 1 && !b.deletedAt,
+      );
+      if (!hasBook) {
+        const first = Math.min(...reading.items.map((i) => i.number));
+        const { opened } = await openProtocolVolumesWith(
+          db,
+          ok.tenant.slug,
+          [
+            {
+              volume: "1",
+              first,
+              last: null,
+              form: "hibrido",
+              sheetCount: 0,
+            },
+          ],
+          ok.actor,
+        );
+        if (opened.length) {
+          books = `O Livro 1 foi aberto com esses títulos, a partir do nº ${first.toLocaleString("pt-BR")}.`;
+        }
+      }
     }
+    const total = (await listProtocolsWith(db, ok.tenant.slug)).filter(
+      (p) => p.kind === "prenotacao",
+    );
+    const last = total.reduce((n, p) => Math.max(n, p.number), 0);
+    books =
+      `${books} No livro agora: ${total.length.toLocaleString("pt-BR")} títulos; próximo nº ${(last + 1).toLocaleString("pt-BR")}. Os importados estão em Protocolo › Todos.`.trim();
     revalidatePath("/admin/ri", "layout");
     const summary = importSummary(created, skipped, reading.errors, "títulos");
     if (summary.status === "idle") return summary;

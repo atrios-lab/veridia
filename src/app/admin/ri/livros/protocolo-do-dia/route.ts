@@ -1,9 +1,8 @@
 import { can } from "@/core/auth/roles.ts";
 import { isoDate } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
-import { brandFor } from "@/lib/document-brand.ts";
-import { renderDocument, renderingFor } from "@/lib/pdf.ts";
-import { protocolDayDocumentFor } from "@/lib/ri-books.ts";
+import { renderingFor } from "@/lib/pdf.ts";
+import { protocolPeriodPdfFor } from "@/lib/ri-protocol-sheets.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
@@ -11,8 +10,10 @@ import { getTenant } from "@/lib/tenant.ts";
 export const runtime = "nodejs";
 
 /**
- * The Protocolo of one day with its encerramento (Lei nº 6.015/1973, art.
- * 184: "O Protocolo será encerrado diariamente"), `?data=aaaa-mm-dd`.
+ * The Protocolo of one day in the model of the book (Número de Ordem, Mês,
+ * Dia, Apresentante, Natureza do Título, Anotações) with its termo de
+ * encerramento below the títulos (Lei nº 6.015/1973, art. 184),
+ * `?data=aaaa-mm-dd`.
  */
 async function handle(request: Request): Promise<Response> {
   const session = await getSession();
@@ -25,15 +26,7 @@ async function handle(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const query = new URL(request.url).searchParams;
   const day = isoDate(query.get("data") ?? "") ?? officeToday();
-  const pdf = await renderDocument(
-    await protocolDayDocumentFor(
-      db,
-      tenant,
-      day,
-      query.get("assinatura") === "imagem",
-    ),
-    await brandFor(tenant),
-  );
+  const pdf = await protocolPeriodPdfFor(db, tenant, { from: day, to: day });
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { volumeLetter, volumeName } from "@/core/ri/books.ts";
 import {
+  DEFAULT_PAGING,
   faceLabel,
   type Pagination,
   type PagingSettings,
@@ -21,7 +22,13 @@ import { riBooks, riProtocols } from "@/db/schema.ts";
 import { recordAuditWith } from "./audit.ts";
 import { DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
 import { type Actor, RiError } from "./ri.ts";
-import { type BookRow, bookWith, historyOf } from "./ri-books.ts";
+import {
+  BookTooLarge,
+  bookWith,
+  historyOf,
+  listBooksWith,
+  MAX_PROTOCOL_LINES,
+} from "./ri-books.ts";
 import { closedDaysWith } from "./ri-protocol-days.ts";
 import { officeToday } from "./ri-protocols.ts";
 
@@ -43,9 +50,15 @@ export function dayTermText(day: string, count: number, place: string): string {
 }
 
 export interface BookSheets {
-  book: BookRow;
+  /** The volume: "1", "1-B"… */
+  volume: string;
   paging: PagingSettings;
   pagination: Pagination;
+  /**
+   * The folhas are the book's own (its "a partir do nº" is set). When not,
+   * the faces print in the book's model with "Folha ____" for the hand.
+   */
+  numbered: boolean;
 }
 
 /**
@@ -98,7 +111,8 @@ export async function bookSheetsWith(
     closings.push({ day, text: dayTermText(day, perDay.get(day) ?? 0, place) });
   }
   return {
-    book,
+    volume: book.volume,
+    numbered: true,
     paging,
     pagination: paginate(
       entries.filter((e) => e.presentedOn >= first),
@@ -208,7 +222,7 @@ function drawFace(
   sheet: number,
   side: Side,
 ) {
-  const { book, pagination } = sheets;
+  const { volume, pagination } = sheets;
   const items = pagination.items.filter(
     (i) => i.sheet === sheet && i.side === side,
   );
@@ -225,9 +239,9 @@ function drawFace(
   const year = [...new Set(years)].join("/");
   // Heading, as the printed book: Livro Nº, Registro de Imóveis, Ano.
   pdf.font("Helvetica").fontSize(11).fillColor(INK);
-  pdf.text("Livro Nº 1", LEFT, 26, { lineBreak: false });
-  if (volumeLetter(book.volume)) {
-    pdf.fontSize(9).text(`Letra ${volumeLetter(book.volume)}`, LEFT, 42, {
+  pdf.text("Livro nº 1", LEFT, 26, { lineBreak: false });
+  if (volumeLetter(volume)) {
+    pdf.fontSize(9).text(`Letra ${volumeLetter(volume)}`, LEFT, 42, {
       lineBreak: false,
     });
   }
@@ -247,11 +261,18 @@ function drawFace(
       align: "center",
       characterSpacing: 3,
     });
-  pdf.fontSize(11).text(`Folha ${faceLabel(sheet, side)}`, LEFT, 26, {
-    width: RIGHT - LEFT,
-    align: "right",
-  });
-  pdf.text(`Ano ${year}`, LEFT, 42, { width: RIGHT - LEFT, align: "right" });
+  pdf
+    .fontSize(11)
+    .text(
+      sheets.numbered ? `Folha ${faceLabel(sheet, side)}` : "Folha ________",
+      LEFT,
+      26,
+      {
+        width: RIGHT - LEFT,
+        align: "right",
+      },
+    );
+  pdf.text(`ANO: ${year}`, LEFT, 42, { width: RIGHT - LEFT, align: "right" });
   pdf
     .fontSize(7)
     .fillColor(SOFT)
@@ -307,9 +328,9 @@ function drawFace(
         .lineTo(RIGHT, end)
         .stroke();
     } else if (item.kind === "termo") {
-      // The termo across Nome do Apresentante and Natureza do Título.
-      const x = (columnX[3] ?? LEFT) + 3;
-      const width = (columnX[5] ?? RIGHT) - x - 3;
+      // The termo across NOME DO APRESENTANTE and Natureza formal do título.
+      const x = (columnX[2] ?? LEFT) + 3;
+      const width = (columnX[4] ?? RIGHT) - x - 3;
       // Like the stamp of the book: a box over the lines, then its text.
       pdf
         .lineWidth(0.8)
@@ -349,7 +370,7 @@ function drawFace(
     .fontSize(6.5)
     .fillColor(SOFT)
     .text(
-      `${volumeName(book.volume)} (Protocolo) · folha ${faceLabel(sheet, side)} · Lei nº 6.015/1973, arts. 175 e 184 · impresso pelo sistema em ${brDay(officeToday())}`,
+      `${volumeName(volume)} (Protocolo) ${sheets.numbered ? ` · folha ${faceLabel(sheet, side)}` : ""} · Lei nº 6.015/1973, arts. 175 e 184 · impresso pelo sistema em ${brDay(officeToday())}`,
       LEFT,
       bottom + 8,
       { width: RIGHT - LEFT, align: "center", lineBreak: false },
@@ -404,4 +425,88 @@ export async function bookSheetsPdf(
   pdf.end();
   await done;
   return new Uint8Array(Buffer.concat(chunks));
+}
+
+/**
+ * The Livro 1 of a period in the model of the book (decision of
+ * 27/11/2026): the "Protocolo do dia" and the book printed by period. Where
+ * the book has its folhas set, the faces are the book's own; otherwise the
+ * same model with "Folha ____" to be numbered by hand.
+ */
+export async function protocolPeriodPdfFor(
+  database: Database,
+  tenant: Tenant,
+  input: { bookId?: string; from: string; to: string },
+): Promise<Uint8Array> {
+  const books = (await listBooksWith(database, tenant.slug)).filter(
+    (b) => b.book === 1 && !b.deletedAt,
+  );
+  const book = input.bookId
+    ? books.find((b) => b.id === input.bookId)
+    : (books.find(
+        (b) =>
+          b.openedOn <= input.from && (!b.closedOn || b.closedOn >= input.from),
+      ) ?? books.find((b) => !b.closedOn));
+  if (book) {
+    const own = await bookSheetsWith(database, tenant, book.id);
+    if (own) {
+      const pdf = await bookSheetsPdf(tenant, own, {
+        fromDay: input.from,
+        toDay: input.to,
+      });
+      if (pdf) return pdf;
+    }
+  }
+  const low = book?.firstItem ?? 1;
+  const high = book?.lastItem ?? Number.MAX_SAFE_INTEGER;
+  const rows = (
+    await database
+      .select()
+      .from(riProtocols)
+      .where(
+        and(
+          eq(riProtocols.tenantSlug, tenant.slug),
+          eq(riProtocols.kind, "prenotacao"),
+        ),
+      )
+  ).filter((r) => r.presentedOn >= input.from && r.presentedOn <= input.to);
+  const perDay = new Map<string, number>();
+  for (const r of rows) {
+    perDay.set(r.presentedOn, (perDay.get(r.presentedOn) ?? 0) + 1);
+  }
+  const entries: SheetEntry[] = rows
+    .filter((r) => r.number >= low && r.number <= high)
+    .map((r) => ({
+      number: r.number,
+      presentedOn: r.presentedOn,
+      presenter: r.presenterName,
+      titleKind: r.titleKind,
+      acts: r.actsSummary,
+      voided: Boolean(r.voidedAt),
+    }));
+  if (entries.length > MAX_PROTOCOL_LINES) {
+    throw new BookTooLarge(
+      `São ${entries.length} títulos nesse período; escolha um período com até ${MAX_PROTOCOL_LINES}.`,
+    );
+  }
+  const place = `${tenant.location.city}/${tenant.location.state}`;
+  const closings: SheetClosing[] = [];
+  for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
+    if (day < input.from || day > input.to) continue;
+    closings.push({
+      day,
+      text:
+        row.kind === "livro-fisico"
+          ? `Dia ${brDay(day)} escriturado no livro físico do Protocolo; o termo de encerramento consta do próprio livro.`
+          : dayTermText(day, perDay.get(day) ?? 0, place),
+    });
+  }
+  const sheets: BookSheets = {
+    volume: book?.volume ?? "1",
+    numbered: false,
+    paging: { ...DEFAULT_PAGING, fromItem: null },
+    pagination: paginate(entries, closings, DEFAULT_PAGING),
+  };
+  // A period with nothing still prints one face, with its heading.
+  return (await bookSheetsPdf(tenant, sheets)) as Uint8Array;
 }
