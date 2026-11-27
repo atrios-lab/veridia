@@ -3882,3 +3882,78 @@ export const deletionRequests = pgTable(
   },
   (t) => [index("deletion_requests_tenant").on(t.tenantSlug, t.status)],
 );
+
+/**
+ * Livro de Cadastro de Aquisição de Imóvel Rural por Estrangeiro (Lei nº
+ * 5.709/1971, art. 10; Decreto nº 74.965/1974, art. 15; Prov. 156/RN, arts.
+ * 68, § 1º, and 274): one assento per aquisição or arrendamento, numbered
+ * in order. Changes keep the previous values in `history`; deleting only
+ * marks (decision of 27/11/2026).
+ */
+export const riForeignEntries = pgTable(
+  "ri_foreign_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    number: integer("number").notNull(),
+    /** "aquisicao" or "arrendamento". */
+    kind: text("kind").notNull().default("aquisicao"),
+    registeredOn: date("registered_on").notNull(),
+    matricula: integer("matricula"),
+    actRef: text("act_ref").notNull().default(""),
+    acquirerKind: text("acquirer_kind").notNull().default("pf-estrangeira"),
+    acquirerName: text("acquirer_name").notNull(),
+    nationality: text("nationality").notNull().default(""),
+    acquirerDocument: text("acquirer_document").notNull().default(""),
+    spouseName: text("spouse_name").notNull().default(""),
+    spouseCpf: text("spouse_cpf").notNull().default(""),
+    transmitterName: text("transmitter_name").notNull().default(""),
+    transmitterDocument: text("transmitter_document").notNull().default(""),
+    area: text("area").notNull().default(""),
+    municipality: text("municipality").notNull().default(""),
+    description: text("description").notNull().default(""),
+    ccir: text("ccir").notNull().default(""),
+    securityArea: boolean("security_area").notNull().default(false),
+    authorityBody: text("authority_body").notNull().default(""),
+    authorizationNumber: text("authorization_number").notNull().default(""),
+    authorizationDate: date("authorization_date"),
+    notes: text("notes").notNull().default(""),
+    /** Averbações on the assento, as lançadas: [{ at, by, text }]. */
+    averbacoes: jsonb("averbacoes").notNull().default(sql`'[]'::jsonb`),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_foreign_entries_tenant").on(t.tenantSlug, t.number)],
+);
+
+/**
+ * The relação trimestral sent (Prov. 156/RN, art. 275; Lei nº 5.709/1971,
+ * art. 11): which trimestre, positive or negative, to whom and when.
+ */
+export const riForeignReports = pgTable(
+  "ri_foreign_reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    year: integer("year").notNull(),
+    quarter: integer("quarter").notNull(),
+    /** "positiva" or "negativa". */
+    kind: text("kind").notNull(),
+    recipients: jsonb("recipients").notNull().default(sql`'[]'::jsonb`),
+    sentOn: date("sent_on").notNull(),
+    notes: text("notes").notNull().default(""),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [index("ri_foreign_reports_tenant").on(t.tenantSlug, t.year)],
+);

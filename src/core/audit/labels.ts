@@ -466,6 +466,17 @@ const EXACT: Record<string, string> = {
   "ri.geometry-add": "Lançou o perímetro georreferenciado de uma matrícula",
   "ri.geometry-delete": "Apagou o perímetro georreferenciado de uma matrícula",
   "ri.geometry-restore": "Restaurou um perímetro georreferenciado apagado",
+  "ri.foreign-create":
+    "Lançou assento no livro de aquisição de imóvel rural por estrangeiro",
+  "ri.foreign-update": "Alterou assento do livro de aquisição por estrangeiro",
+  "ri.foreign-averbacao": "Averbou no livro de aquisição por estrangeiro",
+  "ri.foreign-delete": "Apagou assento do livro de aquisição por estrangeiro",
+  "ri.foreign-restore":
+    "Restaurou assento do livro de aquisição por estrangeiro",
+  "ri.foreign-report":
+    "Registrou o envio da comunicação trimestral de estrangeiros",
+  "ri.foreign-report-delete":
+    "Desfez o registro de envio da comunicação de estrangeiros",
   "ri.book-open": "Abriu um livro do Registro de Imóveis (termo de abertura)",
   "ri.protocol-day-close": "Encerrou dias do Protocolo (Livro 1)",
   "ri.protocol-day-reopen": "Reabriu um dia encerrado do Protocolo (Livro 1)",
@@ -891,6 +902,20 @@ const EXPLANATIONS: Record<string, string> = {
     "O perímetro de uma matrícula foi lido do memorial descritivo ou da planilha do Sigef e guardado, com área, perímetro e planta (Lei nº 6.015/1973, art. 176, §§ 3º a 5º).",
   "ri.geometry-delete":
     "Um perímetro georreferenciado foi apagado, com justificativa. Ele continua guardado e pode ser restaurado.",
+  "ri.foreign-create":
+    "Um assento foi lançado no Livro de Cadastro de Aquisição de Imóvel Rural por Estrangeiro (Lei nº 5.709/1971, art. 10; Prov. 156/RN, art. 274).",
+  "ri.foreign-update":
+    "Um assento do livro de aquisição por estrangeiro foi alterado, com o motivo. Os valores anteriores ficam no histórico do assento.",
+  "ri.foreign-averbacao":
+    "Uma averbação foi lançada num assento do livro de aquisição por estrangeiro.",
+  "ri.foreign-delete":
+    "Um assento do livro de aquisição por estrangeiro saiu da lista, com o motivo. Ele continua guardado e pode ser restaurado.",
+  "ri.foreign-restore":
+    "Um assento apagado do livro de aquisição por estrangeiro voltou ao livro.",
+  "ri.foreign-report":
+    "A relação trimestral de aquisições por estrangeiros (ou a certidão negativa) foi registrada como enviada (Prov. 156/RN, art. 275).",
+  "ri.foreign-report-delete":
+    "O registro de envio de uma comunicação trimestral de estrangeiros foi desfeito, com o motivo.",
   "ri.book-open":
     "Um livro do Registro de Imóveis foi aberto no sistema, com número, forma de escrituração e folhas. O termo de abertura sai dele, para assinar (Lei nº 6.015/1973, art. 4º).",
   "ri.book-edit":

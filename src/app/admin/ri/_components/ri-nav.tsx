@@ -8,6 +8,7 @@ import {
   ClipboardList,
   FileImage,
   Files,
+  Globe,
   LayoutDashboard,
   Library,
   ListChecks,
@@ -65,6 +66,11 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
         icon: Library,
       },
       { label: "Certidões", href: "/admin/ri/certidoes", icon: Files },
+      {
+        label: "Aquisição por estrangeiro",
+        href: "/admin/ri/estrangeiros",
+        icon: Globe,
+      },
     ],
   },
   {

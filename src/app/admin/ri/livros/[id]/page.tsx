@@ -186,6 +186,29 @@ export default async function BookPage({
             title={`Livro ${row.volume}`}
             size="sm"
           />
+          <div className="flex flex-col gap-2 rounded-lg border bg-background p-3">
+            <p className="text-sm font-medium text-foreground">
+              Relatório e tabela
+            </p>
+            <p className="text-xs text-muted-foreground">
+              As mesmas colunas do livro, para conferir, filtrar ou guardar fora
+              do sistema.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`${base}/tabela?formato=xlsx`}
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Baixar planilha (Excel)
+              </a>
+              <a
+                href={`${base}/tabela?formato=csv`}
+                className={buttonVariants({ size: "sm", variant: "outline" })}
+              >
+                Baixar CSV
+              </a>
+            </div>
+          </div>
           <form
             method="get"
             action={`${base}/pdf`}

@@ -10,6 +10,11 @@ import {
 } from "@/core/deletion/official.ts";
 import type { PartyRole } from "@/core/ri/acts.ts";
 import {
+  ForeignError,
+  foreignWarnings,
+  readForeignInput,
+} from "@/core/ri/foreign.ts";
+import {
   isoDate,
   matriculaNumber,
   PropertyError,
@@ -77,6 +82,14 @@ import {
   signatureSettingsWith,
 } from "@/lib/ri-files.ts";
 import {
+  addForeignAverbacaoWith,
+  createForeignWith,
+  recordForeignReportWith,
+  setForeignDeletedWith,
+  setForeignReportDeletedWith,
+  updateForeignWith,
+} from "@/lib/ri-foreign.ts";
+import {
   addGeometryWith,
   readGeometrySource,
   setGeometryDeletedWith,
@@ -96,6 +109,7 @@ import {
   createProtocolWith,
   fulfillRequirementWith,
   issueRequirementsWith,
+  officeToday,
   readProtocolInput,
   readRequirements,
   reentryWith,
@@ -1579,9 +1593,6 @@ export async function saveBookAction(
       await updateBookWith(db, ok.tenant.slug, id, input, ok.actor);
     } else {
       target = await openBookWith(db, ok.tenant.slug, input, ok.actor);
-      if (input.book === 2) {
-        await openIndexBooksWith(db, ok.tenant.slug, ok.actor);
-      }
     }
   } catch (error) {
     return failure(error, "ri.book.save");
@@ -1592,6 +1603,37 @@ export async function saveBookAction(
     status: "success",
     message: "Livro alterado. Os dados anteriores ficaram no histórico.",
   };
+}
+
+/**
+ * Optional (decision of 27/11/2026): opens the Livros 4 and 5 that were
+ * never opened, in meio eletrônico, on the day of the Livro 2 in use. An
+ * office that already keeps them launches its own or imports instead.
+ */
+export async function openIndexBooksAction(
+  _previous: RiState,
+  _formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  let opened = 0;
+  try {
+    opened = await openIndexBooksWith(db, ok.tenant.slug, ok.actor);
+  } catch (error) {
+    return failure(error, "ri.book.save");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return opened
+    ? {
+        status: "success",
+        message:
+          "Livros 4 e 5 abertos na data do Livro 2, em meio eletrônico. O termo de abertura já pode ser assinado.",
+      }
+    : {
+        status: "error",
+        message:
+          "Abra antes o Livro 2: os Livros 4 e 5 tomam a data dele. Se já estão abertos, nada muda.",
+      };
 }
 
 /** Closes the volume: date, last folha, and the termo de encerramento. */
@@ -2012,4 +2054,165 @@ export async function reopenProtocolDayAction(
     status: "success",
     message: "Dia reaberto: já aceita prenotação com a data dele.",
   };
+}
+
+// ── Livro de Cadastro de Aquisição de Imóvel Rural por Estrangeiro ─────
+
+function foreignFailure(error: unknown, where: string): RiState {
+  if (error instanceof ForeignError) {
+    return { status: "error", message: error.message };
+  }
+  return failure(error, where);
+}
+
+/** Lança an assento, or changes it (the reason goes to the history). */
+export async function saveForeignAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const id = text(formData, "id");
+  if (id) {
+    const why = justify(formData);
+    if (why) return { status: "error", message: why };
+  }
+  try {
+    const input = readForeignInput(rawOf(formData), officeToday());
+    if (id) {
+      await updateForeignWith(
+        db,
+        ok.tenant.slug,
+        id,
+        input,
+        text(formData, "justificativa"),
+        ok.actor,
+      );
+    } else {
+      await createForeignWith(db, ok.tenant.slug, input, ok.actor);
+    }
+    revalidatePath("/admin/ri/estrangeiros");
+    const warnings = foreignWarnings(input);
+    return {
+      status: "success",
+      message: `${id ? "Assento alterado; o anterior ficou no histórico." : "Assento lançado no livro."}${warnings.length ? ` Atenção: ${warnings.join(" ")}` : ""}`,
+    };
+  } catch (error) {
+    return foreignFailure(error, "ri.foreign.save");
+  }
+}
+
+export async function addForeignAverbacaoAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  try {
+    await addForeignAverbacaoWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      text(formData, "texto"),
+      ok.actor,
+    );
+  } catch (error) {
+    return foreignFailure(error, "ri.foreign.averbacao");
+  }
+  revalidatePath("/admin/ri/estrangeiros");
+  return { status: "success", message: "Averbação lançada no assento." };
+}
+
+export async function setForeignDeletedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const asked = await askApproval(
+    "ri.foreign",
+    formData,
+    "Assento do livro de aquisição por estrangeiro",
+  );
+  if (asked) return asked;
+  const deleted = text(formData, "op") !== "restore";
+  try {
+    await setForeignDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      deleted,
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return foreignFailure(error, "ri.foreign.delete");
+  }
+  revalidatePath("/admin/ri/estrangeiros");
+  return {
+    status: "success",
+    message: deleted
+      ? "Assento apagado da lista. Ele continua guardado e pode ser restaurado."
+      : "Assento restaurado.",
+  };
+}
+
+/** Records the relação (or certidão negativa) of a trimestre as sent. */
+export async function recordForeignReportAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const sentOn = isoDate(text(formData, "sentOn")) ?? officeToday();
+  try {
+    await recordForeignReportWith(
+      db,
+      ok.tenant.slug,
+      {
+        year: Number(text(formData, "ano")),
+        quarter: Number(text(formData, "trimestre")),
+        kind: text(formData, "kind") === "negativa" ? "negativa" : "positiva",
+        recipients: formData.getAll("recipients").map(String).slice(0, 5),
+        sentOn,
+        notes: text(formData, "notes").slice(0, 2000),
+      },
+      ok.actor,
+    );
+  } catch (error) {
+    return foreignFailure(error, "ri.foreign.report");
+  }
+  revalidatePath("/admin/ri/estrangeiros");
+  return { status: "success", message: "Envio do trimestre registrado." };
+}
+
+export async function deleteForeignReportAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.edit");
+  if (!ok) return denied("ri.edit");
+  const asked = await askApproval(
+    "ri.foreign-report",
+    formData,
+    "Registro de envio da comunicação trimestral de estrangeiros",
+  );
+  if (asked) return asked;
+  try {
+    await setForeignReportDeletedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return foreignFailure(error, "ri.foreign.report");
+  }
+  revalidatePath("/admin/ri/estrangeiros");
+  return { status: "success", message: "Registro de envio desfeito." };
 }

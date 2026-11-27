@@ -76,6 +76,8 @@ import {
   setGeometryDeletedAction as a3,
   withdrawExportAction as a4,
   forgetLearnedActAction as a5,
+  setForeignDeletedAction as f1,
+  deleteForeignReportAction as f2,
 } from "@/app/admin/ri/actions.ts";
 
 /**
@@ -87,6 +89,14 @@ import {
 type Replayable = (previous: any, formData: FormData) => Promise<unknown>;
 
 export const APPROVABLE: Record<string, { label: string; run: Replayable }> = {
+  "ri.foreign": {
+    label: "Assento do livro de aquisição por estrangeiro",
+    run: f1,
+  },
+  "ri.foreign-report": {
+    label: "Registro de envio da comunicação trimestral de estrangeiros",
+    run: f2,
+  },
   "ri.person": { label: "Pessoa do Indicador Pessoal (RI)", run: a0 },
   "ri.file": { label: "Anexo da matrícula (RI)", run: a1 },
   "ri.annotation": { label: "Anotação da matrícula (RI)", run: a2 },

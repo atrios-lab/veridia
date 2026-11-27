@@ -66,6 +66,8 @@ import {
   riBooks,
   riExports,
   riFiles,
+  riForeignEntries,
+  riForeignReports,
   riGeometries,
   riLearnedActs,
   riOnrImages,
@@ -220,6 +222,16 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   {
     table: deletionRequests,
     reason: "Pedidos de exclusão ao Tabelião: limpeza ainda não revisada",
+  },
+  {
+    table: riForeignEntries,
+    reason:
+      "Livro de Cadastro de Aquisição de Imóvel Rural por Estrangeiro: escrituração obrigatória (Lei nº 5.709/1971, art. 10); nunca se apaga.",
+  },
+  {
+    table: riForeignReports,
+    reason:
+      "Comunicações trimestrais enviadas à Corregedoria e ao INCRA (Prov. 156/RN, art. 275): prova do envio.",
   },
   {
     table: riPendencyMarks,

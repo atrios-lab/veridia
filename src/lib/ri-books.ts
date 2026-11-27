@@ -44,6 +44,10 @@ import {
   type TableBook,
   type TableRow,
 } from "./ri-book-model.ts";
+import {
+  personalIndicatorTable,
+  realIndicatorTable,
+} from "./ri-book-tables.ts";
 import { bookToWord, type WordBlock } from "./ri-book-word.ts";
 import { riSignerFor } from "./ri-docs.ts";
 import { currentOf } from "./ri-onr-images.ts";
@@ -474,7 +478,7 @@ export function termOffice(tenant: Tenant): TermOffice {
   };
 }
 
-async function signerLines(tenant: Tenant, withImage: boolean) {
+export async function signerLines(tenant: Tenant, withImage: boolean) {
   const { signer, settings } = await riSignerFor(tenant);
   return {
     signee: signer?.name,
@@ -732,66 +736,34 @@ export async function bookDocumentsFor(
             : undefined,
         });
       }
-    } else if (record.book === 4) {
-      const rows = acervo.properties
-        .filter((p) => !p.deletedAt && p.book === 2 && p.status !== 4)
-        .sort((a, b) => addressLine(a).localeCompare(addressLine(b), "pt-BR"))
-        .map((p) => ({
-          label: propertyTitle(p),
-          value:
-            [
-              addressLine(p),
-              p.rural.denominacao,
-              p.rural.ccir && `CCIR ${p.rural.ccir}`,
-              p.rural.nirf && `NIRF ${p.rural.nirf}`,
-              p.rural.car && `CAR ${p.rural.car}`,
-              p.rural.incra && `Incra ${p.rural.incra}`,
-            ]
-              .filter(Boolean)
-              .join(" · ") || "sem identificação lançada",
-        }));
-      documents.push({
-        eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
-        title: "Indicador Real",
-        subtitle: `${rows.length} ${rows.length === 1 ? "imóvel" : "imóveis"} (Lei nº 6.015/1973, art. 179)`,
-        office: [officialName(tenant), tenant.subtitle],
-        sections: [{ heading: "Imóveis pela localização", rows }],
-        ...signer,
-        footer,
-      });
     } else {
-      const people = new Map<string, { name: string; refs: Set<string> }>();
-      const add = (name: string, document: string, ref: string) => {
-        const key = document || name.toUpperCase();
-        const entry = people.get(key) ?? {
-          name: document ? `${name}, ${formatTaxId(document)}` : name,
-          refs: new Set<string>(),
-        };
-        entry.refs.add(ref);
-        people.set(key, entry);
-      };
-      for (const p of acervo.properties) {
-        if (p.deletedAt) continue;
-        const ref = `${p.book === 3 ? "Livro 3 nº" : "Mat."} ${p.number.toLocaleString("pt-BR")}`;
-        if (p.book === 3) {
-          for (const party of p.aux.parties)
-            add(party.name, party.document, ref);
-        }
-        for (const act of acervo.acts.get(p.id) ?? []) {
-          for (const party of act.parties) {
-            add(party.name, party.document, ref);
-          }
-        }
-      }
-      const rows = [...people.values()]
-        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
-        .map((e) => ({ label: e.name, value: [...e.refs].join("; ") }));
+      // Livros 4 and 5 in the columns of the models annexed to the Lei nº
+      // 6.015/1973, with the year of the book in the header.
+      const isReal = record.book === 4;
+      const table = isReal
+        ? realIndicatorTable(acervo)
+        : personalIndicatorTable(acervo);
+      const year = row.openedOn.slice(0, 4);
       documents.push({
         eyebrow: `Registro de Imóveis · ${info.name} · ${row.volume}`,
-        title: "Indicador Pessoal",
-        subtitle: `${rows.length} ${rows.length === 1 ? "nome" : "nomes"}, em ordem alfabética (Lei nº 6.015/1973, art. 180)`,
+        title: isReal ? "Indicador Real" : "Indicador Pessoal",
+        subtitle: `Livro nº ${record.book} · Ano: ${year} · ${table.rows.length} ${isReal ? (table.rows.length === 1 ? "imóvel" : "imóveis") : table.rows.length === 1 ? "nome" : "nomes"} (Lei nº 6.015/1973, art. ${isReal ? "179" : "180"}; modelo anexo à lei)`,
         office: [officialName(tenant), tenant.subtitle],
-        sections: [{ heading: "Nomes e onde figuram", rows }],
+        sections: [
+          {
+            heading: isReal
+              ? "Registro de Imóveis · Indicador Real"
+              : "Registro de Imóveis · Indicador Pessoal",
+            table: {
+              columns: table.columns.map((label, i) => ({
+                label,
+                weight: i === 0 ? 0.6 : i === 1 ? 2.4 : i === 2 ? 1.6 : 1.4,
+              })),
+              rows: table.rows,
+              empty: "Nenhum lançamento ainda.",
+            },
+          },
+        ],
         ...signer,
         footer,
       });

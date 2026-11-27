@@ -7,13 +7,15 @@ import {
   shortDate,
 } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
-import { listBooksWith, openIndexBooksWith } from "@/lib/ri-books.ts";
+import { listBooksWith } from "@/lib/ri-books.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { Badge } from "../../_ui/badge.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { BookForm, ProtocolDay } from "../_components/book-form.tsx";
+import { ActionButton } from "../_components/client.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { requireRi, riCan } from "../_lib.ts";
+import { openIndexBooksAction } from "../actions.ts";
 
 export const metadata = { title: "Livros e assinatura" };
 
@@ -29,13 +31,9 @@ export default async function BooksPage({
 }) {
   const { session, tenant } = await requireRi();
   const showDeleted = (await searchParams).apagados === "1";
-  // The Livros 4 and 5 open by themselves with the Livro 2 in use: one
-  // of each for the whole acervo (decision of 27/11/2026).
-  if (riCan(session, "ri.books")) {
-    await openIndexBooksWith(db, tenant.slug, { id: session.user.id });
-  }
   const rows = await listBooksWith(db, tenant.slug);
   const canManage = riCan(session, "ri.books");
+  const book2 = rows.find((r) => r.book === 2 && !r.deletedAt && !r.closedOn);
   const visible = rows.filter((r) => Boolean(r.deletedAt) === showDeleted);
   const suggestions = Object.fromEntries(
     BOOK_NUMBERS.map((n) => [
@@ -88,15 +86,42 @@ export default async function BooksPage({
                     {!showDeleted && (n === 4 || n === 5) && (
                       <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm">
                         <p>
-                          Este indicador já está em uso: o sistema o alimenta
-                          sozinho com as matrículas e as pessoas lançadas (Lei
-                          nº 6.015/1973, art. {n === 4 ? "179" : "180"}). Falta
-                          só lançar o livro, para ter o termo de abertura.
+                          O sistema já monta este indicador com as matrículas e
+                          as pessoas lançadas (Lei nº 6.015/1973, art.{" "}
+                          {n === 4 ? "179" : "180"}). Há um só para todo o
+                          acervo. Escolha como lançar o livro:
                         </p>
-                        <p className="text-muted-foreground">
-                          Ele abre sozinho, uma vez só, na data do Livro 2 em
-                          uso, assim que o Livro 2 for aberto aqui.
-                        </p>
+                        <ul className="flex list-disc flex-col gap-1 pl-5 text-muted-foreground">
+                          <li>
+                            Nunca foi aberto: abra junto com o Livro 2, na data
+                            dele, em meio eletrônico.
+                          </li>
+                          <li>
+                            O cartório já tem este livro: lance-o em &quot;Abrir
+                            um livro&quot;, com o número e a data de abertura
+                            dele.
+                          </li>
+                          <li>
+                            Quer trazer o que já escriturou: use{" "}
+                            <Link
+                              href="/admin/ri/importar-exportar"
+                              className="text-primary underline-offset-4 hover:underline"
+                            >
+                              Importar e exportar
+                            </Link>
+                            .
+                          </li>
+                        </ul>
+                        {book2 && canManage && (
+                          <div>
+                            <ActionButton
+                              action={openIndexBooksAction}
+                              fields={{}}
+                              label={`Abrir os Livros 4 e 5 com o Livro 2 (${shortDate(book2.openedOn)})`}
+                              pendingLabel="Abrindo..."
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
