@@ -66,7 +66,12 @@ import { joinPdfs, tiffToPdf } from "./ri-tiff.ts";
 export type BookRow = typeof riBooks.$inferSelect;
 
 const UUID = /^[0-9a-f-]{36}$/i;
-const FORMS: readonly BookForm[] = ["fichas", "folhas", "eletronico"];
+const FORMS: readonly BookForm[] = [
+  "fichas",
+  "folhas",
+  "eletronico",
+  "hibrido",
+];
 
 export interface BookHistoryEntry {
   at: string;

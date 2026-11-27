@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
+import { volumeOfNumber } from "@/core/ri/books.ts";
 import { brDate } from "@/core/ri/property.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
@@ -12,6 +13,7 @@ import {
 import { buttonVariants } from "../../_ui/button.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
+import { ProtocolPeriodPrint } from "../_components/protocol-period-print.tsx";
 import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 import { importProtocolBookAction } from "../actions.ts";
@@ -117,6 +119,16 @@ export default async function ProtocolListPage({
                     pdfHref={`/admin/ri/livros/${book1.id}/pdf`}
                     title={`Livro ${book1.volume} (Protocolo)`}
                     size="sm"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Imprimir por período (diário, mensal, semestral ou anual)
+                  </p>
+                  <ProtocolPeriodPrint
+                    bookId={book1.id}
+                    volume={book1.volume}
+                    today={today}
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -353,6 +365,12 @@ export default async function ProtocolListPage({
                         {r.kind === "exame" ? "E-" : ""}
                         {r.number.toLocaleString("pt-BR")}
                       </Link>
+                      {r.kind === "prenotacao" &&
+                        volumeOfNumber(r.number, books1) && (
+                          <span className="block text-xs text-muted-foreground">
+                            Livro {volumeOfNumber(r.number, books1)}
+                          </span>
+                        )}
                     </td>
                     <td className="px-3 py-2 text-xs">
                       {brDate(r.presentedOn)}

@@ -67,6 +67,9 @@ export function ProtocolVolumesForm() {
                     defaultValue="folhas"
                   >
                     <option value="folhas">Folhas (físico)</option>
+                    <option value="hibrido">
+                      Híbrido (eletrônico e impresso)
+                    </option>
                     <option value="eletronico">Meio eletrônico</option>
                   </NativeSelect>
                 </td>

@@ -6,6 +6,7 @@ import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { can } from "@/core/auth/roles.ts";
 import { planActs } from "@/core/ri/act-plan.ts";
 import { situationOf } from "@/core/ri/acts.ts";
+import { volumeOfNumber } from "@/core/ri/books.ts";
 import { PROTOCOL_FIELD_NAMES, plainValue } from "@/core/ri/history-text.ts";
 import { brDate, propertyTitle } from "@/core/ri/property.ts";
 import { type Requirement, registryChecks } from "@/core/ri/protocol.ts";
@@ -13,6 +14,7 @@ import { formatTaxId } from "@/core/tax-id.ts";
 import { db } from "@/db/index.ts";
 import { feeTableReferenceWith } from "@/lib/fee-tables.ts";
 import { loadAcervo } from "@/lib/ri.ts";
+import { listBooksWith } from "@/lib/ri-books.ts";
 import { signatureSettingsWith } from "@/lib/ri-files.ts";
 import { listLearnedActsWith } from "@/lib/ri-learning.ts";
 import {
@@ -58,12 +60,21 @@ export default async function ProtocolPage({
   const { id } = await params;
   const row = await protocolWith(db, tenant.slug, id);
   if (!row) notFound();
-  const [acervo, acts, table, signature] = await Promise.all([
+  const [acervo, acts, table, signature, books] = await Promise.all([
     loadAcervo(tenant.slug),
     protocolActsWith(db, tenant.slug, row),
     feeTableReferenceWith(db, tenant.slug).catch(() => null),
     signatureSettingsWith(db, tenant.slug),
+    listBooksWith(db, tenant.slug),
   ]);
+  // The letter of the volume it was written in (1, 1-B…).
+  const volume =
+    row.kind === "prenotacao"
+      ? volumeOfNumber(
+          row.number,
+          books.filter((b) => b.book === 1 && !b.deletedAt),
+        )
+      : null;
   const today = officeToday();
   const canEdit = riCan(session, "ri.edit") && !row.voidedAt;
   const exam = row.kind === "exame";
@@ -106,6 +117,7 @@ export default async function ProtocolPage({
           <span className="mr-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
             {row.voidedAt ? "Apagado" : statusText(row)}
           </span>
+          {volume ? `Livro ${volume}. ` : ""}
           Apresentado em {brDate(row.presentedOn)} por {row.presenterName}.
         </>
       }

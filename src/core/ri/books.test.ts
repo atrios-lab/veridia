@@ -7,10 +7,12 @@ import {
   feminineInWords,
   nextVolume,
   openingTerm,
+  periodRange,
   protocolDay,
   readItem,
   volumeLabel,
   volumeLetters,
+  volumeOfNumber,
 } from "./books.ts";
 
 const office = {
@@ -133,4 +135,35 @@ test("items and batches", () => {
     batches([1, 2, 3, 4, 5], 2).map((b) => b.length),
     [2, 2, 1],
   );
+});
+
+test("Livro 1: a letra do volume de cada número", () => {
+  const volumes = [
+    { volume: "1", firstItem: 50, lastItem: 1688 },
+    { volume: "1-B", firstItem: 1689, lastItem: null },
+  ];
+  assert.equal(volumeOfNumber(50, volumes), "1");
+  assert.equal(volumeOfNumber(1688, volumes), "1");
+  assert.equal(volumeOfNumber(2694, volumes), "1-B");
+  assert.equal(volumeOfNumber(10, volumes), null);
+});
+
+test("Livro 1: impressão diária, mensal, semestral e anual", () => {
+  assert.deepEqual(periodRange("dia", "2026-11-27", "", 0, 1), {
+    from: "2026-11-27",
+    to: "2026-11-27",
+  });
+  assert.deepEqual(periodRange("mes", "", "2024-02", 0, 1), {
+    from: "2024-02-01",
+    to: "2024-02-29",
+  });
+  assert.deepEqual(periodRange("semestre", "", "", 2025, 2), {
+    from: "2025-07-01",
+    to: "2025-12-31",
+  });
+  assert.deepEqual(periodRange("ano", "", "", 2025, 1), {
+    from: "2025-01-01",
+    to: "2025-12-31",
+  });
+  assert.equal(periodRange("mes", "", "x", 0, 1), null);
 });
