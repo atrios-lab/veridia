@@ -33,6 +33,7 @@ const OFFERS_DIGITAL_SIGNATURE = new Set([
   // signer's image, or digital.
   "ri/matriculas/[id]/ficha",
   "ri/protocolo/[id]/nota",
+  "(dashboard)/atribuicoes/[slug]/livros/[book]/exportar",
   "ri/estrangeiros/pdf",
   "ri/estrangeiros/trimestre",
   "ri/livros/[id]/pdf",

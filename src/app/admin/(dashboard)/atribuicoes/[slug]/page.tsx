@@ -9,8 +9,10 @@ import {
   offersGuide,
 } from "@/core/attributions/guides.ts";
 import { can } from "@/core/auth/roles.ts";
+import { booksOf } from "@/core/books/catalog.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
+import { listBookEntriesWith } from "@/lib/attribution-books.ts";
 import {
   attributionFolder,
   listAttributionFilesWith,
@@ -38,6 +40,7 @@ import {
   RemoveAttributionFileButton,
   RoutineChecklist,
 } from "../files-forms.tsx";
+import { BookImportForm } from "../livros-forms.tsx";
 
 export async function generateMetadata({
   params,
@@ -171,6 +174,19 @@ export default async function AttributionGuidePage({
   if (!guide) notFound();
   const help = helpOf(guide);
   const tenant = await getTenant();
+  const systemBooks = booksOf(guide.slug);
+  const bookCounts = new Map<string, number>();
+  for (const b of systemBooks) {
+    bookCounts.set(
+      b.key,
+      (await listBookEntriesWith(db, tenant.slug, b)).length,
+    );
+  }
+  const canImportBooks = can(
+    session.user.role ?? "",
+    "attributions.import",
+    session.user.permissions,
+  );
   // What the office does not offer is not in the panel (14/11/2026).
   if (!offersGuide(guide, tenant)) notFound();
   const canSend = can(
@@ -203,6 +219,50 @@ export default async function AttributionGuidePage({
       />
       <main className="flex max-w-[1100px] flex-col gap-5 px-4 py-7 md:px-8">
         <BackLink href="/admin/atribuicoes" label="Todas as atribuições" />
+
+        {systemBooks.length > 0 && (
+          <section className="flex flex-col gap-4 rounded-xl border bg-card p-6 shadow-xs">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-lg font-semibold">Livros no sistema</h2>
+              <p className="text-sm text-muted-foreground">
+                Cada livro com as colunas da lei: lançar, alterar, apagar,
+                importar, exportar (Excel, CSV, JSON) e imprimir ou assinar em
+                PDF.
+              </p>
+            </div>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {systemBooks.map((b) => (
+                <li key={b.key}>
+                  <Link
+                    href={`/admin/atribuicoes/${guide.slug}/livros/${b.key}`}
+                    className="flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2 text-sm hover:bg-muted"
+                  >
+                    <span className="font-medium">{b.name}</span>
+                    <span className="text-muted-foreground">
+                      {bookCounts.get(b.key) ?? 0}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {canImportBooks && (
+              <details className="rounded-lg border p-3">
+                <summary className="cursor-pointer text-sm font-medium">
+                  Importar livros (escolha o livro ou importe tudo)
+                </summary>
+                <div className="pt-3">
+                  <BookImportForm
+                    attribution={guide.slug}
+                    books={systemBooks.map((b) => ({
+                      key: b.key,
+                      name: b.name,
+                    }))}
+                  />
+                </div>
+              </details>
+            )}
+          </section>
+        )}
 
         <section className="flex flex-col gap-3 rounded-xl border bg-card p-6 shadow-xs">
           <div className="flex items-center gap-2">

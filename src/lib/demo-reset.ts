@@ -11,6 +11,7 @@ import {
   appointmentMessages,
   appointmentNotes,
   appointments,
+  attributionBookEntries,
   attributionFiles,
   auditLog,
   auditNotes,
@@ -222,6 +223,11 @@ export const DEMO_RESET_KEPT: readonly { table: PgTable; reason: string }[] = [
   {
     table: deletionRequests,
     reason: "Pedidos de exclusão ao Tabelião: limpeza ainda não revisada",
+  },
+  {
+    table: attributionBookEntries,
+    reason:
+      "Livros de Notas, Títulos e Documentos, Pessoas Jurídicas e Protesto: escrituração da serventia; nunca se apaga.",
   },
   {
     table: riForeignEntries,

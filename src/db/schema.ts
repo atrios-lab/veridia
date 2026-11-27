@@ -3957,3 +3957,39 @@ export const riForeignReports = pgTable(
   },
   (t) => [index("ri_foreign_reports_tenant").on(t.tenantSlug, t.year)],
 );
+
+/**
+ * The books of Notas, Títulos e Documentos, Pessoas Jurídicas and Protesto
+ * (core/books/catalog.ts): one line per lançamento, the columns of its book
+ * in `data`. Imported or typed; a change keeps the previous values in
+ * `history`; deleting only marks (decision of 27/11/2026).
+ */
+export const attributionBookEntries = pgTable(
+  "attribution_book_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantSlug,
+    attribution: text("attribution").notNull(),
+    book: text("book").notNull(),
+    number: integer("number").notNull(),
+    entryDate: date("entry_date"),
+    data: jsonb("data").notNull().default(sql`'{}'::jsonb`),
+    /** "manual" or "importacao". */
+    origin: text("origin").notNull().default("manual"),
+    history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: text("deleted_by"),
+  },
+  (t) => [
+    index("attribution_book_entries_book").on(
+      t.tenantSlug,
+      t.attribution,
+      t.book,
+      t.number,
+    ),
+  ],
+);
