@@ -6,13 +6,11 @@ import {
   nextVolume,
   shortDate,
   termSignaturesOf,
-  tomoLabel,
   tomosOf,
 } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
-import { Badge } from "../../_ui/badge.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { BookForm, ProtocolDay } from "../_components/book-form.tsx";
 import { ActionButton } from "../_components/client.tsx";
@@ -65,8 +63,8 @@ export default async function BooksPage({
   return (
     <RiPage
       wide
-      title="Livros e assinatura"
-      description="Os cinco livros do Registro de Imóveis (Lei nº 6.015/1973, art. 173), cada um aberto e encerrado com o seu termo e assinado pelo oficial (art. 4º): digitalmente, com certificado ICP-Brasil, ou impresso para assinar à mão. O livro inteiro sai num PDF só, para imprimir ou assinar de uma vez."
+      title="Livros e termos"
+      description="Os cinco livros do Registro de Imóveis (Lei nº 6.015/1973, art. 173). Cada linha mostra os tomos na ordem, o que está em uso e o que falta assinar (art. 4º). Clique num tomo para abrir o livro, os termos e a impressão."
       actions={
         deletedCount > 0 && (
           <Link
@@ -84,181 +82,122 @@ export default async function BooksPage({
     >
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5 lg:col-span-2">
-          {BOOK_NUMBERS.map((n) => {
-            const info = BOOKS[n];
-            const list = visible.filter((r) => r.book === n);
-            return (
-              <Panel
-                key={n}
-                title={info.name}
-                description={`${info.purpose[0]?.toUpperCase()}${info.purpose.slice(1)} (${info.source}).`}
-              >
-                {list.length === 0 ? (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-sm text-muted-foreground">
-                      {showDeleted
-                        ? "Nenhum livro apagado."
-                        : "Nenhum livro aberto no sistema ainda."}
-                    </p>
-                    {!showDeleted && (n === 4 || n === 5) && (
-                      <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm">
-                        <p>
-                          O sistema já monta este indicador com as matrículas e
-                          as pessoas lançadas (Lei nº 6.015/1973, art.{" "}
-                          {n === 4 ? "179" : "180"}). Há um só para todo o
-                          acervo. Escolha como lançar o livro:
+          <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+            <div className="hidden grid-cols-[13rem_1fr_12rem] gap-4 border-b px-4 py-2.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase md:grid">
+              <span>Livro</span>
+              <span>Tomos (do primeiro ao em uso)</span>
+              <span>A assinar</span>
+            </div>
+            <ul className="divide-y">
+              {BOOK_NUMBERS.map((n) => {
+                const info = BOOKS[n];
+                const list = visible
+                  .filter((r) => r.book === n)
+                  .sort(
+                    (a, b) =>
+                      (tomos.get(a.id)?.tomo ?? 0) -
+                      (tomos.get(b.id)?.tomo ?? 0),
+                  );
+                const pending = list.find((r) => !r.deletedAt && toSign(r));
+                return (
+                  <li
+                    key={n}
+                    className="grid gap-3 px-4 py-3.5 md:grid-cols-[13rem_1fr_12rem] md:items-center md:gap-4"
+                  >
+                    <div>
+                      <p className="font-semibold">
+                        Nº {n} · {info.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {info.source}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {list.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          {showDeleted
+                            ? "Nenhum livro apagado."
+                            : n === 4 || n === 5
+                              ? "Nenhum aberto. O sistema já monta este índice com as matrículas e as pessoas."
+                              : "Nenhum livro aberto ainda."}
                         </p>
-                        <ul className="flex list-disc flex-col gap-1 pl-5 text-muted-foreground">
-                          <li>
-                            Nunca foi aberto: abra junto com o Livro 2, na data
-                            dele, em meio eletrônico.
-                          </li>
-                          <li>
-                            O cartório já tem este livro: lance-o em &quot;Abrir
-                            um livro&quot;, com o número e a data de abertura
-                            dele.
-                          </li>
-                          <li>
-                            Quer trazer o que já escriturou: use{" "}
+                      ) : (
+                        list.map((r) => {
+                          const t = tomos.get(r.id);
+                          const current = !r.closedOn && !r.deletedAt;
+                          return (
                             <Link
-                              href="/admin/ri/importar-exportar"
-                              className="text-primary underline-offset-4 hover:underline"
+                              key={r.id}
+                              href={`/admin/ri/livros/${r.id}`}
+                              className={`flex flex-col rounded-lg border px-3 py-1.5 transition-colors hover:bg-muted/50 ${current ? "border-2 border-primary bg-primary-soft/40" : ""}`}
                             >
-                              Importar e exportar
+                              <span className="text-sm font-semibold">
+                                {t ? `Tomo ${t.tomo} · ` : ""}Livro {r.volume}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {r.deletedAt
+                                  ? "apagado"
+                                  : r.closedOn
+                                    ? `${r.openedOn.slice(0, 4)} a ${r.closedOn.slice(0, 4)}${r.lastSheet ? ` · fl. ${r.lastSheet}` : ""}`
+                                    : `em uso desde ${shortDate(r.openedOn)}`}
+                                {" · "}
+                                {formLabel(r.form)
+                                  .split(" (")[0]
+                                  ?.toLowerCase()}
+                              </span>
                             </Link>
-                            .
-                          </li>
-                        </ul>
-                        {book2 && canManage && (
-                          <div>
-                            <ActionButton
-                              action={openIndexBooksAction}
-                              fields={{}}
-                              label={`Abrir os Livros 4 e 5 com o Livro 2 (${shortDate(book2.openedOn)})`}
-                              pendingLabel="Abrindo..."
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <ul className="flex flex-col divide-y">
-                    {list.map((r) => (
-                      <li
-                        key={r.id}
-                        className="flex flex-wrap items-center justify-between gap-2 py-2"
-                      >
-                        <div className="min-w-0">
-                          <Link
-                            href={`/admin/ri/livros/${r.id}`}
-                            className="font-medium text-primary underline-offset-4 hover:underline"
-                          >
-                            Livro {r.volume}
-                          </Link>
-                          {tomos.get(r.id) && (
-                            <span className="ml-2 text-xs font-medium text-foreground">
-                              {tomoLabel(tomos.get(r.id))}
-                            </span>
-                          )}
-                          <p className="text-xs text-muted-foreground">
-                            {formLabel(r.form)}
-                            {r.sheetCount ? ` · ${r.sheetCount} folhas` : ""}
-                            {" · aberto em "}
-                            {shortDate(r.openedOn)}
-                            {r.closedOn
-                              ? ` · encerrado em ${shortDate(r.closedOn)}`
-                              : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {!r.deletedAt && toSign(r) ? (
-                            <Link
-                              href={`/admin/ri/livros/${r.id}#termos`}
-                              className={buttonVariants({ size: "sm" })}
-                            >
-                              Assinar o termo de {toSign(r)}
-                            </Link>
-                          ) : !r.deletedAt ? (
-                            <Link
-                              href={`/admin/ri/livros/${r.id}#termos`}
-                              className={buttonVariants({
-                                size: "sm",
-                                variant: "outline",
-                              })}
-                              title="Imprimir ou assinar de novo"
-                            >
-                              Assinado · imprimir
-                            </Link>
-                          ) : null}
-                          <a
-                            href={`/admin/ri/livros/${r.id}/termo?tipo=abertura`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={buttonVariants({
-                              size: "sm",
-                              variant: "outline",
-                            })}
-                          >
-                            Termo de abertura
-                          </a>
-                          {r.closedOn ? (
-                            <a
-                              href={`/admin/ri/livros/${r.id}/termo?tipo=encerramento`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={buttonVariants({
-                                size: "sm",
-                                variant: "outline",
-                              })}
-                            >
-                              Termo de encerramento
-                            </a>
-                          ) : (
-                            <Link
-                              href={`/admin/ri/livros/${r.id}#encerrar`}
-                              className={buttonVariants({
-                                size: "sm",
-                                variant: "outline",
-                              })}
-                              title={
-                                r.form === "folhas" || r.form === "hibrido"
-                                  ? "Encerre o livro e o termo de encerramento sai dele."
-                                  : "Livro em fichas ou eletrônico não se encerra por estar cheio: cada ficha continua. O encerramento só é feito se o livro for substituído ou por determinação da Corregedoria."
-                              }
-                            >
-                              Termo de encerramento (encerrar)
-                            </Link>
-                          )}
-                          <Link
-                            href={`/admin/ri/livros/${r.id}#importar`}
-                            className={buttonVariants({
-                              size: "sm",
-                              variant: "outline",
-                            })}
-                          >
-                            Importar e exportar
-                          </Link>
-                          <Badge variant={r.closedOn ? "secondary" : "default"}>
-                            {r.deletedAt
-                              ? "Apagado"
-                              : r.closedOn
-                                ? "Encerrado"
-                                : "Vigente"}
-                          </Badge>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Panel>
-            );
-          })}
+                          );
+                        })
+                      )}
+                    </div>
+                    <div>
+                      {showDeleted ? null : pending ? (
+                        <Link
+                          href={`/admin/ri/livros/${pending.id}#termos`}
+                          className={buttonVariants({ size: "sm" })}
+                        >
+                          Assinar{" "}
+                          {toSign(pending) === "encerramento"
+                            ? "encerramento"
+                            : "abertura"}
+                          {tomos.get(pending.id)
+                            ? ` · Tomo ${tomos.get(pending.id)?.tomo}`
+                            : ""}
+                        </Link>
+                      ) : list.length > 0 ? (
+                        <span className="rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-semibold text-success-text">
+                          Tudo assinado
+                        </span>
+                      ) : (n === 4 || n === 5) && book2 && canManage ? (
+                        <ActionButton
+                          action={openIndexBooksAction}
+                          fields={{}}
+                          label="Abrir com o Livro 2"
+                          pendingLabel="Abrindo..."
+                        />
+                      ) : canManage ? (
+                        <a
+                          href="#abrir"
+                          className={buttonVariants({
+                            size: "sm",
+                            variant: "outline",
+                          })}
+                        >
+                          Abrir o Livro {n}
+                        </a>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         </div>
 
         <div className="flex flex-col gap-5">
           {canManage && !showDeleted && (
             <Panel
+              id="abrir"
               title="Abrir um livro"
               description="Lança o livro no sistema; o termo de abertura sai dele para assinar."
             >

@@ -15,6 +15,7 @@ import {
 } from "@/core/ri/property.ts";
 import type { Database } from "@/db/index.ts";
 import {
+  officeStaff,
   riActParties,
   riActs,
   riFiles,
@@ -527,7 +528,24 @@ export async function applyReadingWith(
 
 // ------------------------------------------------- signer and signature
 
-export async function signatureSettingsWith(
+/** A name as the images are kept by: no accents, lower case, one space. */
+export const foldName = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("pt-BR")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const bytesOf = (value: string | null | undefined) =>
+  value ? new Uint8Array(Buffer.from(value, "base64")) : null;
+
+/**
+ * The images as saved: the old pair (signatureImage, rubricImage), which
+ * belongs to `legacyOwner` only once the office said whose it is, and the
+ * images of each person of "Quem assina" outside the Equipe.
+ */
+export async function rawSignatureSettingsWith(
   database: Database,
   tenantSlug: string,
 ) {
@@ -537,19 +555,93 @@ export async function signatureSettingsWith(
       signatureImage: riSettings.signatureImage,
       signatureUpdatedAt: riSettings.signatureUpdatedAt,
       rubricImage: riSettings.rubricImage,
+      signerImages: riSettings.signerImages,
+      legacyOwner: riSettings.legacyOwner,
     })
     .from(riSettings)
     .where(eq(riSettings.tenantSlug, tenantSlug))
     .limit(1);
   return {
     signerIndex: row?.signerIndex ?? 0,
-    signatureImage: row?.signatureImage
-      ? new Uint8Array(Buffer.from(row.signatureImage, "base64"))
-      : null,
+    legacySignature: bytesOf(row?.signatureImage),
+    legacyRubric: bytesOf(row?.rubricImage),
     signatureUpdatedAt: row?.signatureUpdatedAt ?? null,
-    rubricImage: row?.rubricImage
-      ? new Uint8Array(Buffer.from(row.rubricImage, "base64"))
-      : null,
+    legacyOwner: row?.legacyOwner ?? "",
+    signerImages: (row?.signerImages ?? {}) as Record<
+      string,
+      { signature?: string; rubric?: string }
+    >,
+  };
+}
+
+export interface SignerImages {
+  staffId: string | null;
+  signatureImage: Uint8Array | null;
+  rubricImage: Uint8Array | null;
+}
+
+/**
+ * The signature and the rubrica of each name of "Quem assina" (decision of
+ * 28/11/2026: each person their own, never the one of who signed before):
+ * from the Equipe, else from the images saved for that person, else the
+ * old pair if the office said it is theirs.
+ */
+export async function signerImagesWith(
+  database: Database,
+  tenantSlug: string,
+  names: readonly string[],
+): Promise<SignerImages[]> {
+  const raw = await rawSignatureSettingsWith(database, tenantSlug);
+  const staff = (
+    await database
+      .select({
+        id: officeStaff.id,
+        name: officeStaff.name,
+        archivedAt: officeStaff.archivedAt,
+        deletedAt: officeStaff.deletedAt,
+        signatureImage: officeStaff.signatureImage,
+        rubricImage: officeStaff.rubricImage,
+      })
+      .from(officeStaff)
+      .where(eq(officeStaff.tenantSlug, tenantSlug))
+  ).filter((p) => !p.archivedAt && !p.deletedAt);
+  return names.map((name) => {
+    const key = foldName(name);
+    const person = staff.find((p) => foldName(p.name) === key);
+    const own = raw.signerImages[key] ?? {};
+    const legacy = raw.legacyOwner !== "" && raw.legacyOwner === key;
+    return {
+      staffId: person?.id ?? null,
+      signatureImage:
+        bytesOf(person?.signatureImage) ??
+        bytesOf(own.signature) ??
+        (legacy ? raw.legacySignature : null),
+      rubricImage:
+        bytesOf(person?.rubricImage) ??
+        bytesOf(own.rubric) ??
+        (legacy ? raw.legacyRubric : null),
+    };
+  });
+}
+
+/**
+ * The settings of who signs by default, with the images of that person
+ * only (decision of 28/11/2026: changing who signs changes the images).
+ */
+export async function signatureSettingsWith(
+  database: Database,
+  tenantSlug: string,
+  defaultName?: string,
+) {
+  const raw = await rawSignatureSettingsWith(database, tenantSlug);
+  const [mine] = defaultName
+    ? await signerImagesWith(database, tenantSlug, [defaultName])
+    : [];
+  return {
+    signerIndex: raw.signerIndex,
+    signatureImage: mine?.signatureImage ?? null,
+    signatureUpdatedAt: raw.signatureUpdatedAt,
+    rubricImage: mine?.rubricImage ?? null,
   };
 }
 

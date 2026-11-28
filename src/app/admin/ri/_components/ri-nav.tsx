@@ -5,6 +5,7 @@ import {
   ArrowLeftRight,
   BookMarked,
   BookOpen,
+  CalendarCheck,
   ClipboardList,
   FileImage,
   Files,
@@ -34,38 +35,49 @@ interface Entry {
   soon?: true;
 }
 
+/** A count beside an entry, only when there is something to do. */
+export interface NavBadge {
+  text: string;
+  warn?: boolean;
+}
+
+/**
+ * The menu in the order of the work (decision of 28/11/2026): what is done
+ * every day first, then the acervo, the books, the migração and the
+ * serventia. The addresses stay the same.
+ */
 const SECTIONS: { title: string; entries: Entry[] }[] = [
   {
-    title: "Trabalho",
+    title: "Dia a dia",
     entries: [
       { label: "Mesa do RI", href: "/admin/ri", icon: LayoutDashboard },
       {
-        label: "Protocolo (Livro 1)",
+        label: "Protocolo · Livro 1",
         href: "/admin/ri/protocolo",
         icon: ClipboardList,
       },
+      {
+        label: "Encerrar o dia",
+        href: "/admin/ri/protocolo/dias",
+        icon: CalendarCheck,
+      },
+      { label: "Certidões", href: "/admin/ri/certidoes", icon: Files },
     ],
   },
   {
     title: "Acervo",
     entries: [
       {
-        label: "Matrículas (Livro 2)",
+        label: "Matrículas · Livro 2",
         href: "/admin/ri/matriculas",
         icon: BookOpen,
       },
       {
-        label: "Registro Auxiliar (Livro 3)",
+        label: "Registro Auxiliar · Livro 3",
         href: "/admin/ri/livro-3",
         icon: Files,
       },
       { label: "Pessoas", href: "/admin/ri/pessoas", icon: Users },
-      {
-        label: "Livros e assinatura",
-        href: "/admin/ri/livros",
-        icon: Library,
-      },
-      { label: "Certidões", href: "/admin/ri/certidoes", icon: Files },
       {
         label: "Aquisição por estrangeiro",
         href: "/admin/ri/estrangeiros",
@@ -74,15 +86,20 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
     ],
   },
   {
-    title: "Índices",
+    title: "Livros e índices",
     entries: [
       {
-        label: "Indicador Real (Livro 4)",
+        label: "Livros e termos",
+        href: "/admin/ri/livros",
+        icon: Library,
+      },
+      {
+        label: "Indicador Real · Livro 4",
         href: "/admin/ri/indicadores/real",
         icon: MapPin,
       },
       {
-        label: "Indicador Pessoal (Livro 5)",
+        label: "Indicador Pessoal · Livro 5",
         href: "/admin/ri/indicadores/pessoal",
         icon: BookMarked,
       },
@@ -93,7 +110,7 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
     title: "Migração e ONR",
     entries: [
       {
-        label: "Pendências da migração",
+        label: "Pendências",
         href: "/admin/ri/migracao",
         icon: ListChecks,
       },
@@ -128,12 +145,28 @@ const SECTIONS: { title: string; entries: Entry[] }[] = [
   },
 ];
 
+const ALL_HREFS = SECTIONS.flatMap((s) => s.entries.map((e) => e.href));
+
+const matches = (pathname: string, href: string) =>
+  href === "/admin/ri"
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
+
+/** The entry that matches best: "Encerrar o dia" over "Protocolo". */
 function isCurrent(pathname: string, href: string): boolean {
-  if (href === "/admin/ri") return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+  if (!matches(pathname, href)) return false;
+  return !ALL_HREFS.some(
+    (other) => other.length > href.length && matches(pathname, other),
+  );
 }
 
-function Entries({ onPick }: { onPick?: () => void }) {
+function Entries({
+  onPick,
+  badges = {},
+}: {
+  onPick?: () => void;
+  badges?: Record<string, NavBadge>;
+}) {
   const pathname = usePathname();
   return (
     <nav aria-label="Registro de Imóveis" className="flex flex-col gap-5 p-3">
@@ -174,6 +207,20 @@ function Entries({ onPick }: { onPick?: () => void }) {
               >
                 <Icon className="size-4 flex-none" />
                 <span className="min-w-0 flex-1">{entry.label}</span>
+                {badges[entry.href] && (
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 text-xs font-semibold tabular-nums",
+                      current
+                        ? "bg-background text-foreground"
+                        : badges[entry.href]?.warn
+                          ? "bg-warning-soft text-warning-text"
+                          : "bg-primary-soft text-primary",
+                    )}
+                  >
+                    {badges[entry.href]?.text}
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -192,16 +239,16 @@ function Entries({ onPick }: { onPick?: () => void }) {
 }
 
 /** The fixed column on a computer. */
-export function RiSideNav() {
+export function RiSideNav({ badges }: { badges?: Record<string, NavBadge> }) {
   return (
     <aside className="sticky top-14 hidden max-h-svh w-64 self-start flex-none overflow-y-auto border-r bg-background md:block">
-      <Entries />
+      <Entries badges={badges} />
     </aside>
   );
 }
 
 /** The drawer on a phone, opened from the top bar. */
-export function RiMobileNav() {
+export function RiMobileNav({ badges }: { badges?: Record<string, NavBadge> }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   // biome-ignore lint/correctness/useExhaustiveDependencies: closes on a new page
@@ -221,7 +268,7 @@ export function RiMobileNav() {
       </button>
       {open && (
         <div className="fixed inset-x-0 top-14 bottom-0 z-40 overflow-y-auto border-t bg-background">
-          <Entries onPick={() => setOpen(false)} />
+          <Entries badges={badges} onPick={() => setOpen(false)} />
         </div>
       )}
     </div>

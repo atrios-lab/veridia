@@ -7,18 +7,20 @@ import type { Tenant } from "@/core/tenant/schema.ts";
 import { formatOfficeDate } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import { propertyDetailWith } from "./ri.ts";
-import { signatureSettingsWith } from "./ri-files.ts";
+import { rawSignatureSettingsWith, signatureSettingsWith } from "./ri-files.ts";
 import { protocolWith } from "./ri-protocols.ts";
 import { getGuideSettings } from "./tax-guides.ts";
 
 /** Who signs for the RI: the one chosen in its Configurações, from "Quem assina". */
 export async function riSignerFor(tenant: Tenant) {
-  const [guide, settings] = await Promise.all([
+  const [guide, raw] = await Promise.all([
     getGuideSettings(tenant),
-    signatureSettingsWith(db, tenant.slug),
+    rawSignatureSettingsWith(db, tenant.slug),
   ]);
   const signers = guide.signers.map((s) => ({ name: s.name, title: s.title }));
-  const signer = signers[settings.signerIndex] ?? signers[0] ?? null;
+  const signer = signers[raw.signerIndex] ?? signers[0] ?? null;
+  // The images of who signs now, never the ones of who signed before.
+  const settings = await signatureSettingsWith(db, tenant.slug, signer?.name);
   return { signer, signers, settings };
 }
 

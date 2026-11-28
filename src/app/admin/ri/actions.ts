@@ -141,8 +141,11 @@ import {
 } from "@/lib/ri-protocols.ts";
 import { SheetFileError, sheetRows, transferFile } from "@/lib/ri-sheet.ts";
 import {
+  copySignerSignatureToRubricWith,
   copyStaffSignatureToRubricWith,
+  saveSignerImageWith,
   saveStaffImageWith,
+  setLegacyOwnerWith,
 } from "@/lib/ri-signers.ts";
 import {
   applyTransferWith,
@@ -1190,6 +1193,27 @@ export async function saveSignerAction(
   return { status: "success", message: "Quem assina foi salvo." };
 }
 
+/** Whose the images saved before each person had their own are. */
+export async function setLegacyOwnerAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("certificates.manage");
+  if (!ok) return denied("certificates.manage");
+  const name = text(formData, "assinante");
+  if (!name) return { status: "error", message: "Escolha de quem é." };
+  try {
+    await setLegacyOwnerWith(db, ok.tenant.slug, name, ok.actor);
+  } catch (error) {
+    return failure(error, "ri.signature");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: `A assinatura e a rubrica antigas agora são de ${name}.`,
+  };
+}
+
 /**
  * The image of the handwritten signature: only who manages the office's
  * certificates (the Tabelião/Registrador, unless he granted it).
@@ -1258,6 +1282,61 @@ export async function saveSignatureImageAction(
           : rubric
             ? "Rubrica salva."
             : "Assinatura salva.",
+    };
+  }
+  // A person of "Quem assina" outside the Equipe: kept by the name.
+  const signerName = text(formData, "assinante");
+  if (signerName) {
+    try {
+      if (rubric && text(formData, "op") === "copy") {
+        await copySignerSignatureToRubricWith(
+          db,
+          ok.tenant.slug,
+          signerName,
+          ok.actor,
+        );
+      } else if (text(formData, "op") === "remove") {
+        await saveSignerImageWith(
+          db,
+          ok.tenant.slug,
+          signerName,
+          rubric ? "rubrica" : "assinatura",
+          null,
+          ok.actor,
+        );
+      } else {
+        const file = formData.get("imagem");
+        if (!(file instanceof File) || file.size === 0) {
+          return {
+            status: "error",
+            message: rubric
+              ? "Escolha a foto da rubrica."
+              : "Escolha a foto da assinatura.",
+          };
+        }
+        await saveSignerImageWith(
+          db,
+          ok.tenant.slug,
+          signerName,
+          rubric ? "rubrica" : "assinatura",
+          new Uint8Array(await file.arrayBuffer()),
+          ok.actor,
+        );
+      }
+    } catch (error) {
+      return failure(error, "ri.signature");
+    }
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message:
+        text(formData, "op") === "remove"
+          ? "Imagem retirada."
+          : text(formData, "op") === "copy"
+            ? "A rubrica agora é a mesma imagem da assinatura."
+            : rubric
+              ? "Rubrica salva."
+              : "Assinatura salva.",
     };
   }
   try {

@@ -3333,6 +3333,17 @@ export const riSettings = pgTable("ri_settings", {
   rubricUpdatedBy: text("rubric_updated_by"),
   rubricUpdatedAt: timestamp("rubric_updated_at", { withTimezone: true }),
   /**
+   * The signature and the rubrica of each person of "Quem assina" who is
+   * not in the Equipe (decision of 28/11/2026), by the name folded:
+   * { "maria ...": { signature: base64, rubric: base64 } }.
+   */
+  signerImages: jsonb("signer_images").notNull().default(sql`'{}'::jsonb`),
+  /**
+   * Whose the images above (signatureImage, rubricImage) are: the folded
+   * name of the person. Empty: nobody said yet, and they are not used.
+   */
+  legacyOwner: text("legacy_owner").notNull().default(""),
+  /**
    * The credential of the PGV-CNM API (pgv.cnm › Integrações › Acesso à
    * API): the Client ID as is, the Hash sealed (AES-256-GCM), never shown
    * back. Empty: not set.
