@@ -67,6 +67,9 @@ export function closingReason(
 const br = (iso: string) =>
   `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
+/** Said of the days of the paper book, after their termo. */
+export const PHYSICAL_TOO = "Encerrado também no livro físico à época.";
+
 /** The sentence that closes the day in the Livro 1. */
 export function closingText(
   day: string,
@@ -74,7 +77,14 @@ export function closingText(
   numbers: { count: number; first: number | null; last: number | null },
 ): string {
   if (reason.kind === "livro-fisico") {
-    return `Dia ${br(day)} escriturado no livro físico do Protocolo; o encerramento consta do próprio livro (dados importados).`;
+    // The day as it really closed, with its títulos or without movement,
+    // and that it was closed on paper at the time too (decision of
+    // 28/11/2026).
+    const base =
+      numbers.count > 0
+        ? closingText(day, { kind: "movimento", why: "" }, numbers)
+        : closingText(day, { kind: "sem-movimento", why: "" }, numbers);
+    return `${base} ${PHYSICAL_TOO}`;
   }
   const when = `${br(day)} (${weekdayName(day)})`;
   if (reason.kind === "movimento" && numbers.first !== null) {

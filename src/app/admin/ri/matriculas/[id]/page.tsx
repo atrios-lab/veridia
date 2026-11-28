@@ -9,6 +9,7 @@ import {
   situationOf,
 } from "@/core/ri/acts.ts";
 import { AUX_ROLE_LABELS } from "@/core/ri/auxiliary.ts";
+import { defaultCustasNote } from "@/core/ri/closing-notes.ts";
 import {
   CNM_PROBLEM_LABELS,
   cnmOf,
@@ -527,6 +528,7 @@ export default async function PropertyPage({
               title={title}
               signer={signing.signer}
               hasImage={Boolean(signing.settings.signatureImage)}
+              custasText={defaultCustasNote(tenant.location.state)}
             />
           )}
           <Panel title="Identificação" actions={editLink}>

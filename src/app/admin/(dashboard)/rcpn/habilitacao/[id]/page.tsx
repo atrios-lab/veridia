@@ -15,12 +15,16 @@ import {
   HABILITACAO_DOCUMENTS,
 } from "@/core/rcpn/habilitacao-docs.ts";
 import { formatIsoDate } from "@/core/rcpn/record.ts";
+import { defaultCustasNote } from "@/core/ri/closing-notes.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { habilitacoes } from "@/lib/rcpn-habilitacao.ts";
 import { getTenant, today } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
+import {
+  CustasNoteProvider,
+  CustasSignOrPrint,
+} from "../../../../_components/custas-note.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
-import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireRcpn } from "../../_lib/access.ts";
 import {
@@ -245,34 +249,38 @@ export default async function HabilitacaoPage({
             Cada documento sai dos dados do processo. Assine digitalmente pelo
             painel ou imprima para assinar à mão.
           </p>
-          <ul className="mt-4 flex flex-col divide-y">
-            {HABILITACAO_DOCUMENTS.map((doc) => {
-              const blocker = documentBlocker(doc, values);
-              const href = `/admin/rcpn/habilitacao/${found.id}/documento/${doc}`;
-              return (
-                <li
-                  key={doc}
-                  className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <span className="text-sm">
-                    <span className="block font-medium text-foreground">
-                      {DOCUMENT_LABELS[doc]}
+          <CustasNoteProvider
+            defaultText={defaultCustasNote(tenant.location.state)}
+          >
+            <ul className="mt-4 flex flex-col divide-y">
+              {HABILITACAO_DOCUMENTS.map((doc) => {
+                const blocker = documentBlocker(doc, values);
+                const href = `/admin/rcpn/habilitacao/${found.id}/documento/${doc}`;
+                return (
+                  <li
+                    key={doc}
+                    className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <span className="text-sm">
+                      <span className="block font-medium text-foreground">
+                        {DOCUMENT_LABELS[doc]}
+                      </span>
+                      {blocker && (
+                        <span className="text-muted-foreground">{blocker}</span>
+                      )}
                     </span>
-                    {blocker && (
-                      <span className="text-muted-foreground">{blocker}</span>
+                    {!blocker && !canceled && (
+                      <CustasSignOrPrint
+                        pdfHref={href}
+                        title={`${DOCUMENT_LABELS[doc]} · processo ${found.number}`}
+                        size="sm"
+                      />
                     )}
-                  </span>
-                  {!blocker && !canceled && (
-                    <SignOrPrint
-                      pdfHref={href}
-                      title={`${DOCUMENT_LABELS[doc]} · processo ${found.number}`}
-                      size="sm"
-                    />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          </CustasNoteProvider>
         </section>
 
         {HABILITACAO_SECTIONS.map((section) => {

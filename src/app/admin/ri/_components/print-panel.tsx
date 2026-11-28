@@ -1,6 +1,10 @@
 import { FileImage, Lock, PenLine, Printer } from "lucide-react";
 import Link from "next/link";
-import { signHref } from "../../_components/sign-or-print.tsx";
+import {
+  CustasLink,
+  CustasNoteProvider,
+  CustasSignLink,
+} from "../../_components/custas-note.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { Panel } from "./page.tsx";
 
@@ -14,11 +18,14 @@ export function PrintPanel({
   title,
   signer,
   hasImage,
+  custasText,
 }: {
   propertyId: string;
   title: string;
   signer: { name: string; title: string } | null;
   hasImage: boolean;
+  /** The custas note that comes ready when the staff member inserts it. */
+  custasText: string;
 }) {
   const pdf = `/admin/ri/matriculas/${propertyId}/ficha`;
   const button = buttonVariants({ size: "sm", variant: "outline" });
@@ -31,45 +38,43 @@ export function PrintPanel({
           : "Escolha quem assina em Configurações do RI."
       }
     >
-      <div className="flex flex-col gap-2">
-        <a
-          href={signHref(pdf, `Ficha da ${title}`)}
-          className={buttonVariants({ size: "sm" })}
-        >
-          <Lock className="size-4" /> Assinar digitalmente (A1 ou A3)
-        </a>
-        <a href={pdf} target="_blank" rel="noreferrer" className={button}>
-          <Printer className="size-4" /> Imprimir para assinar à mão
-        </a>
-        {hasImage ? (
+      <CustasNoteProvider defaultText={custasText}>
+        <div className="flex flex-col gap-2">
+          <CustasSignLink
+            pdfHref={pdf}
+            title={`Ficha da ${title}`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            <Lock className="size-4" /> Assinar digitalmente (A1 ou A3)
+          </CustasSignLink>
+          <CustasLink href={pdf} className={button}>
+            <Printer className="size-4" /> Imprimir para assinar à mão
+          </CustasLink>
+          {hasImage ? (
+            <CustasLink href={`${pdf}?assinatura=imagem`} className={button}>
+              <PenLine className="size-4" /> PDF com a minha assinatura
+            </CustasLink>
+          ) : (
+            <Link href="/admin/ri/configuracoes#assinatura" className={button}>
+              <PenLine className="size-4" /> Cadastrar a imagem da assinatura
+            </Link>
+          )}
           <a
-            href={`${pdf}?assinatura=imagem`}
-            target="_blank"
-            rel="noreferrer"
+            href={`/admin/ri/matriculas/${propertyId}/imagem`}
             className={button}
           >
-            <PenLine className="size-4" /> PDF com a minha assinatura
+            <FileImage className="size-4" /> Imagem TIFF para a ONR
           </a>
-        ) : (
-          <Link href="/admin/ri/configuracoes#assinatura" className={button}>
-            <PenLine className="size-4" /> Cadastrar a imagem da assinatura
-          </Link>
-        )}
-        <a
-          href={`/admin/ri/matriculas/${propertyId}/imagem`}
-          className={button}
-        >
-          <FileImage className="size-4" /> Imagem TIFF para a ONR
-        </a>
-        {hasImage && (
-          <a
-            href={`/admin/ri/matriculas/${propertyId}/imagem?assinatura=imagem`}
-            className={button}
-          >
-            <FileImage className="size-4" /> TIFF com a minha assinatura
-          </a>
-        )}
-      </div>
+          {hasImage && (
+            <a
+              href={`/admin/ri/matriculas/${propertyId}/imagem?assinatura=imagem`}
+              className={button}
+            >
+              <FileImage className="size-4" /> TIFF com a minha assinatura
+            </a>
+          )}
+        </div>
+      </CustasNoteProvider>
       <p className="mt-3 text-xs text-muted-foreground">
         A imagem da assinatura não substitui a assinatura. O ato vale assinado à
         mão no papel ou digitalmente com certificado ICP-Brasil (Lei nº

@@ -23,7 +23,6 @@ import {
   type TermOffice,
   type TermText,
 } from "@/core/ri/books.ts";
-import { custasNoteFor } from "@/core/ri/closing-notes.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { addressLine, isoDate, propertyTitle } from "@/core/ri/property.ts";
@@ -597,20 +596,37 @@ export async function protocolDayDocumentFor(
     title: `Protocolo do dia ${shortDate(day)}`,
     subtitle: "Encerramento diário (Lei nº 6.015/1973, art. 184)",
     office: [officialName(tenant), tenant.subtitle],
-    sections: protocolDay(day, days.get(day) ?? [], recordedText(closed)),
+    sections: protocolDay(
+      day,
+      days.get(day) ?? [],
+      recordedText(closed, days.get(day) ?? []),
+    ),
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${shortDate(day)}.`,
     ...(await signerLines(tenant, withImage)),
     footer: `${officialName(tenant)} · Livro nº 1 · Protocolo de ${shortDate(day)} · ${tenant.legalFooter}`,
   };
 }
 
-/** The closing as recorded for the day, in the words of the Livro 1. */
-function recordedText(row: ProtocolDayRow | undefined): string | undefined {
+/**
+ * The closing as recorded for the day, in the words of the Livro 1. A day
+ * of the paper book counts its títulos from the Protocolo imported.
+ */
+function recordedText(
+  row: ProtocolDayRow | undefined,
+  lines: readonly ProtocolLine[] = [],
+): string | undefined {
   if (!row) return undefined;
+  const numbers = lines.map((l) => l.number);
   return closingText(
     row.day,
     { kind: row.kind as ClosingKind, why: row.why },
-    { count: row.count, first: row.firstNumber, last: row.lastNumber },
+    row.kind === "livro-fisico"
+      ? {
+          count: numbers.length,
+          first: numbers.length ? Math.min(...numbers) : null,
+          last: numbers.length ? Math.max(...numbers) : null,
+        }
+      : { count: row.count, first: row.firstNumber, last: row.lastNumber },
   );
 }
 
@@ -677,9 +693,7 @@ export async function bookDocumentsFor(
     }
     // The closed days without títulos go in the book too, on their date.
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day, row] of closed) {
-      // The days of the physical book have no termo of their own here.
-      if (row.kind === "livro-fisico") continue;
+    for (const day of closed.keys()) {
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const ordered = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -689,7 +703,7 @@ export async function bookDocumentsFor(
         title: `Protocolo do dia ${shortDate(day)}`,
         subtitle: "Lei nº 6.015/1973, arts. 175 e 184",
         office: [officialName(tenant), tenant.subtitle],
-        sections: protocolDay(day, lines, recordedText(closed.get(day))),
+        sections: protocolDay(day, lines, recordedText(closed.get(day), lines)),
         ...signer,
         footer,
       });
@@ -895,9 +909,7 @@ export async function bookPdfFor(
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
     const days = await protocolDaysWith(database, tenant.slug, from, to);
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day, row] of closed) {
-      // The days of the physical book have no termo of their own here.
-      if (row.kind === "livro-fisico") continue;
+    for (const day of closed.keys()) {
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const total = [...days.values()].reduce((n, l) => n + l.length, 0);
@@ -923,7 +935,7 @@ export async function bookPdfFor(
           ],
         });
       }
-      const text = recordedText(closed.get(day));
+      const text = recordedText(closed.get(day), lines);
       rows.push({
         across:
           text ??
@@ -1235,7 +1247,12 @@ export async function fichaLegalPdfWith(
   database: Database,
   tenant: Tenant,
   propertyId: string,
-  options: { signer?: boolean; withImage?: boolean } = {},
+  options: {
+    signer?: boolean;
+    withImage?: boolean;
+    /** The custas note the staff member inserted (none when not clicked). */
+    custas?: string | null;
+  } = {},
 ): Promise<{ bytes: Buffer; number: number } | null> {
   const acervo = await loadAcervoWith(database, tenant.slug);
   const p = acervo.properties.find((x) => x.id === propertyId);
@@ -1248,7 +1265,7 @@ export async function fichaLegalPdfWith(
   const volume = openBook?.volume ?? String(p.book);
   if (p.book === 3) {
     const bytes = await drawTableBook({
-      closingNote: custasNoteFor(tenant.location.state),
+      closingNote: options.custas ?? null,
       title: "REGISTRO AUXILIAR",
       book: 3,
       volume,
@@ -1300,7 +1317,7 @@ export async function fichaLegalPdfWith(
               : undefined,
         }
       : null,
-    custasNoteFor(tenant.location.state),
+    options.custas ?? null,
   );
   return { bytes, number: p.number };
 }

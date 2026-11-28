@@ -60,3 +60,15 @@ test("dias pendentes e o lembrete das 14h", () => {
     ["2026-11-25"],
   );
 });
+
+test("dia do livro físico: o termo real do dia e que foi encerrado no físico à época", () => {
+  const fisico = { kind: "livro-fisico" as const, why: "" };
+  assert.equal(
+    closingText("2024-07-22", fisico, { count: 1, first: 2551, last: 2551 }),
+    "Encerra-se o Protocolo do dia 22/07/2024 (segunda-feira) com 1 título apontado, sob o nº 2.551. Encerrado também no livro físico à época.",
+  );
+  assert.match(
+    closingText("2024-07-23", fisico, { count: 0, first: null, last: null }),
+    /sem movimento: não houve apresentação de títulos\. Encerrado também no livro físico à época\.$/,
+  );
+});

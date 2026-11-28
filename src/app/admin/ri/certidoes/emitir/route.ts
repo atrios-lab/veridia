@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { can } from "@/core/auth/roles.ts";
 import type { CertidaoKind } from "@/core/ri/certidao.ts";
+import { custasNoteFrom } from "@/core/ri/closing-notes.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocumentDocx } from "@/lib/guide-files.ts";
 import { renderDocument, renderingFor } from "@/lib/pdf.ts";
@@ -75,6 +76,7 @@ async function handle(request: Request): Promise<Response> {
         requester: get("requerente"),
         seal: { number: get("seloNumero"), image },
         withSignatureImage: get("assinatura") === "imagem",
+        custas: custasNoteFrom(form.get("custas")),
       },
       { id: session.user.id },
     );

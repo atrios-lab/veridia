@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CERTIDAO_FORM_LABELS, isCertidaoForm } from "@/core/rcpn/certidao.ts";
 import { RCPN_KIND_LABELS, type RcpnKind } from "@/core/rcpn/record.ts";
+import { defaultCustasNote } from "@/core/ri/closing-notes.ts";
 import { formatOfficeDateTime } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
 import {
@@ -12,8 +13,11 @@ import {
 import { getGuideSettings } from "@/lib/tax-guides.ts";
 import { getTenant } from "@/lib/tenant.ts";
 import { BackLink } from "../../../../_components/back-link.tsx";
+import {
+  CustasNoteProvider,
+  CustasSignOrPrint,
+} from "../../../../_components/custas-note.tsx";
 import { AdminPageHeader } from "../../../../_components/page-header.tsx";
-import { SignOrPrint } from "../../../../_components/sign-or-print.tsx";
 import { buttonVariants } from "../../../../_ui/button.tsx";
 import { requireRcpn } from "../../_lib/access.ts";
 import {
@@ -83,10 +87,14 @@ export default async function CertidaoPage({
                 : ""}
             </p>
           </div>
-          <SignOrPrint
-            pdfHref={pdfHref}
-            title={`${certidaoTitle(kind, row.form)}${subject ? ` de ${subject}` : ""}`}
-          />
+          <CustasNoteProvider
+            defaultText={defaultCustasNote(tenant.location.state)}
+          >
+            <CustasSignOrPrint
+              pdfHref={pdfHref}
+              title={`${certidaoTitle(kind, row.form)}${subject ? ` de ${subject}` : ""}`}
+            />
+          </CustasNoteProvider>
           <RemoveCertidaoButton id={row.id} />
         </section>
 

@@ -6,7 +6,7 @@ import {
   type CertidaoKind,
   certidaoSections,
 } from "@/core/ri/certidao.ts";
-import { custasNoteFor, LGPD_ATTENTION } from "@/core/ri/closing-notes.ts";
+import { LGPD_ATTENTION } from "@/core/ri/closing-notes.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { officialName } from "@/core/tenant/identification.ts";
@@ -47,6 +47,8 @@ export interface CertidaoRequest {
   requester?: string;
   seal?: { number: string; image?: Uint8Array };
   withSignatureImage?: boolean;
+  /** The custas note the staff member inserted (none when not clicked). */
+  custas?: string | null;
 }
 
 /** Matrículas where the person is an owner today (for the negativa). */
@@ -181,9 +183,7 @@ export async function certidaoDocumentFor(
       seal: request.seal,
       compactSignature: true,
       closingNotes: [
-        ...(custasNoteFor(tenant.location.state)
-          ? [{ text: custasNoteFor(tenant.location.state) as string }]
-          : []),
+        ...(request.custas ? [{ text: request.custas }] : []),
         { heading: "ATENÇÃO!", text: LGPD_ATTENTION },
       ],
       signee: signer?.name,

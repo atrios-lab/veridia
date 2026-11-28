@@ -5,6 +5,7 @@ import {
   HABILITACAO_DOCUMENTS,
   type HabilitacaoDocument,
 } from "@/core/rcpn/habilitacao-docs.ts";
+import { custasNoteOfUrl } from "@/core/ri/closing-notes.ts";
 import { brandFor } from "@/lib/document-brand.ts";
 import { renderDocument, renderingFor } from "@/lib/pdf.ts";
 import { habilitacoes } from "@/lib/rcpn-habilitacao.ts";
@@ -18,7 +19,7 @@ const isDocument = (doc: string): doc is HabilitacaoDocument =>
 
 /** A document of the habilitação, to print or to sign digitally. */
 async function handle(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string; doc: string }> },
 ): Promise<Response> {
   const session = await getSession();
@@ -47,6 +48,7 @@ async function handle(
       number: found.number,
       values: found.values,
       today: today(),
+      custas: custasNoteOfUrl(request.url),
     }),
     await brandFor(tenant),
   );

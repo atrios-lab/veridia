@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { volumeLetter, volumeName } from "@/core/ri/books.ts";
+import { PHYSICAL_TOO } from "@/core/ri/protocol-days.ts";
 import {
   DEFAULT_PAGING,
   faceLabel,
@@ -42,12 +43,19 @@ import type { PrintChoice } from "./ri-signers.ts";
 const brDay = (iso: string) => iso.split("-").reverse().join("/");
 
 /** The termo of the day, as the stamp of the book said it (art. 261). */
-export function dayTermText(day: string, count: number, place: string): string {
+export function dayTermText(
+  day: string,
+  count: number,
+  place: string,
+  physical = false,
+): string {
   const what =
     count === 0
       ? "sem movimento"
       : `protocolando ${count} ${count === 1 ? "título" : "títulos"}`;
-  return `Termo de encerramento. Declaro encerrado o expediente de hoje, ${what}. ${place}, ${brDay(day)}.`;
+  // A day of the paper book: the same termo, and that it was closed there
+  // at the time too (decision of 28/11/2026).
+  return `Termo de encerramento. Declaro encerrado o expediente de hoje, ${what}. ${place}, ${brDay(day)}.${physical ? ` ${PHYSICAL_TOO}` : ""}`;
 }
 
 export interface BookSheets {
@@ -131,9 +139,17 @@ export async function bookSheetsWith(
   const closings: SheetClosing[] = [];
   // Every closed day, those of the physical book too: its stamp said the
   // same ("Declaro encerrado o expediente de hoje").
-  for (const [day] of await closedDaysWith(database, tenant.slug)) {
+  for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
     if (day < first || day > last) continue;
-    closings.push({ day, text: dayTermText(day, perDay.get(day) ?? 0, place) });
+    closings.push({
+      day,
+      text: dayTermText(
+        day,
+        perDay.get(day) ?? 0,
+        place,
+        row.kind === "livro-fisico",
+      ),
+    });
   }
   return {
     volume: book.volume,
@@ -546,10 +562,12 @@ export async function protocolPeriodPdfFor(
     if (day < input.from || day > input.to) continue;
     closings.push({
       day,
-      text:
-        row.kind === "livro-fisico"
-          ? `Dia ${brDay(day)} escriturado no livro físico do Protocolo; o termo de encerramento consta do próprio livro.`
-          : dayTermText(day, perDay.get(day) ?? 0, place),
+      text: dayTermText(
+        day,
+        perDay.get(day) ?? 0,
+        place,
+        row.kind === "livro-fisico",
+      ),
     });
   }
   const sheets: BookSheets = {
