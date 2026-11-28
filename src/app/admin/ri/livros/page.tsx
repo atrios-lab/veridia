@@ -105,9 +105,7 @@ export default async function BooksPage({
                     className="grid gap-3 px-4 py-3.5 md:grid-cols-[13rem_1fr_12rem] md:items-center md:gap-4"
                   >
                     <div>
-                      <p className="font-semibold">
-                        Nº {n} · {info.name}
-                      </p>
+                      <p className="font-semibold">{info.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {info.source}
                       </p>
