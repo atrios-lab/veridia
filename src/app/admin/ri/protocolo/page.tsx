@@ -1,9 +1,17 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
-import { volumeLetter, volumeName, volumeOfNumber } from "@/core/ri/books.ts";
+import {
+  TERM_SIGN_FORMATS,
+  termSignaturesOf,
+  tomoLabel,
+  tomosOf,
+  volumeLetter,
+  volumeName,
+  volumeOfNumber,
+} from "@/core/ri/books.ts";
 import { brDate } from "@/core/ri/property.ts";
+import { weekdayName } from "@/core/ri/protocol-days.ts";
 import {
   capacityOf,
   faceLabel,
@@ -11,8 +19,11 @@ import {
   pagingOf,
   SHEET_LAYOUT,
 } from "@/core/ri/protocol-sheets.ts";
+import { type ProtocolTone, protocolView } from "@/core/ri/protocol-view.ts";
+import { addDays } from "@/core/scheduling/calendar.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
+import { pendingDaysWith } from "@/lib/ri-protocol-days.ts";
 import { bookSheetsWith } from "@/lib/ri-protocol-sheets.ts";
 import {
   countersOf,
@@ -21,27 +32,47 @@ import {
 } from "@/lib/ri-protocols.ts";
 import { printSignersWith } from "@/lib/ri-signers.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
-import { BookPrintOptions } from "../_components/book-print-options.tsx";
 import { ActionButton } from "../_components/client.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
+import { PrintPicker } from "../_components/print-picker.tsx";
 import { ProtocolPagingForm } from "../_components/protocol-paging-form.tsx";
+import { ProtocolTabs } from "../_components/protocol-tabs.tsx";
 import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 import {
   importProtocolBookAction,
   openProtocolVolumesAction,
 } from "../actions.ts";
-import { dueOf, statusText } from "./_shared.ts";
+import { statusText } from "./_shared.ts";
 
 export const metadata = { title: "Protocolo (Livro 1)" };
 
 const VIEWS = [
   ["abertos", "Em andamento"],
-  ["todos", "Todos"],
+  ["prazo", "Vencem hoje"],
+  ["exigencia", "Em exigência"],
+  ["registrados", "Registrados"],
   ["exame", "Exame e cálculo"],
+  ["todos", "Todos"],
   ["apagados", "Apagados"],
 ] as const;
+
+/** The colour of each meaning, the same on every screen. */
+const TONE_CHIP: Record<ProtocolTone, string> = {
+  red: "bg-destructive-soft text-destructive",
+  amber: "bg-warning-soft text-warning-text",
+  blue: "bg-primary-soft text-primary",
+  green: "bg-success-soft text-success-text",
+  gray: "bg-muted text-muted-foreground",
+};
+const TONE_BAR: Record<ProtocolTone, string> = {
+  red: "bg-destructive",
+  amber: "bg-warning",
+  blue: "bg-primary",
+  green: "bg-success",
+  gray: "bg-muted-foreground",
+};
 
 /**
  * The Livro 1: every título in the order it came in (Lei nº 6.015/1973,
@@ -89,17 +120,32 @@ export default async function ProtocolListPage({
       redirect(`/admin/ri/protocolo/${exact[0].id}`);
     }
   }
+  const tomorrow = addDays(today, 1);
+  const views = new Map(
+    all.map((r) => [r.id, protocolView(r, today, tomorrow)]),
+  );
+  const isOpen = (r: (typeof all)[number]) =>
+    r.kind === "prenotacao" &&
+    ["prenotado", "exigencia", "duvida"].includes(r.status);
+  const inView = (r: (typeof all)[number], v: (typeof VIEWS)[number][0]) =>
+    v === "exame"
+      ? r.kind === "exame"
+      : v === "abertos"
+        ? isOpen(r)
+        : v === "prazo"
+          ? r.kind === "prenotacao" &&
+            r.status === "prenotado" &&
+            Boolean(r.qualifyBy && r.qualifyBy <= tomorrow)
+          : v === "exigencia"
+            ? r.kind === "prenotacao" && r.status === "exigencia"
+            : v === "registrados"
+              ? r.status === "registrado"
+              : true;
+  const counts = Object.fromEntries(
+    VIEWS.map(([v]) => [v, all.filter((r) => inView(r, v)).length]),
+  ) as Record<(typeof VIEWS)[number][0], number>;
   const rows = all
-    .filter((r) =>
-      q
-        ? true
-        : view === "exame"
-          ? r.kind === "exame"
-          : view === "abertos"
-            ? r.kind === "prenotacao" &&
-              ["prenotado", "exigencia", "duvida"].includes(r.status)
-            : true,
-    )
+    .filter((r) => (q ? true : inView(r, view)))
     .filter(
       (r) =>
         !q ||
@@ -110,118 +156,274 @@ export default async function ProtocolListPage({
               .toLowerCase()
               .includes(q)),
     );
+  const tab = params.aba === "livro" ? "livro" : "titulos";
+  // Which volume of the Livro 1 is in use, and whether its termo is signed.
+  const tomo = book1
+    ? tomosOf(await listBooksWith(db, tenant.slug)).get(book1.id)
+    : undefined;
+  const opening = book1
+    ? termSignaturesOf(book1.termSignatures).abertura
+    : undefined;
+  // Today, as the book stands (decision of 28/11/2026: the day's work first).
+  const pending = (await pendingDaysWith(db, tenant.slug, today))
+    .filter((d) => d < today)
+    .sort();
+  const todayCount = prenotations.filter((r) => r.presentedOn === today).length;
+  const exigencias = all.filter(
+    (r) => r.kind === "prenotacao" && r.status === "exigencia" && !r.voidedAt,
+  ).length;
+  const nextFace = sheets?.pagination.next;
+  const canEdit = riCan(session, "ri.edit");
+  const allTomos = tomosOf(await listBooksWith(db, tenant.slug));
+  const capacity = sheets ? capacityOf(sheets.paging) : null;
+  const lastFull = sheets ? fullFaces(sheets.pagination).at(-1) : undefined;
+  const sheetsLeft =
+    paged?.sheetCount && nextFace
+      ? paged.sheetCount - nextFace.sheet + (nextFace.side === "frente" ? 1 : 0)
+      : null;
+  const faceUsed = nextFace
+    ? Math.round((nextFace.line / SHEET_LAYOUT.linesPerSide) * 100)
+    : 0;
   return (
     <RiPage
       wide
-      title="Protocolo (Livro 1)"
-      description="Todo título apresentado ganha o número de ordem, que fixa a prioridade (Lei nº 6.015/1973, arts. 174, 182 e 186). A qualificação vence em 10 dias úteis (5 nos casos do art. 188, § 1º) e a prenotação em 20 (art. 205), contados em dias úteis (art. 9º, § 1º)."
+      title="Protocolo · Livro 1"
+      description={
+        book1 ? (
+          <>
+            {volumeName(book1.volume)}
+            {tomo && <strong> · {tomoLabel(tomo)}</strong>}
+            {` · aberto em ${brDate(book1.openedOn)}`}
+            {book1.firstItem
+              ? ` · nº ${book1.firstItem.toLocaleString("pt-BR")} ${book1.lastItem ? `a ${book1.lastItem.toLocaleString("pt-BR")}` : "em diante"}`
+              : ""}
+            {nextFace
+              ? ` · escriturado até a folha ${faceLabel(nextFace.sheet, nextFace.side)}`
+              : ""}
+          </>
+        ) : (
+          "O Livro 1 ainda não foi aberto no sistema."
+        )
+      }
       actions={
-        <>
+        book1 ? (
           <Link
-            href="/admin/ri/protocolo/dias"
-            className={buttonVariants({ size: "sm", variant: "outline" })}
+            href={`/admin/ri/livros/${book1.id}#termos`}
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${opening ? "bg-success-soft text-success-text" : "bg-warning-soft text-warning-text"}`}
           >
-            Encerramento dos dias
+            {opening
+              ? `Termo de abertura assinado ${TERM_SIGN_FORMATS[opening.format]}`
+              : "Termo de abertura a assinar"}
           </Link>
-          <Link
-            href="/admin/ri/protocolo/indice"
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-          >
-            Índice do Protocolo
-          </Link>
-          {riCan(session, "ri.edit") && (
+        ) : undefined
+      }
+    >
+      <section
+        aria-label="Hoje"
+        className={`flex flex-wrap items-center gap-4 rounded-xl border border-l-4 bg-card px-5 py-4 shadow-xs ${pending.length ? "border-l-warning" : "border-l-primary"}`}
+      >
+        <div className="min-w-0">
+          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            Hoje · {weekdayName(today)}, {brDate(today)}
+          </p>
+          <p className="mt-0.5 text-base font-semibold text-foreground">
+            Protocolo do dia aberto ·{" "}
+            {todayCount === 1 ? "1 título" : `${todayCount} títulos`}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Próximo nº{" "}
+            <strong className="text-foreground tabular-nums">
+              {(lastNumber + 1).toLocaleString("pt-BR")}
+            </strong>
+            {nextFace && (
+              <>
+                {" "}
+                · cai na{" "}
+                <strong className="text-foreground">
+                  folha {faceLabel(nextFace.sheet, nextFace.side)}
+                </strong>
+                , linha {nextFace.line + 1}
+              </>
+            )}
+            {pending.length > 0 && (
+              <>
+                {" "}
+                · a encerrar:{" "}
+                <strong className="text-warning-text">
+                  {pending.length === 1
+                    ? brDate(pending[0] ?? "")
+                    : `${pending.length >= 400 ? "400 ou mais" : pending.length} dias, desde ${brDate(pending[0] ?? "")}`}
+                </strong>
+              </>
+            )}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:ml-auto">
+          {pending.length > 0 && (
             <Link
-              href="/admin/ri/protocolo/novo"
-              className={buttonVariants({ size: "sm" })}
+              href="/admin/ri/protocolo/dias"
+              className={buttonVariants({ variant: "outline" })}
             >
+              Encerrar{" "}
+              {pending.length === 1 ? brDate(pending[0] ?? "") : "os dias"}
+            </Link>
+          )}
+          {canEdit && (
+            <Link href="/admin/ri/protocolo/novo" className={buttonVariants()}>
               <Plus className="size-4" /> Novo protocolo
             </Link>
           )}
-        </>
-      }
-    >
-      <Panel
-        title="O livro do Protocolo"
-        description="Imprimir o Livro 1, os termos de abertura e de encerramento, encerrar o livro, exportar e importar."
-      >
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="flex flex-col gap-3">
-            {book1 ? (
-              <>
-                <p className="text-sm">
-                  <span className="font-medium">
-                    {volumeName(book1.volume)}
-                  </span>
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · aberto em {brDate(book1.openedOn)}
-                    {book1.closedOn
-                      ? ` · encerrado em ${brDate(book1.closedOn)}`
-                      : " · em uso"}
-                  </span>
-                </p>
-                <BookPrintOptions
-                  signers={printSigners.signers.map((p) => ({
-                    index: p.index,
-                    label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
-                    hasSignature: Boolean(p.signatureImage),
-                    hasRubric: Boolean(p.rubricImage),
-                  }))}
-                  defaultIndex={printSigners.defaultIndex}
-                  today={today}
-                  targets={[
-                    {
-                      label: `${volumeName(book1.volume)} inteiro (termos e folhas)`,
-                      href: `/admin/ri/livros/${book1.id}/pdf`,
-                      word: `/admin/ri/livros/${book1.id}/pdf?formato=word`,
-                    },
-                    {
-                      label: `Termo de abertura do ${volumeName(book1.volume)}`,
-                      href: `/admin/ri/livros/${book1.id}/termo?tipo=abertura`,
-                      word: `/admin/ri/livros/${book1.id}/termo?tipo=abertura&formato=word`,
-                    },
-                    ...(book1.closedOn
-                      ? [
-                          {
-                            label: `Termo de encerramento do ${volumeName(book1.volume)}`,
-                            href: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento`,
-                            word: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento&formato=word`,
-                          },
-                        ]
-                      : []),
-                  ]}
-                  period={{
-                    href: `/admin/ri/livros/${book1.id}/pdf`,
-                    label:
-                      "Imprimir por período (diário, mensal, semestral ou anual)",
-                  }}
-                />
-                {!book1.closedOn && (
-                  <Link
-                    href={`/admin/ri/livros/${book1.id}#encerrar`}
-                    className={buttonVariants({
-                      size: "sm",
-                      variant: "outline",
-                    })}
-                  >
-                    Encerrar o livro
-                  </Link>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  O encerramento de cada dia (art. 184) fica em
-                  &quot;Encerramento dos dias&quot;, acima.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  O Livro 1 ainda não foi aberto no sistema, por isso não há
-                  termos para imprimir.
-                  {prenotations.length > 0 && riCan(session, "ri.books")
-                    ? ` Há ${prenotations.length.toLocaleString("pt-BR")} títulos no Protocolo, do nº ${firstNumber.toLocaleString("pt-BR")} ao ${lastNumber.toLocaleString("pt-BR")}. Abra o Livro 1 com eles (em uso, forma híbrida); se o livro antigo tinha letras, separe depois em "Abrir os livros do Protocolo".`
-                    : ' Abra os livros em "Abrir os livros do Protocolo", logo abaixo.'}
-                </p>
-                {prenotations.length > 0 && riCan(session, "ri.books") && (
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        {(
+          [
+            [
+              "Em andamento",
+              counters.open,
+              "títulos no prazo ou em exigência",
+              "border-l-primary",
+              "",
+              "abertos",
+            ],
+            [
+              "Qualificação vence hoje",
+              counters.qualifyToday,
+              "qualificar hoje (art. 188)",
+              "border-l-destructive",
+              counters.qualifyToday ? "text-destructive" : "",
+              "prazo",
+            ],
+            [
+              "Qualificação vencida",
+              counters.qualifyLate,
+              counters.qualifyLate ? "fora do prazo" : "nenhuma em atraso",
+              "border-l-destructive",
+              counters.qualifyLate ? "text-destructive" : "",
+              "prazo",
+            ],
+            [
+              "Em exigência",
+              exigencias,
+              counters.prenotationEnding
+                ? `${counters.prenotationEnding} com a prenotação no fim`
+                : "prenotação de 20 dias (art. 205)",
+              "border-l-warning",
+              exigencias ? "text-warning-text" : "",
+              "exigencia",
+            ],
+            [
+              "Títulos no livro",
+              prenotations.length,
+              lastNumber
+                ? `próximo nº ${(lastNumber + 1).toLocaleString("pt-BR")}`
+                : "nenhum ainda",
+              "border-l-success",
+              "",
+              "todos",
+            ],
+          ] as const
+        ).map(([label, value, hint, edge, tone, link]) => (
+          <Link
+            key={label}
+            href={`/admin/ri/protocolo?ver=${link}`}
+            className={`rounded-xl border border-l-4 bg-card px-4 py-3 shadow-xs transition-colors hover:bg-muted/40 ${edge}`}
+          >
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className={`mt-1 text-2xl font-bold tabular-nums ${tone}`}>
+              {value.toLocaleString("pt-BR")}
+            </p>
+            <p className="text-xs text-muted-foreground">{hint}</p>
+          </Link>
+        ))}
+      </div>
+
+      <ProtocolTabs
+        active={tab}
+        titles={prenotations.length}
+        pendingDays={pending.length}
+      />
+
+      {tab === "livro" && (
+        <>
+          {books1.length > 0 && (
+            <Panel
+              title="Os livros do Protocolo"
+              description="Todos são o Livro 1, do primeiro ao em uso (Lei nº 6.015/1973, arts. 4º e 6º). Clique num tomo para abrir o livro, os termos e a assinatura."
+            >
+              <ol className="grid gap-3 md:grid-cols-[repeat(auto-fit,minmax(15rem,1fr))]">
+                {[...books1]
+                  .sort(
+                    (x, y) =>
+                      x.openedOn.localeCompare(y.openedOn) ||
+                      (x.firstItem ?? 0) - (y.firstItem ?? 0),
+                  )
+                  .map((b) => {
+                    const t = allTomos.get(b.id);
+                    const signed = termSignaturesOf(b.termSignatures);
+                    const term = b.closedOn
+                      ? signed.encerramento
+                        ? {
+                            ok: true,
+                            text: `Termos assinados ${TERM_SIGN_FORMATS[signed.encerramento.format]}`,
+                          }
+                        : { ok: false, text: "Termo de encerramento a assinar" }
+                      : signed.abertura
+                        ? {
+                            ok: true,
+                            text: `Abertura assinada ${TERM_SIGN_FORMATS[signed.abertura.format]}`,
+                          }
+                        : { ok: false, text: "Termo de abertura a assinar" };
+                    return (
+                      <li key={b.id}>
+                        <Link
+                          href={`/admin/ri/livros/${b.id}#termos`}
+                          className={`flex h-full flex-col gap-1 rounded-xl border px-4 py-3 transition-colors hover:bg-muted/40 ${b.closedOn ? "bg-muted/20" : "border-2 border-primary bg-primary-soft/40"}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <strong className="text-base">
+                              Tomo {t?.tomo ?? ""}
+                            </strong>
+                            <span
+                              className={`ml-auto rounded-full px-2.5 py-0.5 text-xs font-semibold ${b.closedOn ? "bg-muted text-muted-foreground" : "bg-primary-soft text-primary"}`}
+                            >
+                              {b.closedOn ? "Encerrado" : "Em uso"}
+                            </span>
+                          </span>
+                          <span className="text-sm">
+                            {volumeName(b.volume)}
+                            {b.firstItem
+                              ? ` · nº ${b.firstItem.toLocaleString("pt-BR")} ${b.lastItem ? `a ${b.lastItem.toLocaleString("pt-BR")}` : "em diante"}`
+                              : ""}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {b.closedOn
+                              ? `${brDate(b.openedOn)} a ${brDate(b.closedOn)}${b.lastSheet ? ` · encerrado na folha ${b.lastSheet}` : ""}`
+                              : `desde ${brDate(b.openedOn)}${nextFace && b.id === book1?.id ? ` · até a folha ${faceLabel(nextFace.sheet, nextFace.side)}` : ""}`}
+                          </span>
+                          <span
+                            className={`mt-1.5 self-start rounded-full px-2.5 py-0.5 text-xs font-semibold ${term.ok ? "bg-success-soft text-success-text" : "bg-warning-soft text-warning-text"}`}
+                          >
+                            {term.text}
+                          </span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+              </ol>
+            </Panel>
+          )}
+
+          {!book1 && (
+            <Panel title="O Livro 1 ainda não foi aberto no sistema">
+              <p className="text-sm text-muted-foreground">
+                {prenotations.length > 0 && riCan(session, "ri.books")
+                  ? `Há ${prenotations.length.toLocaleString("pt-BR")} títulos no Protocolo, do nº ${firstNumber.toLocaleString("pt-BR")} ao ${lastNumber.toLocaleString("pt-BR")}. Abra o Livro 1 com eles (em uso, forma híbrida); se o livro antigo tinha letras, separe depois em "Abrir os livros do Protocolo".`
+                  : 'Abra os livros em "Abrir os livros do Protocolo", abaixo.'}
+              </p>
+              {prenotations.length > 0 && riCan(session, "ri.books") && (
+                <div className="mt-3">
                   <ActionButton
                     action={openProtocolVolumesAction}
                     fields={{
@@ -235,449 +437,459 @@ export default async function ProtocolListPage({
                     pendingLabel="Abrindo..."
                     variant="default"
                   />
-                )}
-              </>
-            )}
-          </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <p className="text-xs font-medium text-muted-foreground">
-                Exportar todos os títulos
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <a
-                  href="/admin/ri/protocolo/tabela?formato=xlsx"
-                  className={buttonVariants({ size: "sm", variant: "outline" })}
-                >
-                  Planilha (Excel)
-                </a>
-                <a
-                  href="/admin/ri/protocolo/tabela?formato=csv"
-                  className={buttonVariants({ size: "sm", variant: "outline" })}
-                >
-                  CSV
-                </a>
-              </div>
-            </div>
-            {riCan(session, "ri.import") && (
-              <ImportSheetForm
-                action={importProtocolBookAction}
-                label="Importar o Protocolo que o cartório já tem (.xlsx, .csv ou .ods)"
-              />
-            )}
-            <p className="text-xs text-muted-foreground">
-              Colunas: Nº de ordem, Data, Apresentante, Natureza do título, Atos
-              (anotações) e, se quiser, Situação e Livro (1, 1-A, 1-B…). Com a
-              coluna Livro, os livros abrem sozinhos na importação. Número que
-              já existe fica como está; título importado não volta a contar
-              prazo.
-            </p>
-          </div>
-        </div>
-      </Panel>
+                </div>
+              )}
+            </Panel>
+          )}
 
-      {paged && (
-        <Panel
-          title="Folhas do livro"
-          description="O Livro 1 corre como no livro de papel: um título depois do outro, com uma linha entre eles, e o termo de encerramento de cada dia logo abaixo do último título do dia, na mesma folha (Lei nº 6.015/1973, arts. 175 e 184; Provimento nº 156/2016-CGJ/RN, arts. 260, parágrafo único, e 261). O dia seguinte continua embaixo. Título ou termo que não cabe no resto da face vai inteiro para a próxima, e o espaço que sobra é inutilizado com um traço."
-        >
-          {sheets ? (
-            (() => {
-              const cap = capacityOf(sheets.paging);
-              const next = sheets.pagination.next;
-              const free = SHEET_LAYOUT.linesPerSide - next.line;
-              const fitsHere = Math.floor(free / sheets.paging.entryLines);
-              const full = fullFaces(sheets.pagination);
-              const lastFull = full.at(-1);
-              const left = paged.sheetCount
-                ? paged.sheetCount -
-                  next.sheet +
-                  (next.side === "frente" ? 1 : 0)
-                : null;
-              return (
-                <div className="flex flex-col gap-4">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-md border p-3">
+          <div className="grid gap-5 lg:grid-cols-[1.65fr_1fr]">
+            {book1 ? (
+              <Panel
+                title="Imprimir ou assinar"
+                description="Escolha o que, quem rubrica e assina, e como. Tudo num lugar só."
+              >
+                <PrintPicker
+                  signers={printSigners.signers.map((p) => ({
+                    index: p.index,
+                    label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
+                    hasSignature: Boolean(p.signatureImage),
+                    hasRubric: Boolean(p.rubricImage),
+                  }))}
+                  defaultIndex={printSigners.defaultIndex}
+                  today={today}
+                  groups={[
+                    ...(paged && sheets
+                      ? [
+                          {
+                            label: "Folhas",
+                            options: [
+                              ...(lastFull
+                                ? [
+                                    {
+                                      label: "Completas",
+                                      href: `/admin/ri/livros/${paged.id}/folhas?ate_folha=${lastFull.side === "verso" || !sheets.paging.bothSides ? lastFull.sheet : lastFull.sheet - 1}`,
+                                    },
+                                  ]
+                                : []),
+                              {
+                                label: `Em andamento (${faceLabel(sheets.pagination.next.sheet, sheets.pagination.next.side)})`,
+                                href: `/admin/ri/livros/${paged.id}/folhas?folha=${sheets.pagination.next.sheet}&ate_folha=${sheets.pagination.next.sheet}`,
+                              },
+                              {
+                                label: "De hoje",
+                                href: `/admin/ri/livros/${paged.id}/folhas?de=${today}&ate=${today}`,
+                              },
+                              {
+                                label: "Todas",
+                                href: `/admin/ri/livros/${paged.id}/folhas`,
+                              },
+                            ],
+                          },
+                        ]
+                      : []),
+                    {
+                      label: "Livro inteiro",
+                      options: [
+                        {
+                          label: `${volumeName(book1.volume)} inteiro (termos e folhas)`,
+                          href: `/admin/ri/livros/${book1.id}/pdf`,
+                          word: `/admin/ri/livros/${book1.id}/pdf?formato=word`,
+                        },
+                      ],
+                    },
+                    {
+                      label: "Termo de abertura",
+                      options: [
+                        {
+                          label: `Termo de abertura do ${volumeName(book1.volume)}`,
+                          href: `/admin/ri/livros/${book1.id}/termo?tipo=abertura`,
+                          word: `/admin/ri/livros/${book1.id}/termo?tipo=abertura&formato=word`,
+                        },
+                      ],
+                    },
+                    ...(book1.closedOn
+                      ? [
+                          {
+                            label: "Termo de encerramento",
+                            options: [
+                              {
+                                label: `Termo de encerramento do ${volumeName(book1.volume)}`,
+                                href: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento`,
+                                word: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento&formato=word`,
+                              },
+                            ],
+                          },
+                        ]
+                      : []),
+                  ]}
+                  period={{
+                    href: `/admin/ri/livros/${book1.id}/pdf`,
+                    label: "Período",
+                  }}
+                />
+              </Panel>
+            ) : (
+              <div />
+            )}
+            <div className="flex flex-col gap-5">
+              {paged && (
+                <Panel title="Folhas do livro">
+                  {sheets ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                            Próximo título
+                          </p>
+                          <p className="text-xl font-bold">
+                            Folha{" "}
+                            {faceLabel(
+                              sheets.pagination.next.sheet,
+                              sheets.pagination.next.side,
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            linha {sheets.pagination.next.line + 1} de{" "}
+                            {SHEET_LAYOUT.linesPerSide}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                            Cabem
+                          </p>
+                          <p className="text-xl font-bold">
+                            {capacity?.perSide} por face
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {capacity?.perSheet} por folha ·{" "}
+                            {sheetsLeft === null
+                              ? "sem limite de folhas"
+                              : `${sheetsLeft} ${sheetsLeft === 1 ? "folha restante" : "folhas restantes"}`}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        aria-hidden
+                        className="block h-1.5 overflow-hidden rounded-full bg-muted"
+                      >
+                        <span
+                          className="block h-full rounded-full bg-primary"
+                          style={{ width: `${faceUsed}%` }}
+                        />
+                      </span>
                       <p className="text-xs text-muted-foreground">
-                        O próximo protocolo cai na
+                        Face{" "}
+                        {faceLabel(
+                          sheets.pagination.next.sheet,
+                          sheets.pagination.next.side,
+                        )}
+                        : {faceUsed}% usada. Título ou termo que não cabe vai
+                        inteiro para a face seguinte (Lei nº 6.015/1973, arts.
+                        175 e 184; Provimento nº 156/2016-CGJ/RN, arts. 260 e
+                        261).
                       </p>
-                      <p className="text-lg font-semibold">
-                        Folha {faceLabel(next.sheet, next.side)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        linha {next.line + 1} de {SHEET_LAYOUT.linesPerSide}.
-                        Cabem mais {fitsHere}{" "}
-                        {fitsHere === 1 ? "título" : "títulos"} nesta face
-                      </p>
+                      {riCan(session, "ri.books") && (
+                        <details>
+                          <summary className="cursor-pointer text-sm font-medium text-primary">
+                            Alterar onde começam as folhas
+                          </summary>
+                          <div className="pt-3">
+                            <ProtocolPagingForm
+                              bookId={paged.id}
+                              value={sheets.paging}
+                              suggestedItem={paged.firstItem}
+                            />
+                          </div>
+                        </details>
+                      )}
                     </div>
-                    <div className="rounded-md border p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Quantos cabem
+                  ) : riCan(session, "ri.books") ? (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm">
+                        Diga a partir de qual número o sistema imprime as folhas
+                        e em que folha começa. Daí em diante, cada protocolo
+                        novo já sai com a sua folha.
                       </p>
-                      <p className="text-lg font-semibold">
-                        {cap.perSide} por face · {cap.perSheet} por folha
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {SHEET_LAYOUT.linesPerSide} linhas por face,{" "}
-                        {sheets.paging.entryLines} por título (mais, se o texto
-                        pedir); o termo do dia ocupa {SHEET_LAYOUT.termLines}{" "}
-                        linhas. Num dia com termo, cabem {cap.perSideWithTerm}{" "}
-                        títulos na face.
-                      </p>
+                      <ProtocolPagingForm
+                        bookId={paged.id}
+                        value={pagingOf(paged.paging)}
+                        suggestedItem={paged.firstItem}
+                      />
                     </div>
-                    <div className="rounded-md border p-3">
-                      <p className="text-xs text-muted-foreground">
-                        Folhas do livro
-                      </p>
-                      <p className="text-lg font-semibold">
-                        {left === null
-                          ? "Sem limite informado"
-                          : `${left} ${left === 1 ? "folha restante" : "folhas restantes"}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {paged.sheetCount
-                          ? `de ${paged.sheetCount}; quando acabar, abra o próximo livro (Lei nº 6.015/1973, art. 6º).`
-                          : "Informe o número de folhas em Livros e assinatura."}
-                      </p>
-                    </div>
-                  </div>
-                  <BookPrintOptions
-                    signers={printSigners.signers.map((p) => ({
-                      index: p.index,
-                      label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
-                      hasSignature: Boolean(p.signatureImage),
-                      hasRubric: Boolean(p.rubricImage),
-                    }))}
-                    defaultIndex={printSigners.defaultIndex}
-                    today={today}
-                    targets={[
-                      ...(lastFull
-                        ? [
-                            {
-                              label: "Folhas completas (prontas para o livro)",
-                              href: `/admin/ri/livros/${paged.id}/folhas?ate_folha=${lastFull.side === "verso" || !sheets.paging.bothSides ? lastFull.sheet : lastFull.sheet - 1}`,
-                            },
-                          ]
-                        : []),
-                      {
-                        label: `Folha em andamento (${faceLabel(next.sheet, next.side)})`,
-                        href: `/admin/ri/livros/${paged.id}/folhas?folha=${next.sheet}&ate_folha=${next.sheet}`,
-                      },
-                      {
-                        label: "Folhas de hoje",
-                        href: `/admin/ri/livros/${paged.id}/folhas?de=${today}&ate=${today}`,
-                      },
-                      {
-                        label: "Todas as folhas do livro",
-                        href: `/admin/ri/livros/${paged.id}/folhas`,
-                      },
-                    ]}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    O termo de cada dia é lavrado no sistema ao encerrar o dia e
-                    pode ser assinado digitalmente (Provimento nº
-                    156/2016-CGJ/RN, art. 259, § 3º). No papel, a folha entra no
-                    livro quando completa; a folha em andamento pode ser
-                    impressa para conferência.
-                  </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      As folhas ainda não foram definidas por quem cuida dos
+                      livros.
+                    </p>
+                  )}
+                </Panel>
+              )}
+              <Panel
+                title={book1 && !book1.closedOn ? "Livro em uso" : "O livro"}
+                description={
+                  book1 && tomo
+                    ? `${tomoLabel(tomo)} · aberto em ${brDate(book1.openedOn)}`
+                    : undefined
+                }
+              >
+                <div className="flex flex-col gap-2">
+                  <a
+                    href="/admin/ri/protocolo/tabela?formato=xlsx"
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Exportar (Excel)
+                  </a>
+                  <a
+                    href="/admin/ri/protocolo/tabela?formato=csv"
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Exportar (CSV)
+                  </a>
+                  {book1 && !book1.closedOn && (
+                    <Link
+                      href={`/admin/ri/livros/${book1.id}#encerrar`}
+                      className={buttonVariants({ variant: "outline" })}
+                    >
+                      Encerrar o livro e abrir o próximo tomo
+                    </Link>
+                  )}
+                  {riCan(session, "ri.import") && (
+                    <details className="rounded-lg border p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-primary">
+                        Importar o Protocolo que o cartório já tem
+                      </summary>
+                      <div className="flex flex-col gap-2 pt-3">
+                        <ImportSheetForm
+                          action={importProtocolBookAction}
+                          label="Planilha (.xlsx, .csv ou .ods)"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Colunas: Nº de ordem, Data, Apresentante, Natureza do
+                          título, Atos (anotações) e, se quiser, Situação, Livro
+                          (1, 1-A, 1-B…) e Folha. Número que já existe fica como
+                          está; título importado não volta a contar prazo.
+                        </p>
+                      </div>
+                    </details>
+                  )}
                   {riCan(session, "ri.books") && (
-                    <details>
-                      <summary className="cursor-pointer text-sm font-medium">
-                        Alterar onde começam as folhas
+                    <details className="rounded-lg border p-3">
+                      <summary className="cursor-pointer text-sm font-medium text-primary">
+                        Abrir os livros do Protocolo (tomos antigos)
                       </summary>
                       <div className="pt-3">
-                        <ProtocolPagingForm
-                          bookId={paged.id}
-                          value={sheets.paging}
-                          suggestedItem={paged.firstItem}
-                        />
+                        <ProtocolVolumesForm />
                       </div>
                     </details>
                   )}
                 </div>
-              );
-            })()
-          ) : riCan(session, "ri.books") ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-sm">
-                Diga a partir de qual número o sistema imprime as folhas e em
-                que folha começa (por exemplo, o nº seguinte ao último lançado à
-                mão, na folha seguinte). Daí em diante, cada protocolo novo já
-                sai com a sua folha.
-              </p>
-              <ProtocolPagingForm
-                bookId={paged.id}
-                value={pagingOf(paged.paging)}
-                suggestedItem={paged.firstItem}
-              />
+              </Panel>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              As folhas ainda não foram definidas por quem cuida dos livros.
-            </p>
-          )}
-        </Panel>
-      )}
-
-      {books1.length > 0 && (
-        <Panel
-          title="Os livros do Protocolo"
-          description="Todos são o Livro 1; a letra do livro antigo fica entre parênteses. Cada um com os seus números, o PDF e os termos de abertura e de encerramento (Lei nº 6.015/1973, art. 4º)."
-        >
-          <ul className="divide-y text-sm">
-            {[...books1]
-              .sort(
-                (a, b) =>
-                  (a.firstItem ?? 0) - (b.firstItem ?? 0) ||
-                  a.openedOn.localeCompare(b.openedOn),
-              )
-              .map((b) => (
-                <li
-                  key={b.id}
-                  className="flex flex-wrap items-center justify-between gap-2 py-2"
-                >
-                  <span>
-                    <Link
-                      href={`/admin/ri/livros/${b.id}`}
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      {volumeName(b.volume)}
-                    </Link>
-                    <span className="text-muted-foreground">
-                      {b.firstItem ? ` · nº ${b.firstItem}` : ""}
-                      {b.lastItem
-                        ? ` a ${b.lastItem}`
-                        : b.firstItem
-                          ? " em diante"
-                          : ""}
-                      {` · aberto em ${brDate(b.openedOn)}`}
-                      {b.closedOn
-                        ? ` · encerrado em ${brDate(b.closedOn)}`
-                        : " · em uso"}
-                    </span>
-                  </span>
-                  <div className="flex w-full flex-col gap-2 sm:grid sm:grid-cols-3">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Livro
-                      </p>
-                      <SignOrPrint
-                        pdfHref={`/admin/ri/livros/${b.id}/pdf`}
-                        title={`${volumeName(b.volume)} (Protocolo)`}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Termo de abertura
-                      </p>
-                      <SignOrPrint
-                        pdfHref={`/admin/ri/livros/${b.id}/termo?tipo=abertura`}
-                        title={`Termo de abertura do ${volumeName(b.volume)}`}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Termo de encerramento
-                      </p>
-                      {b.closedOn ? (
-                        <SignOrPrint
-                          pdfHref={`/admin/ri/livros/${b.id}/termo?tipo=encerramento`}
-                          title={`Termo de encerramento do ${volumeName(b.volume)}`}
-                          size="sm"
-                        />
-                      ) : (
-                        <Link
-                          href={`/admin/ri/livros/${b.id}#encerrar`}
-                          className="text-xs text-primary underline-offset-4 hover:underline"
-                        >
-                          Em uso. Encerrar o livro
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              ))}
-          </ul>
-        </Panel>
-      )}
-
-      {riCan(session, "ri.books") && (
-        <Panel
-          title="Abrir os livros do Protocolo"
-          description="Para o Protocolo que veio do livro físico: todos são o Livro 1, e a letra que o livro antigo tinha (A, B…) fica à parte. Preencha um livro por linha e use “Adicionar outro livro” para os demais; o sistema tira as datas dos títulos importados."
-        >
-          <ProtocolVolumesForm />
-        </Panel>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-5">
-        {[
-          [
-            "Títulos no livro",
-            `${prenotations.length.toLocaleString("pt-BR")}${lastNumber ? ` (próximo nº ${(lastNumber + 1).toLocaleString("pt-BR")})` : ""}`,
-            "",
-          ],
-          ["Em andamento", counters.open, ""],
-          ["Qualificação vencida", counters.qualifyLate, "text-destructive"],
-          [
-            "Qualificação vence hoje",
-            counters.qualifyToday,
-            "text-warning-text",
-          ],
-          [
-            "Prenotação no fim (em exigência)",
-            counters.prenotationEnding,
-            "text-warning-text",
-          ],
-        ].map(([label, value, tone]) => (
-          <div
-            key={label as string}
-            className="rounded-xl border bg-card px-4 py-3 shadow-xs"
-          >
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className={`text-2xl font-semibold ${tone}`}>{value}</p>
           </div>
-        ))}
-      </div>
+        </>
+      )}
 
-      <form className="flex flex-wrap items-end gap-3 rounded-xl border bg-card p-4 shadow-xs">
-        <div className="flex flex-wrap gap-1.5">
-          {VIEWS.map(([v, label]) => (
-            <Link
-              key={v}
-              href={`/admin/ri/protocolo?ver=${v}`}
-              className={buttonVariants({
-                size: "sm",
-                variant: v === view ? "default" : "outline",
-              })}
+      {tab === "titulos" && (
+        <section className="overflow-hidden rounded-xl border bg-card shadow-xs">
+          <form className="flex flex-wrap items-center gap-3 border-b p-3">
+            <nav
+              aria-label="Filtrar os títulos"
+              className="flex flex-wrap overflow-hidden rounded-lg border"
             >
-              {label}
-            </Link>
-          ))}
-        </div>
-        <input type="hidden" name="ver" value={view} />
-        <label className="flex min-w-60 flex-1 flex-col gap-1.5 text-sm font-medium">
-          Buscar
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Número, apresentante, CPF, natureza…"
-            className="h-9 rounded-md border bg-background px-2.5 text-sm font-normal"
-          />
-        </label>
-        <button type="submit" className={buttonVariants({ size: "sm" })}>
-          Buscar
-        </button>
-      </form>
-
-      {rows.length === 0 ? (
-        <Panel title="Nenhum protocolo aqui">
-          <p className="text-sm text-muted-foreground">
-            {view === "abertos" && prenotations.length ? (
-              <>
-                Nenhum título em andamento agora. Os{" "}
-                {prenotations.length.toLocaleString("pt-BR")} títulos do livro
-                (os importados já estão registrados ou cessados) estão em{" "}
+              {VIEWS.map(([v, label]) => (
                 <Link
-                  href="/admin/ri/protocolo?ver=todos"
-                  className="text-primary underline-offset-4 hover:underline"
+                  key={v}
+                  href={`/admin/ri/protocolo?ver=${v}`}
+                  aria-current={v === view && !q ? "true" : undefined}
+                  className={`border-r px-3 py-1.5 text-sm font-semibold last:border-r-0 ${v === view && !q ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/60"}`}
                 >
-                  Todos
+                  {label}
+                  {v !== "todos" && v !== "apagados" && counts[v] > 0 && (
+                    <span className="ml-1.5 tabular-nums opacity-80">
+                      {counts[v]}
+                    </span>
+                  )}
                 </Link>
-                .
-              </>
-            ) : (
-              "Lance o título no balcão em Novo protocolo."
-            )}
-          </p>
-        </Panel>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card shadow-xs">
-          <table className="w-full min-w-3xl text-left text-sm">
-            <thead className="border-b bg-muted/50 text-xs text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Nº</th>
-                <th className="px-3 py-2 font-medium">Apresentação</th>
-                <th className="px-3 py-2 font-medium">Apresentante e título</th>
-                <th className="px-3 py-2 font-medium">Qualificar até</th>
-                <th className="px-3 py-2 font-medium">Prenotação até</th>
-                <th className="px-3 py-2 font-medium">Situação</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {rows.map((r) => {
-                const open = ["prenotado", "exigencia", "duvida"].includes(
-                  r.status,
-                );
-                const qualify =
-                  open && r.status === "prenotado"
-                    ? dueOf(r.qualifyBy, today)
-                    : null;
-                const ends = open ? dueOf(r.prenotationEnds, today) : null;
-                return (
-                  <tr key={r.id}>
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/admin/ri/protocolo/${r.id}`}
-                        className="font-semibold text-primary hover:underline"
-                      >
-                        {r.kind === "exame" ? "E-" : ""}
-                        {r.number.toLocaleString("pt-BR")}
-                      </Link>
-                      {r.kind === "prenotacao" &&
-                        volumeLetter(
-                          volumeOfNumber(r.number, books1) ?? "",
-                        ) && (
-                          <span className="block text-xs text-muted-foreground">
-                            Letra{" "}
-                            {volumeLetter(
-                              volumeOfNumber(r.number, books1) ?? "",
-                            )}
-                          </span>
-                        )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {brDate(r.presentedOn)}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="block font-medium">
-                        {r.presenterName}
-                      </span>
-                      <span className="block text-xs text-muted-foreground">
-                        {r.titleKind}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {qualify ? (
-                        <span
-                          className={`rounded-full px-2 py-0.5 ${qualify.tone}`}
-                        >
-                          {qualify.text}
-                        </span>
-                      ) : (
-                        brDate(r.qualifyBy)
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">
-                      {ends && r.status === "exigencia" ? (
-                        <span
-                          className={`rounded-full px-2 py-0.5 ${ends.tone}`}
-                        >
-                          {ends.text}
-                        </span>
-                      ) : (
-                        brDate(r.prenotationEnds)
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-xs">{statusText(r)}</td>
+              ))}
+            </nav>
+            <input type="hidden" name="ver" value={view} />
+            <label className="flex min-w-48 flex-1 items-center gap-2 text-sm">
+              <span className="sr-only">Buscar</span>
+              <input
+                name="q"
+                defaultValue={q}
+                placeholder="Nº (2.694 ou 2694), apresentante, CPF, natureza…"
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+              />
+            </label>
+            <button type="submit" className={buttonVariants({ size: "sm" })}>
+              Buscar
+            </button>
+          </form>
+          {rows.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {view === "abertos" && prenotations.length ? (
+                <>
+                  Nenhum título em andamento agora. Os{" "}
+                  {prenotations.length.toLocaleString("pt-BR")} títulos do livro
+                  estão em{" "}
+                  <Link
+                    href="/admin/ri/protocolo?ver=todos"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Todos
+                  </Link>
+                  .
+                </>
+              ) : q ? (
+                "Nenhum título encontrado com essa busca."
+              ) : (
+                "Nenhum título aqui. Lance o título do balcão em Novo protocolo."
+              )}
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-3xl text-left text-sm">
+                <thead className="border-b text-xs tracking-wide text-muted-foreground uppercase">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Nº de ordem</th>
+                    <th className="px-3 py-2.5 font-semibold">Data</th>
+                    <th className="px-3 py-2.5 font-semibold">
+                      Apresentante e título
+                    </th>
+                    <th className="px-3 py-2.5 font-semibold">Situação</th>
+                    <th className="px-3 py-2.5 font-semibold">Prazo</th>
+                    <th className="px-4 py-2.5">
+                      <span className="sr-only">Ação</span>
+                    </th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y">
+                  {rows.map((r) => {
+                    const v =
+                      views.get(r.id) ?? protocolView(r, today, tomorrow);
+                    const letter =
+                      r.kind === "prenotacao"
+                        ? volumeLetter(volumeOfNumber(r.number, books1) ?? "")
+                        : "";
+                    const action = r.voidedAt
+                      ? "Ver"
+                      : r.kind === "prenotacao" && r.status === "prenotado"
+                        ? "Qualificar"
+                        : r.status === "exigencia"
+                          ? "Ver exigência"
+                          : r.status === "registrado"
+                            ? "Ver atos"
+                            : "Abrir";
+                    return (
+                      <tr key={r.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/admin/ri/protocolo/${r.id}`}
+                            className="font-bold text-primary tabular-nums hover:underline"
+                          >
+                            {r.kind === "exame" ? "E-" : ""}
+                            {r.number.toLocaleString("pt-BR")}
+                          </Link>
+                          {letter && (
+                            <span className="block text-xs text-muted-foreground">
+                              Letra {letter}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 whitespace-nowrap">
+                          {brDate(r.presentedOn)}
+                          {r.sheetLabel && (
+                            <span className="block text-xs text-muted-foreground">
+                              folha {r.sheetLabel}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className="block font-semibold text-foreground">
+                            {r.presenterName}
+                          </span>
+                          <span className="block text-xs text-muted-foreground">
+                            {r.titleKind}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span
+                            title={statusText(r)}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${r.voidedAt ? TONE_CHIP.gray : TONE_CHIP[v.tone]}`}
+                          >
+                            <span
+                              aria-hidden
+                              className="size-1.5 rounded-full bg-current"
+                            />
+                            {r.voidedAt ? "Lançado por engano" : v.label}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-xs whitespace-nowrap">
+                          {v.due && !r.voidedAt ? (
+                            <>
+                              <span className="text-foreground">
+                                até {brDate(v.due)}
+                              </span>
+                              {v.used !== null && (
+                                <span
+                                  aria-hidden
+                                  className="mt-1.5 block h-1.5 w-28 overflow-hidden rounded-full bg-muted"
+                                >
+                                  <span
+                                    className={`block h-full rounded-full ${TONE_BAR[v.tone]}`}
+                                    style={{ width: `${v.used}%` }}
+                                  />
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {r.status === "registrado"
+                                ? "concluído"
+                                : "sem prazo"}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            href={`/admin/ri/protocolo/${r.id}`}
+                            className={buttonVariants({
+                              size: "sm",
+                              variant: "outline",
+                            })}
+                          >
+                            {action}
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-3 border-t px-4 py-2.5 text-xs text-muted-foreground">
+            <span>
+              Mostrando {rows.length.toLocaleString("pt-BR")} de{" "}
+              {all.length.toLocaleString("pt-BR")}
+            </span>
+            <span className="ml-auto flex gap-3">
+              <a
+                href="/admin/ri/protocolo/tabela?formato=xlsx"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                Exportar planilha
+              </a>
+              <a
+                href="/admin/ri/protocolo/tabela?formato=csv"
+                className="text-primary underline-offset-4 hover:underline"
+              >
+                CSV
+              </a>
+            </span>
+          </div>
+        </section>
       )}
     </RiPage>
   );

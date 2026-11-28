@@ -15,6 +15,7 @@ import { buttonVariants } from "../../../_ui/button.tsx";
 import { ActionButton, ConfirmButton } from "../../_components/client.tsx";
 import { Panel, RiPage } from "../../_components/page.tsx";
 import { CloseDaysForm } from "../../_components/protocol-days-form.tsx";
+import { ProtocolTabs } from "../../_components/protocol-tabs.tsx";
 import { requireRi, riCan } from "../../_lib.ts";
 import {
   closePhysicalDaysAction,
@@ -58,7 +59,7 @@ export default async function ProtocolDaysPage() {
     <RiPage
       title="Encerramento dos dias do Protocolo"
       description="O Protocolo é encerrado diariamente (Lei nº 6.015/1973, art. 184). Enquanto o dia está aberto, dá para prenotar com a data dele; ao encerrar, cada termo sai com a data do próprio dia, mesmo encerrando a semana na sexta."
-      back={{ href: "/admin/ri/protocolo", label: "Protocolo (Livro 1)" }}
+      back={{ href: "/admin/ri/protocolo", label: "Protocolo" }}
       actions={
         book1 ? (
           <Link
@@ -77,6 +78,7 @@ export default async function ProtocolDaysPage() {
         )
       }
     >
+      <ProtocolTabs active="dias" />
       <Panel
         title={
           pending.length

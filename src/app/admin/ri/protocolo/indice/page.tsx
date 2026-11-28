@@ -11,6 +11,7 @@ import { Input } from "../../../_ui/input.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { BookPrintOptions } from "../../_components/book-print-options.tsx";
 import { Panel, RiPage } from "../../_components/page.tsx";
+import { ProtocolTabs } from "../../_components/protocol-tabs.tsx";
 import { requireRi } from "../../_lib.ts";
 
 export const metadata = { title: "Índice do Protocolo" };
@@ -53,6 +54,7 @@ export default async function ProtocolIndexPage({
       description="Os apresentantes de cada livro em ordem alfabética, com a data, a natureza do título, o número de ordem e a folha. Índice auxiliar da serventia (Provimento nº 156/2016-CGJ/RN, art. 73)."
       back={{ href: "/admin/ri/protocolo", label: "Protocolo" }}
     >
+      <ProtocolTabs active="indice" />
       {!chosen || !index ? (
         <Panel title="Nenhum livro do Protocolo aberto">
           <p className="text-sm text-muted-foreground">
