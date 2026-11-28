@@ -438,9 +438,10 @@ export function readForeignImport(
  * of the physical book, anverso and verso (decision of 28/11/2026).
  */
 export function sheetLabelOf(value: string): string | null {
-  const v = fold(value).replace(/fls?\.?|folhas?/g, "").trim();
+  const v = fold(value)
+    .replace(/fls?\.?|folhas?/g, "")
+    .trim();
   const m = /^(\d{1,5})\s*-?\s*(v|verso)?$/.exec(v);
   if (!m?.[1]) return null;
   return `${Number(m[1])}${m[2] ? "-v" : ""}`;
 }
-

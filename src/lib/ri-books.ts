@@ -50,10 +50,10 @@ import {
 } from "./ri-book-tables.ts";
 import { bookToWord, type WordBlock } from "./ri-book-word.ts";
 import { riSignerFor } from "./ri-docs.ts";
-import { stampRubric } from "./ri-signers.ts";
 import { currentOf } from "./ri-onr-images.ts";
 import { closedDaysWith, type ProtocolDayRow } from "./ri-protocol-days.ts";
 import { officeToday } from "./ri-protocols.ts";
+import { stampRubric } from "./ri-signers.ts";
 import { joinPdfs, tiffToPdf } from "./ri-tiff.ts";
 
 /**
