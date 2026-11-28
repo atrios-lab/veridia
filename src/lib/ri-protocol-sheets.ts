@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { volumeLetter, volumeName } from "@/core/ri/books.ts";
-import { PHYSICAL_TOO } from "@/core/ri/protocol-days.ts";
+import { notWorkingOf, PHYSICAL_TOO } from "@/core/ri/protocol-days.ts";
 import {
   DEFAULT_PAGING,
   faceLabel,
@@ -15,6 +15,7 @@ import {
   type SheetEntry,
   type Side,
 } from "@/core/ri/protocol-sheets.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -48,11 +49,17 @@ export function dayTermText(
   count: number,
   place: string,
   physical = false,
+  /** "sábado", "domingo", "feriado de Natal": a day that was not a working day. */
+  notWorking: string | null = null,
 ): string {
+  // A day with títulos closes with how many, whatever day it was (decision
+  // of 28/11/2026); without, a non-working day says why.
   const what =
-    count === 0
-      ? "sem movimento"
-      : `protocolando ${count} ${count === 1 ? "título" : "títulos"}`;
+    count > 0
+      ? `protocolando ${count} ${count === 1 ? "título" : "títulos"}`
+      : notWorking
+        ? `sem movimento, por não ser dia útil (${notWorking})`
+        : "sem movimento";
   // A day of the paper book: the same termo, and that it was closed there
   // at the time too (decision of 28/11/2026).
   return `Termo de encerramento. Declaro encerrado o expediente de hoje, ${what}. ${place}, ${brDay(day)}.${physical ? ` ${PHYSICAL_TOO}` : ""}`;
@@ -136,6 +143,7 @@ export async function bookSheetsWith(
     ) ?? book.openedOn;
   const last = book.closedOn ?? officeToday();
   const place = `${tenant.location.city}/${tenant.location.state}`;
+  const holidays = officeHolidays(tenant);
   const closings: SheetClosing[] = [];
   // Every closed day, those of the physical book too: its stamp said the
   // same ("Declaro encerrado o expediente de hoje").
@@ -148,6 +156,7 @@ export async function bookSheetsWith(
         perDay.get(day) ?? 0,
         place,
         row.kind === "livro-fisico",
+        notWorkingOf(day, holidays),
       ),
     });
   }
@@ -557,6 +566,7 @@ export async function protocolPeriodPdfFor(
     );
   }
   const place = `${tenant.location.city}/${tenant.location.state}`;
+  const holidays = officeHolidays(tenant);
   const closings: SheetClosing[] = [];
   for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
     if (day < input.from || day > input.to) continue;
@@ -567,6 +577,7 @@ export async function protocolPeriodPdfFor(
         perDay.get(day) ?? 0,
         place,
         row.kind === "livro-fisico",
+        notWorkingOf(day, holidays),
       ),
     });
   }

@@ -205,3 +205,14 @@ test("a folha do livro de papel vinda da importação é respeitada", async () =
     ],
   );
 });
+
+test("carimbo do sábado sem título diz que não era dia útil", () => {
+  assert.match(
+    dayTermText("2026-11-28", 0, "Cidade/UF", false, "sábado"),
+    /sem movimento, por não ser dia útil \(sábado\)\. Cidade\/UF, 28\/11\/2026\.$/,
+  );
+  assert.match(
+    dayTermText("2026-11-28", 2, "Cidade/UF", false, "sábado"),
+    /protocolando 2 títulos\. Cidade/,
+  );
+});
