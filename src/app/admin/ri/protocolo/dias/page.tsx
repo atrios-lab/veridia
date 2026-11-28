@@ -83,7 +83,7 @@ export default async function ProtocolDaysPage() {
             ? `Dias abertos (${pending.length})`
             : "Nenhum dia aberto"
         }
-        description="Dia sem título sai como encerrado sem movimento; feriado e fim de semana dizem o motivo."
+        description="Dia sem título sai encerrado sem movimento; sábado, domingo e feriado sem título encerram por não ser dia útil. Dia com título encerra com a quantidade, seja qual for o dia. Só a conta Átrios reabre um dia para prenotar nele."
       >
         {pending.length === 0 ? (
           <p className="text-sm text-muted-foreground">

@@ -5,6 +5,9 @@ import {
   formLabel,
   nextVolume,
   shortDate,
+  termSignaturesOf,
+  tomoLabel,
+  tomosOf,
 } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
 import { listBooksWith } from "@/lib/ri-books.ts";
@@ -38,13 +41,27 @@ export default async function BooksPage({
   const suggestions = Object.fromEntries(
     BOOK_NUMBERS.map((n) => [
       n,
-      nextVolume(
-        n,
-        rows.filter((r) => r.book === n && !r.deletedAt).map((r) => r.volume),
-      ),
+      // Livro 1 needs no letter: many may be "1" (decision of 28/11/2026).
+      n === 1
+        ? "1"
+        : nextVolume(
+            n,
+            rows
+              .filter((r) => r.book === n && !r.deletedAt)
+              .map((r) => r.volume),
+          ),
     ]),
   );
   const deletedCount = rows.filter((r) => r.deletedAt).length;
+  // The order of the volumes of each book: Tomo 1, 2… and the one in use.
+  const tomos = tomosOf(rows);
+  // The termo still to sign: abertura, or encerramento once closed.
+  const toSign = (r: (typeof rows)[number]) => {
+    const signed = termSignaturesOf(r.termSignatures);
+    if (!signed.abertura) return "abertura";
+    if (r.closedOn && !signed.encerramento) return "encerramento";
+    return null;
+  };
   return (
     <RiPage
       wide
@@ -139,6 +156,11 @@ export default async function BooksPage({
                           >
                             Livro {r.volume}
                           </Link>
+                          {tomos.get(r.id) && (
+                            <span className="ml-2 text-xs font-medium text-foreground">
+                              {tomoLabel(tomos.get(r.id))}
+                            </span>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             {formLabel(r.form)}
                             {r.sheetCount ? ` · ${r.sheetCount} folhas` : ""}
@@ -150,6 +172,25 @@ export default async function BooksPage({
                           </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
+                          {!r.deletedAt && toSign(r) ? (
+                            <Link
+                              href={`/admin/ri/livros/${r.id}#termos`}
+                              className={buttonVariants({ size: "sm" })}
+                            >
+                              Assinar o termo de {toSign(r)}
+                            </Link>
+                          ) : !r.deletedAt ? (
+                            <Link
+                              href={`/admin/ri/livros/${r.id}#termos`}
+                              className={buttonVariants({
+                                size: "sm",
+                                variant: "outline",
+                              })}
+                              title="Imprimir ou assinar de novo"
+                            >
+                              Assinado · imprimir
+                            </Link>
+                          ) : null}
                           <a
                             href={`/admin/ri/livros/${r.id}/termo?tipo=abertura`}
                             target="_blank"
@@ -203,7 +244,7 @@ export default async function BooksPage({
                               ? "Apagado"
                               : r.closedOn
                                 ? "Encerrado"
-                                : "Em uso"}
+                                : "Vigente"}
                           </Badge>
                         </div>
                       </li>

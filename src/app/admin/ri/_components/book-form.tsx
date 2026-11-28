@@ -132,8 +132,9 @@ export function BookForm({
             className="bg-background"
           />
           <p className="text-xs text-muted-foreground">
-            O número se conserva e ganha letras: {book}, {book}-A, {book}-B (Lei
-            nº 6.015/1973, art. 6º).
+            {book === 1
+              ? "Livro 1. Pode haver vários Livros 1: o sistema mostra qual é o tomo 1, o 2 e o que está em uso. A letra (1-A, 1-B) é facultativa, só para o cartório que a usou."
+              : `O número se conserva e ganha letras: ${book}, ${book}-A, ${book}-B (Lei nº 6.015/1973, art. 6º).`}
           </p>
         </div>
         <div className="flex flex-col gap-1.5">
@@ -204,6 +205,25 @@ export function BookForm({
           className="field-sizing-fixed bg-background"
         />
       </div>
+      {value && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={`${prefix}-why`}>Por que alterar</Label>
+          <Textarea
+            id={`${prefix}-why`}
+            name="justificativa"
+            rows={2}
+            required
+            minLength={3}
+            maxLength={2000}
+            placeholder="Ex.: o número do livro foi digitado errado."
+            className="field-sizing-fixed bg-background"
+          />
+          <p className="text-xs text-muted-foreground">
+            Os dados anteriores e a justificativa ficam no histórico do livro e
+            na auditoria.
+          </p>
+        </div>
+      )}
       {!value && (
         <fieldset className="flex flex-col gap-2 rounded-lg border bg-background p-3">
           <legend className="px-1 text-sm font-medium">
@@ -255,10 +275,13 @@ export function CloseBookForm({
   id,
   book,
   lastItem,
+  lastSheet = "",
 }: {
   id: string;
   book: number;
   lastItem: string;
+  /** The last folha the system counted: comes filled, may be changed. */
+  lastSheet?: string;
 }) {
   const [state, action, pending] = useActionState(closeBookAction, IDLE);
   useRiToast(state);
@@ -285,6 +308,12 @@ export function CloseBookForm({
           name="lastSheet"
           label="Última folha ou ficha escriturada"
           inputMode="numeric"
+          defaultValue={lastSheet}
+          hint={
+            lastSheet
+              ? "Contada pelo sistema; confira com o livro e corrija se preciso."
+              : undefined
+          }
         />
         {item && (
           <Field

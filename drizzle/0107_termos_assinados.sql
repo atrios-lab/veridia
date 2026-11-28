@@ -1,0 +1,1 @@
+ALTER TABLE "ri_books" ADD COLUMN "term_signatures" jsonb DEFAULT '{}'::jsonb NOT NULL;

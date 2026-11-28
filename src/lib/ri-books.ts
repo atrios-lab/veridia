@@ -20,8 +20,12 @@ import {
   protocolDay,
   readItem,
   shortDate,
+  TERM_SIGN_FORMATS,
+  type TermKind,
   type TermOffice,
+  type TermSignFormat,
   type TermText,
+  termSignaturesOf,
 } from "@/core/ri/books.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
@@ -77,7 +81,7 @@ export interface BookHistoryEntry {
   at: string;
   by: string;
   what: string;
-  before: Partial<BookInput>;
+  before: Partial<BookInput> | Record<string, string>;
 }
 
 export interface BookInput {
@@ -183,7 +187,12 @@ async function volumeTaken(
   tenantSlug: string,
   input: Pick<BookInput, "book" | "volume">,
   except?: string,
+  /** The import opening volumes by name: never the same one twice. */
+  byName = false,
 ) {
+  // Many volumes may be "Livro 1", with or without a letter (decision of
+  // 28/11/2026): the Tomo tells them apart.
+  if (input.book === 1 && !byName) return false;
   const rows = await listBooksWith(database, tenantSlug);
   return rows.some(
     (r) =>
@@ -281,6 +290,8 @@ export async function updateBookWith(
   id: string,
   input: BookInput,
   actor: Actor,
+  /** Why it changed (a número typed wrong…), kept in the history. */
+  reason = "",
 ): Promise<void> {
   const row = await ownBook(database, tenantSlug, id);
   if (input.book !== row.book) {
@@ -305,7 +316,7 @@ export async function updateBookWith(
         {
           at: new Date().toISOString(),
           by: actor.id,
-          what: "alterou os dados do livro",
+          what: `alterou os dados do livro${reason.trim() ? `: ${reason.trim().slice(0, 2000)}` : ""}`,
           before: snapshot(row),
         },
       ],
@@ -317,6 +328,99 @@ export async function updateBookWith(
     action: "ri.book-edit",
     targetType: "ri-book",
     targetId: id,
+    reason: reason.trim().slice(0, 2000) || null,
+  });
+}
+
+/**
+ * Marks a termo as signed, and how (decision of 28/11/2026): digitally,
+ * by hand, or printed with the signature image. Signing again replaces
+ * the mark; the previous one goes to the history.
+ */
+export async function markTermSignedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  kind: TermKind,
+  format: TermSignFormat,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (kind === "encerramento" && !row.closedOn) {
+    throw new RiError("O livro ainda não foi encerrado.");
+  }
+  const signed = termSignaturesOf(row.termSignatures);
+  const before = signed[kind];
+  await database
+    .update(riBooks)
+    .set({
+      termSignatures: {
+        ...signed,
+        [kind]: { at: new Date().toISOString(), by: actor.id, format },
+      },
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `${before ? "assinou de novo" : "marcou como assinado"} o termo de ${kind}, ${TERM_SIGN_FORMATS[format]}`,
+          before: before
+            ? { [`termo de ${kind}`]: TERM_SIGN_FORMATS[before.format] }
+            : {},
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-term-signed",
+    targetType: "ri-book",
+    targetId: id,
+    reason: `Termo de ${kind} ${TERM_SIGN_FORMATS[format]}`,
+  });
+}
+
+/** Undoes the mark (it was marked by mistake): kept in the history. */
+export async function unmarkTermSignedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  kind: TermKind,
+  reason: string,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  const signed = termSignaturesOf(row.termSignatures);
+  const before = signed[kind];
+  if (!before) throw new RiError("Este termo não está marcado como assinado.");
+  const rest = Object.fromEntries(
+    Object.entries(signed).filter(([k]) => k !== kind),
+  );
+  await database
+    .update(riBooks)
+    .set({
+      termSignatures: rest,
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `desmarcou a assinatura do termo de ${kind}: ${reason.trim().slice(0, 2000)}`,
+          before: { [`termo de ${kind}`]: TERM_SIGN_FORMATS[before.format] },
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-term-unsigned",
+    targetType: "ri-book",
+    targetId: id,
+    reason: reason.trim().slice(0, 2000),
   });
 }
 
@@ -456,6 +560,15 @@ export async function setBookDeletedWith(
   });
 }
 
+/**
+ * The remarks the system once wrote on the books it opened from the
+ * import ("Livro aberto pelo sistema…"): kept in the row, never printed on
+ * the termo, which reads as signed at the time (decision of 28/11/2026).
+ */
+export function termNotes(notes: string): string {
+  return /\bpelo sistema\b/i.test(notes) ? "" : notes;
+}
+
 export function recordOf(row: BookRow): BookRecord {
   return {
     book: row.book as BookNumber,
@@ -467,8 +580,8 @@ export function recordOf(row: BookRow): BookRecord {
     openedOn: row.openedOn,
     closedOn: row.closedOn,
     lastSheet: row.lastSheet,
-    openingNotes: row.openingNotes,
-    closingNotes: row.closingNotes,
+    openingNotes: termNotes(row.openingNotes),
+    closingNotes: termNotes(row.closingNotes),
   };
 }
 
@@ -527,6 +640,11 @@ export async function termDocumentFor(
   if (!row) return null;
   if (kind === "encerramento" && !row.closedOn) return null;
   const record = recordOf(row);
+  if (kind === "encerramento" && !record.lastSheet) {
+    // Not typed at the closing: the last folha the system laid out.
+    const { sheetFactsWith } = await import("./ri-protocol-sheets.ts");
+    record.lastSheet = (await sheetFactsWith(database, tenant, row)).lastNumber;
+  }
   const term =
     kind === "abertura"
       ? openingTerm(record, termOffice(tenant))
@@ -1373,7 +1491,7 @@ export async function openProtocolVolumesWith(
       },
       today,
     );
-    if (await volumeTaken(database, tenantSlug, input)) {
+    if (await volumeTaken(database, tenantSlug, input, undefined, true)) {
       kept.push(input.volume);
       continue;
     }
@@ -1388,8 +1506,9 @@ export async function openProtocolVolumesWith(
       {
         ...input,
         openedOn: dates[0] ?? today,
-        openingNotes:
-          "Livro aberto pelo sistema a partir dos números de ordem; a data é a do primeiro título lançado nele. Confira com o termo de abertura do livro.",
+        // The termo reads as the book was opened at the time: no remark
+        // that the system opened it (decision of 28/11/2026).
+        openingNotes: "",
       },
       actor,
     );
@@ -1402,8 +1521,7 @@ export async function openProtocolVolumesWith(
           closedOn: dates.at(-1) ?? dates[0] ?? today,
           lastSheet: null,
           lastItem: v.last,
-          notes:
-            "Encerrado pelo sistema na data do último título lançado no livro. Confira com o termo de encerramento do livro físico.",
+          notes: "",
         },
         actor,
       );
@@ -1465,8 +1583,7 @@ export async function openBooksForAcervoWith(
           },
           today,
         ),
-        openingNotes:
-          "Livro aberto pelo sistema na importação do acervo; confira a data e os dados com o termo de abertura do livro.",
+        openingNotes: "",
       },
       actor,
     );

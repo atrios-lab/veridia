@@ -25,7 +25,9 @@ import { recordAuditWith } from "./audit.ts";
 import { DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
 import { type Actor, RiError } from "./ri.ts";
 import {
+  type BookRow,
   BookTooLarge,
+  bookFichasWith,
   bookWith,
   historyOf,
   listBooksWith,
@@ -166,6 +168,64 @@ export async function bookSheetsWith(
     paging: configured.fromItem ? configured : paging,
     pagination: paginate(entries, closings, paging),
   };
+}
+
+export interface SheetFacts {
+  /** Folhas (or fichas) the volume has used so far. */
+  count: number | null;
+  /** The last folha (or ficha) written: "75", "75-v" or the ficha nº. */
+  last: string | null;
+  /** The same, as a number, for the termo de encerramento. */
+  lastNumber: number | null;
+  /** "folha" or "ficha". */
+  unit: "folha" | "ficha";
+}
+
+/**
+ * The folhas or fichas of a volume, counted by the system when the office
+ * did not type them (decision of 28/11/2026: "Folhas ou fichas" and
+ * "Última folha escriturada" never blank). The Livro 1 counts its laid-out
+ * folhas; the Livros 2 and 3, their fichas (one per matrícula or
+ * registro).
+ */
+export async function sheetFactsWith(
+  database: Database,
+  tenant: Tenant,
+  row: BookRow,
+): Promise<SheetFacts> {
+  if (row.book === 1) {
+    const sheets = await bookSheetsWith(database, tenant, row.id);
+    const items = sheets?.pagination.items ?? [];
+    const lastItem = items.reduce<(typeof items)[number] | null>(
+      (best, i) =>
+        !best ||
+        i.sheet * 2 + (i.side === "verso" ? 1 : 0) >
+          best.sheet * 2 + (best.side === "verso" ? 1 : 0)
+          ? i
+          : best,
+      null,
+    );
+    return {
+      count: lastItem ? lastItem.sheet : null,
+      last: lastItem ? faceLabel(lastItem.sheet, lastItem.side) : null,
+      lastNumber: lastItem ? lastItem.sheet : null,
+      unit: "folha",
+    };
+  }
+  if (row.book === 2 || row.book === 3) {
+    const fichas = await bookFichasWith(database, tenant.slug, row);
+    const last = fichas.reduce<number | null>(
+      (n, f) => (n === null || f.number > n ? f.number : n),
+      null,
+    );
+    return {
+      count: fichas.length || null,
+      last: last === null ? null : last.toLocaleString("pt-BR"),
+      lastNumber: last,
+      unit: "ficha",
+    };
+  }
+  return { count: null, last: null, lastNumber: null, unit: "folha" };
 }
 
 /** Saves where the folhas begin; the previous values go to the history. */
@@ -442,7 +502,7 @@ function drawFace(
     .fontSize(6.5)
     .fillColor(SOFT)
     .text(
-      `${volumeName(volume)} (Protocolo) ${sheets.numbered ? ` · folha ${faceLabel(sheet, side)}` : ""} · Lei nº 6.015/1973, arts. 175 e 184 · impresso pelo sistema em ${brDay(officeToday())}`,
+      `${volumeName(volume)} (Protocolo) ${sheets.numbered ? ` · folha ${faceLabel(sheet, side)}` : ""} · Lei nº 6.015/1973, arts. 175 e 184`,
       LEFT,
       bottom + 8,
       { width: RIGHT - LEFT, align: "center", lineBreak: false },
