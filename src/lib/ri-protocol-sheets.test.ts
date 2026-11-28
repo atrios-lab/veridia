@@ -222,5 +222,8 @@ test("carimbo de dia do livro físico: o termo do dia e que foi encerrado no fí
     dayTermText("2024-07-22", 1, "Cidade/UF", true),
     "Termo de encerramento. Declaro encerrado o expediente de hoje, protocolando 1 título. Cidade/UF, 22/07/2024. Encerrado também no livro físico à época.",
   );
-  assert.doesNotMatch(dayTermText("2024-07-22", 1, "Cidade/UF", true), /sistema/);
+  assert.doesNotMatch(
+    dayTermText("2024-07-22", 1, "Cidade/UF", true),
+    /sistema/,
+  );
 });

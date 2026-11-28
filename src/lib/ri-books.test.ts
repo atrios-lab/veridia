@@ -373,7 +373,10 @@ test("vários Livros 1, com ou sem letra; termo marcado como assinado e desmarca
   );
   const fixed = await bookWith(db, T, b);
   assert.equal(fixed?.volume, "1-A");
-  assert.match(historyOf(fixed!).at(-1)?.what ?? "", /número digitado errado/);
+  assert.match(
+    historyOf(fixed ?? { history: [] }).at(-1)?.what ?? "",
+    /número digitado errado/,
+  );
 
   await markTermSignedWith(db, T, c, "abertura", "digital", ACTOR);
   let row = await bookWith(db, T, c);
@@ -387,7 +390,10 @@ test("vários Livros 1, com ou sem letra; termo marcado como assinado e desmarca
     termSignaturesOf(row?.termSignatures).abertura?.format,
     "manual",
   );
-  assert.match(historyOf(row!).at(-1)?.what ?? "", /assinou de novo/);
+  assert.match(
+    historyOf(row ?? { history: [] }).at(-1)?.what ?? "",
+    /assinou de novo/,
+  );
   await unmarkTermSignedWith(db, T, c, "abertura", "marcado por engano", ACTOR);
   row = await bookWith(db, T, c);
   assert.equal(termSignaturesOf(row?.termSignatures).abertura, undefined);
