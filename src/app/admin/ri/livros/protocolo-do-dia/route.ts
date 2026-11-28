@@ -4,6 +4,7 @@ import { db } from "@/db/index.ts";
 import { renderingFor } from "@/lib/pdf.ts";
 import { protocolPeriodPdfFor } from "@/lib/ri-protocol-sheets.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
+import { printChoiceWith } from "@/lib/ri-signers.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -26,7 +27,12 @@ async function handle(request: Request): Promise<Response> {
   const tenant = await getTenant();
   const query = new URL(request.url).searchParams;
   const day = isoDate(query.get("data") ?? "") ?? officeToday();
-  const pdf = await protocolPeriodPdfFor(db, tenant, { from: day, to: day });
+  const pdf = await protocolPeriodPdfFor(
+    db,
+    tenant,
+    { from: day, to: day },
+    await printChoiceWith(db, tenant, query),
+  );
   return new Response(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

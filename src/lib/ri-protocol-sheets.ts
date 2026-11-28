@@ -31,6 +31,7 @@ import {
 } from "./ri-books.ts";
 import { closedDaysWith } from "./ri-protocol-days.ts";
 import { officeToday } from "./ri-protocols.ts";
+import type { PrintChoice } from "./ri-signers.ts";
 
 /**
  * The folhas of the Livro 1 printed from the system (book in folhas or
@@ -62,8 +63,11 @@ export interface BookSheets {
 }
 
 /**
- * The layout of a Livro 1 whose folhas the system prints. Null when the
- * book has no "a partir do nº" set (its folhas are all on paper).
+ * The layout of a Livro 1, always with its folhas numbered (decision of
+ * 28/11/2026): the whole volume from folha 1 (anverso and verso, as the
+ * physical books were), each título on the folha the import gave when it
+ * did, and the part the system writes from the folha set in "Folhas do
+ * livro". Past the folhas foreseen, it goes on to the last one used.
  */
 export async function bookSheetsWith(
   database: Database,
@@ -72,10 +76,7 @@ export async function bookSheetsWith(
 ): Promise<BookSheets | null> {
   const book = await bookWith(database, tenant.slug, id);
   if (!book || book.book !== 1 || book.deletedAt) return null;
-  const paging = pagingOf(book.paging);
-  if (!paging.fromItem) return null;
-  const from = Math.max(paging.fromItem, book.firstItem ?? 1);
-  const to = book.lastItem ?? Number.MAX_SAFE_INTEGER;
+  const configured = pagingOf(book.paging);
   const rows = await database
     .select()
     .from(riProtocols)
@@ -85,40 +86,60 @@ export async function bookSheetsWith(
         eq(riProtocols.kind, "prenotacao"),
       ),
     );
+  const low = book.firstItem ?? 1;
+  const high = book.lastItem ?? Number.MAX_SAFE_INTEGER;
+  const own = rows.filter((r) => r.number >= low && r.number <= high);
+  const from = own.reduce(
+    (n, r) => Math.min(n, r.number),
+    configured.fromItem ?? Number.MAX_SAFE_INTEGER,
+  );
+  // The whole volume from folha 1; the part set in "Folhas do livro"
+  // starts where it was set.
+  const paging: PagingSettings = {
+    ...configured,
+    fromItem: from === Number.MAX_SAFE_INTEGER ? low : from,
+    fromSheet: 1,
+    fromSide: "frente",
+  };
+  const startHint = configured.fromItem
+    ? `${configured.fromSheet}${configured.fromSide === "verso" ? "-v" : ""}`
+    : null;
   const perDay = new Map<string, number>();
   for (const r of rows) {
     perDay.set(r.presentedOn, (perDay.get(r.presentedOn) ?? 0) + 1);
   }
-  const entries: SheetEntry[] = rows
-    .filter((r) => r.number >= from && r.number <= to)
-    .map((r) => ({
-      number: r.number,
-      presentedOn: r.presentedOn,
-      presenter: r.presenterName,
-      titleKind: r.titleKind,
-      acts: r.actsSummary,
-      voided: Boolean(r.voidedAt),
-    }));
-  // The days from the first one the system lays out: the day of "a partir
-  // do nº", or the opening of the book when that título is not in yet.
+  const entries: SheetEntry[] = own.map((r) => ({
+    number: r.number,
+    presentedOn: r.presentedOn,
+    presenter: r.presenterName,
+    titleKind: r.titleKind,
+    acts: r.actsSummary,
+    voided: Boolean(r.voidedAt),
+    sheet:
+      r.sheetLabel ??
+      (configured.fromItem && r.number === configured.fromItem
+        ? startHint
+        : null),
+  }));
   const first =
-    rows.find((r) => r.number === from)?.presentedOn ?? book.openedOn;
+    entries.reduce<string | null>(
+      (d, e) => (d === null || e.presentedOn < d ? e.presentedOn : d),
+      null,
+    ) ?? book.openedOn;
   const last = book.closedOn ?? officeToday();
   const place = `${tenant.location.city}/${tenant.location.state}`;
   const closings: SheetClosing[] = [];
-  for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
-    if (row.kind === "livro-fisico" || day < first || day > last) continue;
+  // Every closed day, those of the physical book too: its stamp said the
+  // same ("Declaro encerrado o expediente de hoje").
+  for (const [day] of await closedDaysWith(database, tenant.slug)) {
+    if (day < first || day > last) continue;
     closings.push({ day, text: dayTermText(day, perDay.get(day) ?? 0, place) });
   }
   return {
     volume: book.volume,
     numbered: true,
-    paging,
-    pagination: paginate(
-      entries.filter((e) => e.presentedOn >= first),
-      closings,
-      paging,
-    ),
+    paging: configured.fromItem ? configured : paging,
+    pagination: paginate(entries, closings, paging),
   };
 }
 
@@ -221,7 +242,15 @@ function drawFace(
   sheets: BookSheets,
   sheet: number,
   side: Side,
+  choice: PrintChoice | null,
 ) {
+  // The rubrica in the upper right corner, as on the physical book.
+  if (choice?.rubric && choice.signer?.rubricImage) {
+    pdf.image(Buffer.from(choice.signer.rubricImage), RIGHT - 70, 4, {
+      fit: [70, 20],
+      align: "right",
+    });
+  }
   const { volume, pagination } = sheets;
   const items = pagination.items.filter(
     (i) => i.sheet === sheet && i.side === side,
@@ -338,12 +367,30 @@ function drawFace(
         .strokeColor(INK)
         .rect(x - 1, top + 2, width + 2, item.lines * LINE_H - 4)
         .fillAndStroke();
-      const lines = [
-        ...item.text,
-        isDigitalSigning()
+      // "Ass.:" with who signs, chosen at the print: the signature image
+      // (or the rubrica), the name and the function.
+      const who = choice?.signer
+        ? `${choice.signer.name}${choice.signer.title ? `, ${choice.signer.title}` : ""}`
+        : "";
+      const mark =
+        (choice?.signature && choice.signer?.signatureImage) ||
+        (choice?.rubric && choice.signer?.rubricImage) ||
+        null;
+      const signLine = mark
+        ? `Ass.:                              ${who}`
+        : isDigitalSigning() && !who
           ? DIGITAL_SIGNATURE_NOTE
-          : "Ass.: ____________________________________",
-      ].slice(item.offset, item.offset + item.lines);
+          : `Ass.: ______________________ ${who}`;
+      const lines = [...item.text, signLine].slice(
+        item.offset,
+        item.offset + item.lines,
+      );
+      const signRow = item.text.length - item.offset;
+      if (mark && signRow >= 0 && signRow < item.lines) {
+        pdf.image(Buffer.from(mark), x + 26, lineY(item.line + signRow) - 6, {
+          fit: [110, LINE_H + 2],
+        });
+      }
       for (const [n, text] of lines.entries()) {
         fitText(
           pdf,
@@ -390,6 +437,7 @@ export async function bookSheetsPdf(
     fromDay?: string;
     toDay?: string;
   } = {},
+  choice: PrintChoice | null = null,
 ): Promise<Uint8Array | null> {
   const { pagination } = sheets;
   const dayOf = (i: Pagination["items"][number]) =>
@@ -420,7 +468,7 @@ export async function bookSheetsPdf(
   const done = new Promise<void>((resolve) => pdf.on("end", resolve));
   for (const f of faces) {
     pdf.addPage({ size: "A4", margin: 0 });
-    drawFace(pdf, tenant, sheets, f.sheet, f.side);
+    drawFace(pdf, tenant, sheets, f.sheet, f.side, choice);
   }
   pdf.end();
   await done;
@@ -437,6 +485,7 @@ export async function protocolPeriodPdfFor(
   database: Database,
   tenant: Tenant,
   input: { bookId?: string; from: string; to: string },
+  choice: PrintChoice | null = null,
 ): Promise<Uint8Array> {
   const books = (await listBooksWith(database, tenant.slug)).filter(
     (b) => b.book === 1 && !b.deletedAt,
@@ -450,10 +499,12 @@ export async function protocolPeriodPdfFor(
   if (book) {
     const own = await bookSheetsWith(database, tenant, book.id);
     if (own) {
-      const pdf = await bookSheetsPdf(tenant, own, {
-        fromDay: input.from,
-        toDay: input.to,
-      });
+      const pdf = await bookSheetsPdf(
+        tenant,
+        own,
+        { fromDay: input.from, toDay: input.to },
+        choice,
+      );
       if (pdf) return pdf;
     }
   }
@@ -508,5 +559,5 @@ export async function protocolPeriodPdfFor(
     pagination: paginate(entries, closings, DEFAULT_PAGING),
   };
   // A period with nothing still prints one face, with its heading.
-  return (await bookSheetsPdf(tenant, sheets)) as Uint8Array;
+  return (await bookSheetsPdf(tenant, sheets, {}, choice)) as Uint8Array;
 }

@@ -137,6 +137,10 @@ import {
 } from "@/lib/ri-protocols.ts";
 import { SheetFileError, sheetRows, transferFile } from "@/lib/ri-sheet.ts";
 import {
+  copyStaffSignatureToRubricWith,
+  saveStaffImageWith,
+} from "@/lib/ri-signers.ts";
+import {
   applyTransferWith,
   previewTransferWith,
   type TransferPreview,
@@ -1199,6 +1203,59 @@ export async function saveSignatureImageAction(
     };
   }
   const rubric = text(formData, "tipo") === "rubrica";
+  // One person of "Quem assina" (decision of 28/11/2026): each has their own.
+  const staffId = text(formData, "pessoa");
+  if (staffId) {
+    try {
+      if (rubric && text(formData, "op") === "copy") {
+        await copyStaffSignatureToRubricWith(
+          db,
+          ok.tenant.slug,
+          staffId,
+          ok.actor,
+        );
+      } else if (text(formData, "op") === "remove") {
+        await saveStaffImageWith(
+          db,
+          ok.tenant.slug,
+          staffId,
+          rubric ? "rubrica" : "assinatura",
+          null,
+          ok.actor,
+        );
+      } else {
+        const file = formData.get("imagem");
+        if (!(file instanceof File) || file.size === 0) {
+          return {
+            status: "error",
+            message: rubric
+              ? "Escolha a foto da rubrica."
+              : "Escolha a foto da assinatura.",
+          };
+        }
+        await saveStaffImageWith(
+          db,
+          ok.tenant.slug,
+          staffId,
+          rubric ? "rubrica" : "assinatura",
+          new Uint8Array(await file.arrayBuffer()),
+          ok.actor,
+        );
+      }
+    } catch (error) {
+      return failure(error, "ri.signature");
+    }
+    revalidatePath("/admin/ri", "layout");
+    return {
+      status: "success",
+      message:
+        text(formData, "op") === "remove"
+          ? "Imagem retirada."
+          : rubric
+            ? "Rubrica salva."
+            : "Assinatura salva.",
+    };
+  }
   try {
     if (rubric && text(formData, "op") === "copy") {
       await copySignatureToRubricWith(db, ok.tenant.slug, ok.actor);
@@ -1599,6 +1656,19 @@ export async function setGeometryDeletedAction(
 
 /* ------------------------------------------------------------- the books */
 
+/**
+ * Reopening, changing, deleting or restoring a book, a termo or a closed day
+ * is for the Átrios account only (decision of 28/11/2026): the office prints
+ * and signs; a mistake is fixed by the platform, with the reason kept.
+ */
+const MASTER_ONLY: RiState = {
+  status: "error",
+  message:
+    "Reabrir, alterar, apagar ou restaurar livros, termos e dias encerrados é feito só pela conta Átrios. Peça à Átrios, com o motivo.",
+};
+const isMaster = (ok: NonNullable<Awaited<ReturnType<typeof access>>>) =>
+  ok.session.user.role === "superadmin";
+
 const bookPath = (id: string) => `/admin/ri/livros/${id}`;
 
 /** Opens a volume, or changes its data (the old values go to the history). */
@@ -1609,6 +1679,7 @@ export async function saveBookAction(
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
   const id = text(formData, "id");
+  if (id && !isMaster(ok)) return MASTER_ONLY;
   let target = id;
   try {
     const input = readBookInput(rawOf(formData));
@@ -1709,6 +1780,7 @@ export async function reopenBookAction(
   if (why) return { status: "error", message: why };
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
+  if (!isMaster(ok)) return MASTER_ONLY;
   try {
     await reopenBookWith(db, ok.tenant.slug, text(formData, "id"), ok.actor);
   } catch (error) {
@@ -1729,6 +1801,7 @@ export async function setBookDeletedAction(
   if (why) return { status: "error", message: why };
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
+  if (!isMaster(ok)) return MASTER_ONLY;
   const deleted = text(formData, "op") !== "restore";
   if (deleted) {
     const asked = await askTabeliao(
@@ -2096,6 +2169,7 @@ export async function reopenProtocolDayAction(
   if (why) return { status: "error", message: why };
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
+  if (!isMaster(ok)) return MASTER_ONLY;
   try {
     await reopenDayWith(
       db,

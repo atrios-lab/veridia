@@ -2,6 +2,7 @@ import { can } from "@/core/auth/roles.ts";
 import { db } from "@/db/index.ts";
 import { renderingFor } from "@/lib/pdf.ts";
 import { bookSheetsPdf, bookSheetsWith } from "@/lib/ri-protocol-sheets.ts";
+import { printChoiceWith } from "@/lib/ri-signers.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -42,12 +43,17 @@ async function handle(
     const v = query.get(key);
     return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
   };
-  const bytes = await bookSheetsPdf(tenant, sheets, {
-    fromSheet: num("folha"),
-    toSheet: num("ate_folha"),
-    fromDay: iso("de"),
-    toDay: iso("ate"),
-  });
+  const bytes = await bookSheetsPdf(
+    tenant,
+    sheets,
+    {
+      fromSheet: num("folha"),
+      toSheet: num("ate_folha"),
+      fromDay: iso("de"),
+      toDay: iso("ate"),
+    },
+    await printChoiceWith(db, tenant, query),
+  );
   if (!bytes) {
     return new Response("Nenhuma folha nesse intervalo.", {
       status: 404,

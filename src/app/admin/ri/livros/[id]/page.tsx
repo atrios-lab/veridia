@@ -15,6 +15,8 @@ import {
   MAX_FICHAS,
 } from "@/lib/ri-books.ts";
 import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
+import { officeToday } from "@/lib/ri-protocols.ts";
+import { printSignersWith } from "@/lib/ri-signers.ts";
 import {
   SignOrPrint,
   signBatchHref,
@@ -24,6 +26,7 @@ import { Input } from "../../../_ui/input.tsx";
 import { Label } from "../../../_ui/label.tsx";
 import { NativeSelect } from "../../../_ui/native-select.tsx";
 import { BookForm, CloseBookForm } from "../../_components/book-form.tsx";
+import { BookPrintOptions } from "../../_components/book-print-options.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
 import { ImportSheetForm } from "../../_components/import-sheet.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
@@ -51,6 +54,9 @@ export default async function BookPage({
   if (!row) notFound();
   const info = BOOKS[row.book as BookNumber];
   const canManage = riCan(session, "ri.books");
+  const printSigners = await printSignersWith(db, tenant);
+  // Reopening, changing and deleting: the Átrios account only (28/11/2026).
+  const isMaster = session.user.role === "superadmin";
   const fichas = await bookFichasWith(db, tenant.slug, row);
   // The Livro 2 is one digital book: the signed fichas are its pages, and
   // a ficha signed again replaces the page; the old one goes to
@@ -113,34 +119,42 @@ export default async function BookPage({
         title="Termos"
         description="O livro é aberto e encerrado pelo oficial (Lei nº 6.015/1973, art. 4º). Assina quem está em Configurações do RI: o oficial, o substituto legal ou o escrevente designado e autorizado pelo juiz (art. 210)."
       >
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-foreground">
-              Termo de abertura
-            </p>
-            <SignOrPrint
-              pdfHref={`${base}/termo?tipo=abertura`}
-              title={`Termo de abertura do Livro ${row.volume}`}
-              size="sm"
-            />
-          </div>
-          {row.closedOn ? (
-            <div className="flex flex-col gap-2">
-              <p className="text-sm font-medium text-foreground">
-                Termo de encerramento
-              </p>
-              <SignOrPrint
-                pdfHref={`${base}/termo?tipo=encerramento`}
-                title={`Termo de encerramento do Livro ${row.volume}`}
-                size="sm"
-              />
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              O termo de encerramento aparece quando o livro for encerrado.
-            </p>
-          )}
-        </div>
+        <BookPrintOptions
+          signers={printSigners.signers.map((p) => ({
+            index: p.index,
+            label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
+            hasSignature: Boolean(p.signatureImage),
+            hasRubric: Boolean(p.rubricImage),
+          }))}
+          defaultIndex={printSigners.defaultIndex}
+          today={officeToday()}
+          targets={[
+            {
+              label: `Livro ${row.volume} inteiro (termos e ${row.book === 2 ? "fichas" : "folhas"})`,
+              href: `${base}/pdf`,
+              word: `${base}/pdf?formato=word`,
+            },
+            {
+              label: "Termo de abertura",
+              href: `${base}/termo?tipo=abertura`,
+              word: `${base}/termo?tipo=abertura&formato=word`,
+            },
+            ...(row.closedOn
+              ? [
+                  {
+                    label: "Termo de encerramento",
+                    href: `${base}/termo?tipo=encerramento`,
+                    word: `${base}/termo?tipo=encerramento&formato=word`,
+                  },
+                ]
+              : []),
+          ]}
+        />
+        {!row.closedOn && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            O termo de encerramento aparece quando o livro for encerrado.
+          </p>
+        )}
       </Panel>
 
       <Panel
@@ -406,16 +420,23 @@ export default async function BookPage({
             }
           >
             {row.closedOn ? (
-              <ConfirmButton
-                action={reopenBookAction}
-                fields={{ id: row.id }}
-                trigger="Desfazer o encerramento"
-                question={`Desfazer o encerramento do Livro ${row.volume}?`}
-                consequence="O livro volta a ficar em uso. O encerramento anterior (data, última folha e observação) fica no histórico e na auditoria. Se o termo de encerramento já foi assinado, guarde-o com a justificativa."
-                confirmLabel="Desfazer o encerramento"
-                pendingLabel="Desfazendo…"
-                destructive={false}
-              />
+              !isMaster ? (
+                <p className="text-sm text-muted-foreground">
+                  Livro encerrado. Desfazer o encerramento é feito só pela conta
+                  Átrios, com o motivo.
+                </p>
+              ) : (
+                <ConfirmButton
+                  action={reopenBookAction}
+                  fields={{ id: row.id }}
+                  trigger="Desfazer o encerramento"
+                  question={`Desfazer o encerramento do Livro ${row.volume}?`}
+                  consequence="O livro volta a ficar em uso. O encerramento anterior (data, última folha e observação) fica no histórico e na auditoria. Se o termo de encerramento já foi assinado, guarde-o com a justificativa."
+                  confirmLabel="Desfazer o encerramento"
+                  pendingLabel="Desfazendo…"
+                  destructive={false}
+                />
+              )
             ) : (
               <CloseBookForm
                 id={row.id}
@@ -424,33 +445,35 @@ export default async function BookPage({
               />
             )}
           </Panel>
-          <Panel title="Alterar os dados do livro">
-            <details>
-              <summary className="cursor-pointer text-sm font-medium text-primary">
-                Mostrar o formulário
-              </summary>
-              <div className="mt-3">
-                <BookForm
-                  suggestions={{}}
-                  value={{
-                    id: row.id,
-                    book: row.book,
-                    volume: row.volume,
-                    form: row.form,
-                    sheetCount: row.sheetCount ? String(row.sheetCount) : "",
-                    firstItem: display(row.firstItem),
-                    lastItem: display(row.lastItem),
-                    openedOn: shortDate(row.openedOn),
-                    openingNotes: row.openingNotes,
-                  }}
-                />
-              </div>
-            </details>
-          </Panel>
+          {isMaster && (
+            <Panel title="Alterar os dados do livro">
+              <details>
+                <summary className="cursor-pointer text-sm font-medium text-primary">
+                  Mostrar o formulário
+                </summary>
+                <div className="mt-3">
+                  <BookForm
+                    suggestions={{}}
+                    value={{
+                      id: row.id,
+                      book: row.book,
+                      volume: row.volume,
+                      form: row.form,
+                      sheetCount: row.sheetCount ? String(row.sheetCount) : "",
+                      firstItem: display(row.firstItem),
+                      lastItem: display(row.lastItem),
+                      openedOn: shortDate(row.openedOn),
+                      openingNotes: row.openingNotes,
+                    }}
+                  />
+                </div>
+              </details>
+            </Panel>
+          )}
         </>
       )}
 
-      {canManage && (
+      {isMaster && (
         <div className="flex flex-wrap gap-2">
           {row.deletedAt ? (
             <ConfirmButton

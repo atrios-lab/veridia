@@ -53,6 +53,7 @@ import { riSignerFor } from "./ri-docs.ts";
 import { currentOf } from "./ri-onr-images.ts";
 import { closedDaysWith, type ProtocolDayRow } from "./ri-protocol-days.ts";
 import { officeToday } from "./ri-protocols.ts";
+import { stampRubric } from "./ri-signers.ts";
 import { joinPdfs, tiffToPdf } from "./ri-tiff.ts";
 
 /**
@@ -508,9 +509,8 @@ function termDocument(
     dateLine: term.dateLine,
     ...signer,
     footer: `${officialName(tenant)} · ${term.subtitle} · ${term.title} · ${tenant.legalFooter}`,
-    closingNotes: custasNoteFor(tenant.location.state)
-      ? [{ text: custasNoteFor(tenant.location.state) as string }]
-      : undefined,
+    // No note of custas: the termos are internal acts, ex officio, not in
+    // the tabela de emolumentos (decision of 28/11/2026).
   };
 }
 
@@ -521,6 +521,8 @@ export async function termDocumentFor(
   id: string,
   kind: "abertura" | "encerramento",
   withImage: boolean,
+  /** Who signs, chosen at the print (lib/ri-signers.ts). */
+  chosen?: Awaited<ReturnType<typeof signerLines>>,
 ): Promise<{ document: RequerimentoDocument; name: string } | null> {
   const row = await bookWith(database, tenant.slug, id);
   if (!row) return null;
@@ -531,7 +533,11 @@ export async function termDocumentFor(
       ? openingTerm(record, termOffice(tenant))
       : closingTerm(record, termOffice(tenant));
   return {
-    document: termDocument(tenant, term, await signerLines(tenant, withImage)),
+    document: termDocument(
+      tenant,
+      term,
+      chosen ?? (await signerLines(tenant, withImage)),
+    ),
     name: `livro-${row.volume.toLowerCase()}-termo-de-${kind}`,
   };
 }
@@ -752,9 +758,6 @@ export async function bookDocumentsFor(
           })),
           ...signer,
           footer,
-          closingNotes: custasNoteFor(tenant.location.state)
-            ? [{ text: custasNoteFor(tenant.location.state) as string }]
-            : undefined,
         });
       }
     } else {
@@ -843,6 +846,10 @@ export async function bookPdfFor(
      * day below its títulos), from lib/ri-protocol-sheets.ts.
      */
     protocolSheets?: (from: string, to: string) => Promise<Uint8Array | null>;
+    /** Who signs the termos, chosen at the print. */
+    signer?: Awaited<ReturnType<typeof signerLines>>;
+    /** The rubrica for the upper corner of the pages (the termos, fichas, tables). */
+    rubric?: Uint8Array | null;
   } = {},
 ): Promise<{ bytes: Uint8Array; name: string; word?: boolean } | null> {
   const sealMode = options.seal ?? "numero";
@@ -851,12 +858,14 @@ export async function bookPdfFor(
   if (!row) return null;
   const record = recordOf(row);
   const office = termOffice(tenant);
-  const signer = await signerLines(tenant, withImage);
+  const signer = options.signer ?? (await signerLines(tenant, withImage));
   const brand = await brandFor(tenant);
   const parts: Uint8Array[] = [];
+  const stamp = async (bytes: Uint8Array) =>
+    options.rubric ? stampRubric(bytes, options.rubric) : bytes;
   const addTerm = async (doc: RequerimentoDocument) => {
     if (options.word) blocks.push({ kind: "term", document: doc });
-    else parts.push(await renderDocument(doc, brand));
+    else parts.push(await stamp(await renderDocument(doc, brand)));
   };
   const addTable = async (book: TableBook) => {
     if (options.word) blocks.push({ kind: "table", book });
@@ -864,7 +873,8 @@ export async function bookPdfFor(
       parts.push(
         await drawTableBook({
           ...book,
-          closingNote: custasNoteFor(tenant.location.state),
+          // The book is an internal act: no note of custas.
+          closingNote: null,
         }),
       );
   };
@@ -981,10 +991,7 @@ export async function bookPdfFor(
       const flush = async () => {
         if (run.length) {
           if (options.word) blocks.push({ kind: "fichas", fichas: run });
-          else
-            parts.push(
-              await drawFichas(run, null, custasNoteFor(tenant.location.state)),
-            );
+          else parts.push(await drawFichas(run, null, null));
         }
         run = [];
       };

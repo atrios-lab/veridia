@@ -66,6 +66,8 @@ export interface ProtocolImport {
   voided: boolean;
   /** The "Livro" column, when the spreadsheet has it ("1", "1-B"…). */
   volume?: string;
+  /** The "Folha" column: the folha of the physical book ("74", "74-v"). */
+  sheet?: string;
 }
 
 /** The columns the Livro 1 is exported with (art. 175), and "Situação". */
@@ -196,6 +198,7 @@ export function readProtocolImport(
     acts: column(header, "atos", "anotacoes", "anotacao"),
     status: column(header, "situacao"),
     volume: column(header, "livro"),
+    sheet: column(header, "folha", "fls", "fl."),
   };
   if (at.number < 0 || at.date < 0 || at.presenter < 0 || at.title < 0) {
     return {
@@ -320,6 +323,8 @@ export function readProtocolImport(
     };
     const volume = at.volume >= 0 ? cell(at.volume).slice(0, 30) : "";
     if (volume) item.volume = volume;
+    const sheet = at.sheet >= 0 ? sheetLabelOf(cell(at.sheet)) : null;
+    if (sheet) item.sheet = sheet;
     if (!item.presenter || !item.titleKind) {
       item.presenter ||= "Não consta";
       item.titleKind ||= "Não consta";
@@ -426,4 +431,17 @@ export function readForeignImport(
     }
   });
   return { items, errors };
+}
+
+/**
+ * "74", "fls. 74", "74v", "74-v", "74 verso" → "74" or "74-v": the folha
+ * of the physical book, anverso and verso (decision of 28/11/2026).
+ */
+export function sheetLabelOf(value: string): string | null {
+  const v = fold(value)
+    .replace(/fls?\.?|folhas?/g, "")
+    .trim();
+  const m = /^(\d{1,5})\s*-?\s*(v|verso)?$/.exec(v);
+  if (!m?.[1]) return null;
+  return `${Number(m[1])}${m[2] ? "-v" : ""}`;
 }

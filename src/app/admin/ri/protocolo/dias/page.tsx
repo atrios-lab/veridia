@@ -47,6 +47,8 @@ export default async function ProtocolDaysPage() {
     lastImportedDayWith(db, tenant.slug),
   ]);
   const canClose = riCan(session, "ri.books");
+  // Reopening a closed day: the Átrios account only (28/11/2026).
+  const isMaster = session.user.role === "superadmin";
   const holidays = officeHolidays(tenant);
   const book1 = books.find((b) => b.book === 1 && !b.deletedAt && !b.closedOn);
   const recent = [...closed.values()]
@@ -209,7 +211,7 @@ export default async function ProtocolDaysPage() {
                     title={`Protocolo do dia ${shortDate(row.day)}`}
                     size="sm"
                   />
-                  {canClose && (
+                  {isMaster && (
                     <ConfirmButton
                       action={reopenProtocolDayAction}
                       fields={{ dia: row.day }}

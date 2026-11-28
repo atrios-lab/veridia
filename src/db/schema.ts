@@ -3114,6 +3114,14 @@ export const officeStaff = pgTable(
     imageConsentAt: timestamp("image_consent_at", { withTimezone: true }),
     /** Listed in "Quem assina" (guias, ISS, declarações). */
     canSign: boolean("can_sign").notNull().default(false),
+    /**
+     * The signature and the rubrica of this person, as PNG in base64 (ink
+     * only), for the books, termos and índices of the Registro de Imóveis
+     * (decision of 28/11/2026: more than one person signs, each with their
+     * own). Empty: none registered.
+     */
+    signatureImage: text("signature_image"),
+    rubricImage: text("rubric_image"),
     /** Encarregado de Dados (DPO): a function, shown on the LGPD page. */
     isDpo: boolean("is_dpo").notNull().default(false),
     /** The Encarregado is from outside the team: no level on the site. */
@@ -3642,6 +3650,12 @@ export const riProtocols = pgTable(
       .notNull()
       .defaultNow(),
     presentedOn: date("presented_on").notNull(),
+    /**
+     * The folha of the physical book the título was written on ("74",
+     * "74-v"), from the "Folha" column of the import: the book reprinted
+     * from the system keeps the folhas as they were (28/11/2026).
+     */
+    sheetLabel: text("sheet_label"),
     presenterName: text("presenter_name").notNull(),
     presenterDocument: text("presenter_document").notNull().default(""),
     presenterContact: text("presenter_contact").notNull().default(""),
