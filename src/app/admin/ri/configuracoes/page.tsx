@@ -3,12 +3,14 @@ import { UF_IBGE } from "@/core/ri/codes.ts";
 import { db } from "@/db/index.ts";
 import { riSettingsWith } from "@/lib/ri.ts";
 import { riSignerFor } from "@/lib/ri-docs.ts";
+import { rawSignatureSettingsWith } from "@/lib/ri-files.ts";
 import { listLearnedActsWith } from "@/lib/ri-learning.ts";
 import { printSignersWith } from "@/lib/ri-signers.ts";
 import { ConfirmButton } from "../_components/client.tsx";
 import { Field, Panel, RiPage } from "../_components/page.tsx";
 import { SettingsForm } from "../_components/settings-form.tsx";
 import {
+  LegacyOwnerForm,
   SignatureImageForm,
   SignerForm,
 } from "../_components/signature-forms.tsx";
@@ -24,10 +26,14 @@ export default async function RiSettingsPage() {
     riSignerFor(tenant),
     printSignersWith(db, tenant),
   ]);
-  const team = people.signers.filter((p) => p.staffId);
+  // Everyone of "Quem assina", with or without a place in the Equipe: each
+  // with their own signature and rubrica (decision of 28/11/2026).
+  const team = people.signers;
+  const raw = await rawSignatureSettingsWith(db, tenant.slug);
+  const legacyUnowned =
+    !raw.legacyOwner && Boolean(raw.legacySignature || raw.legacyRubric);
   const dataUrl = (img: Uint8Array | null) =>
     img ? `data:image/png;base64,${Buffer.from(img).toString("base64")}` : null;
-  const image = signing.settings.signatureImage;
   const learned = await listLearnedActsWith(db, tenant.slug);
   return (
     <RiPage
@@ -76,6 +82,7 @@ export default async function RiSettingsPage() {
       </Panel>
       {team.length > 0 && (
         <Panel
+          id="assinatura"
           title="Assinaturas e rubricas de quem assina"
           description="Cada pessoa de Quem assina (Configurações › Equipe) com a sua assinatura e a sua rubrica. Na hora de imprimir o livro, os termos ou o índice, escolha quem consta e se vai a rubrica em todas as folhas, a assinatura nos termos e nas linhas de encerramento, a assinatura digital, ou tudo junto. A imagem não substitui a assinatura: o ato vale assinado à mão ou digitalmente com certificado ICP-Brasil."
         >
@@ -91,14 +98,20 @@ export default async function RiSettingsPage() {
                     {p.title ? ` · ${p.title}` : ""}
                   </span>
                 </p>
-                {riCan(session, "certificates.manage") && p.staffId ? (
+                {p.index === people.defaultIndex && (
+                  <span className="-mt-2 text-xs font-semibold text-primary">
+                    Assina os documentos do RI
+                  </span>
+                )}
+                {riCan(session, "certificates.manage") ? (
                   <div className="grid gap-4 lg:grid-cols-2">
                     <div className="flex flex-col gap-2">
                       <p className="text-xs font-medium text-muted-foreground">
                         Assinatura
                       </p>
                       <SignatureImageForm
-                        staffId={p.staffId}
+                        staffId={p.staffId ?? undefined}
+                        signerName={p.name}
                         preview={dataUrl(p.signatureImage)}
                       />
                     </div>
@@ -108,7 +121,8 @@ export default async function RiSettingsPage() {
                       </p>
                       <SignatureImageForm
                         kind="rubrica"
-                        staffId={p.staffId}
+                        staffId={p.staffId ?? undefined}
+                        signerName={p.name}
                         canCopySignature={Boolean(p.signatureImage)}
                         preview={dataUrl(p.rubricImage)}
                       />
@@ -126,53 +140,34 @@ export default async function RiSettingsPage() {
           </div>
         </Panel>
       )}
-      <section id="assinatura">
+      {legacyUnowned && riCan(session, "certificates.manage") && (
         <Panel
-          title="Imagem da assinatura"
-          description="Para emitir a ficha em PDF ou TIFF com a assinatura de quem assina. A imagem não substitui a assinatura: o ato vale assinado à mão no papel ou digitalmente com certificado ICP-Brasil (Lei nº 6.015/1973, art. 17, § 1º; Lei nº 14.063/2020, art. 4º)."
+          title="Assinatura cadastrada antes"
+          description="Esta imagem foi cadastrada antes de cada pessoa ter a sua, e ia para quem estivesse assinando. Diga de quem ela é: passa a valer só para essa pessoa. Nada é apagado."
         >
-          {riCan(session, "certificates.manage") ? (
-            <SignatureImageForm
-              preview={
-                image
-                  ? `data:image/png;base64,${Buffer.from(image).toString("base64")}`
-                  : null
-              }
-            />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {image ? "Cadastrada." : "Não cadastrada."} Só quem cuida dos
-              certificados digitais da serventia cadastra ou troca.
-            </p>
-          )}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-4 rounded-lg border bg-background p-3">
+              {raw.legacySignature && (
+                // biome-ignore lint/performance/noImgElement: a data URL of the office's own image
+                <img
+                  src={dataUrl(raw.legacySignature) ?? ""}
+                  alt="Assinatura cadastrada antes"
+                  className="h-16 w-auto"
+                />
+              )}
+              {raw.legacyRubric && (
+                // biome-ignore lint/performance/noImgElement: a data URL of the office's own image
+                <img
+                  src={dataUrl(raw.legacyRubric) ?? ""}
+                  alt="Rubrica cadastrada antes"
+                  className="h-12 w-auto"
+                />
+              )}
+            </div>
+            <LegacyOwnerForm signers={team.map((p) => p.name)} />
+          </div>
         </Panel>
-        <div className="mt-5">
-          <Panel
-            title="Imagem da rubrica"
-            description="Vai no canto superior direito de todas as folhas das imagens do Livro 2 para a ONR, como a rubrica nas folhas do livro físico."
-          >
-            {riCan(session, "certificates.manage") ? (
-              <SignatureImageForm
-                kind="rubrica"
-                canCopySignature={Boolean(image)}
-                preview={
-                  signing.settings.rubricImage
-                    ? `data:image/png;base64,${Buffer.from(signing.settings.rubricImage).toString("base64")}`
-                    : null
-                }
-              />
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {signing.settings.rubricImage
-                  ? "Cadastrada."
-                  : "Não cadastrada."}{" "}
-                Só quem cuida dos certificados digitais da serventia cadastra ou
-                troca.
-              </p>
-            )}
-          </Panel>
-        </div>
-      </section>
+      )}
       <Panel
         title="Integração com o PGV-CNM e com a ONR"
         description="O que já funciona e o que falta para o envio direto."

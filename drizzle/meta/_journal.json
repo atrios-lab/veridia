@@ -757,6 +757,13 @@
       "when": 1795867195396,
       "tag": "0107_termos_assinados",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1795870860271,
+      "tag": "0108_imagens_de_quem_assina",
+      "breakpoints": true
     }
   ]
 }

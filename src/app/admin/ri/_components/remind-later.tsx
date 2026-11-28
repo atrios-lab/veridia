@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 
 const KEY = "ri-protocol-reminder-later";
@@ -9,6 +10,11 @@ const HOUR = 60 * 60 * 1000;
 /** Hides the reminder on this computer for one hour. */
 export function RemindLater({ children }: { children: ReactNode }) {
   const [hidden, setHidden] = useState(true);
+  const pathname = usePathname();
+  // The Mesa and the Protocolo show the same in their own place ("Agora",
+  // "Hoje"), so the bar on top would only repeat it (decision of 28/11/2026).
+  const ownPlace =
+    pathname === "/admin/ri" || pathname.startsWith("/admin/ri/protocolo");
   useEffect(() => {
     let until = 0;
     try {
@@ -21,7 +27,7 @@ export function RemindLater({ children }: { children: ReactNode }) {
     window.addEventListener(EVENT, hide);
     return () => window.removeEventListener(EVENT, hide);
   }, []);
-  if (hidden) return null;
+  if (hidden || ownPlace) return null;
   return <>{children}</>;
 }
 

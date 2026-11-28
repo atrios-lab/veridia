@@ -12,6 +12,6 @@
 
 ## 3. Mesa do RI, Livros e menu (parte 3)
 
-- [ ] 3.1 Mesa com a lista "Agora" por urgência
-- [ ] 3.2 Livros e termos com tomos e coluna "A assinar"
-- [ ] 3.3 Menu agrupado com contadores
+- [x] 3.1 Mesa com a lista "Agora" por urgência
+- [x] 3.2 Livros e termos com tomos e coluna "A assinar"
+- [x] 3.3 Menu agrupado com contadores

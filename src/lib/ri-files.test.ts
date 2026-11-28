@@ -12,11 +12,14 @@ import {
   addFileWith,
   applyReadingWith,
   listFilesWith,
+  rawSignatureSettingsWith,
   readMatriculaFilesWith,
   saveSignatureImageWith,
   setFileDeletedWith,
   signatureSettingsWith,
+  signerImagesWith,
 } from "./ri-files.ts";
+import { saveSignerImageWith, setLegacyOwnerWith } from "./ri-signers.ts";
 import { fichaTiff, imageToBwTiff } from "./ri-tiff.ts";
 
 let db: Database;
@@ -116,13 +119,51 @@ test("imagem da assinatura: papel fica transparente, tinta preta", async () => {
     .jpeg()
     .toBuffer();
   await saveSignatureImageWith(db, TENANT, new Uint8Array(photo), ACTOR);
-  const { signatureImage } = await signatureSettingsWith(db, TENANT);
-  assert.ok(signatureImage);
-  const meta = await sharp(signatureImage).metadata();
+  const { legacySignature } = await rawSignatureSettingsWith(db, TENANT);
+  assert.ok(legacySignature);
+  const meta = await sharp(legacySignature).metadata();
   assert.equal(meta.format, "png");
   assert.equal(meta.hasAlpha, true);
+
+  // Without an owner, the old image goes to nobody: changing who signs
+  // never shows the signature of who signed before (decision of 28/11/2026).
+  assert.equal(
+    (await signatureSettingsWith(db, TENANT, "Pessoa Fictícia Um"))
+      .signatureImage,
+    null,
+  );
+  await setLegacyOwnerWith(db, TENANT, "Pessoa Fictícia Um", ACTOR);
+  assert.ok(
+    (await signatureSettingsWith(db, TENANT, "Pessoa Fictícia Um"))
+      .signatureImage,
+  );
+  assert.equal(
+    (await signatureSettingsWith(db, TENANT, "Pessoa Fictícia Dois"))
+      .signatureImage,
+    null,
+  );
+  // The second person gets her own place.
+  await saveSignerImageWith(
+    db,
+    TENANT,
+    "Pessoa Fictícia Dois",
+    "assinatura",
+    new Uint8Array(photo),
+    ACTOR,
+  );
+  const [um, dois] = await signerImagesWith(db, TENANT, [
+    "Pessoa Fictícia Um",
+    "pessoa ficticia dois",
+  ]);
+  assert.ok(um?.signatureImage && dois?.signatureImage);
+  assert.equal(dois?.rubricImage, null);
+
   await saveSignatureImageWith(db, TENANT, null, ACTOR);
-  assert.equal((await signatureSettingsWith(db, TENANT)).signatureImage, null);
+  assert.equal(
+    (await signatureSettingsWith(db, TENANT, "Pessoa Fictícia Um"))
+      .signatureImage,
+    null,
+  );
 });
 
 test("TIFF da matrícula: preto e branco, 1 bit, G4, 200 dpi (manual Matrícula Online), várias páginas", async () => {

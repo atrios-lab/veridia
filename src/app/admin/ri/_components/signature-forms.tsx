@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect } from "react";
 import { FilePicker } from "../../_components/file-picker.tsx";
 import { Button } from "../../_ui/button.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
@@ -8,6 +9,7 @@ import {
   type RiState,
   saveSignatureImageAction,
   saveSignerAction,
+  setLegacyOwnerAction,
 } from "../actions.ts";
 import { useRiToast } from "./client.tsx";
 
@@ -22,6 +24,11 @@ export function SignerForm({
 }) {
   const [state, action, pending] = useActionState(saveSignerAction, IDLE);
   useRiToast(state);
+  const router = useRouter();
+  // The page shows the new person (and their images) at once, no reload.
+  useEffect(() => {
+    if (state.status === "success") router.refresh();
+  }, [state, router]);
   return (
     <form action={action} className="flex flex-wrap items-end gap-3">
       <div className="flex min-w-64 flex-1 flex-col gap-1.5 text-sm font-medium">
@@ -46,18 +53,53 @@ export function SignerForm({
   );
 }
 
+/** Whose the images saved before each person had their own are. */
+export function LegacyOwnerForm({ signers }: { signers: string[] }) {
+  const [state, action, pending] = useActionState(setLegacyOwnerAction, IDLE);
+  useRiToast(state);
+  return (
+    <form action={action} className="flex flex-wrap items-end gap-3">
+      <div className="flex min-w-64 flex-1 flex-col gap-1.5 text-sm font-medium">
+        <label htmlFor="ri-legacy-owner">De quem é esta assinatura</label>
+        <NativeSelect
+          id="ri-legacy-owner"
+          name="assinante"
+          defaultValue=""
+          className="w-full"
+          required
+        >
+          <option value="" disabled>
+            Escolha a pessoa
+          </option>
+          {signers.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <Button type="submit" disabled={pending}>
+        {pending ? "Salvando…" : "Salvar"}
+      </Button>
+    </form>
+  );
+}
+
 export function SignatureImageForm({
   preview,
   kind = "assinatura",
   canCopySignature = false,
   staffId,
+  signerName,
 }: {
   preview: string | null;
   kind?: "assinatura" | "rubrica";
   /** Rubrica: offer "usar a mesma assinatura". */
   canCopySignature?: boolean;
-  /** The person of the Equipe the image is of; absent: the office's default. */
+  /** The person of the Equipe the image is of. */
   staffId?: string;
+  /** A person of "Quem assina" outside the Equipe, by the name. */
+  signerName?: string;
 }) {
   const [state, action, pending] = useActionState(
     saveSignatureImageAction,
@@ -78,6 +120,9 @@ export function SignatureImageForm({
             <input type="hidden" name="op" value="remove" />
             <input type="hidden" name="tipo" value={kind} />
             {staffId && <input type="hidden" name="pessoa" value={staffId} />}
+            {!staffId && signerName && (
+              <input type="hidden" name="assinante" value={signerName} />
+            )}
             <Button
               type="submit"
               size="sm"
@@ -93,6 +138,9 @@ export function SignatureImageForm({
         <form action={action}>
           <input type="hidden" name="tipo" value="rubrica" />
           {staffId && <input type="hidden" name="pessoa" value={staffId} />}
+          {!staffId && signerName && (
+            <input type="hidden" name="assinante" value={signerName} />
+          )}
           <input type="hidden" name="op" value="copy" />
           <Button type="submit" variant="outline" disabled={pending}>
             Usar a mesma assinatura como rubrica
@@ -105,6 +153,9 @@ export function SignatureImageForm({
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="tipo" value={kind} />
         {staffId && <input type="hidden" name="pessoa" value={staffId} />}
+        {!staffId && signerName && (
+          <input type="hidden" name="assinante" value={signerName} />
+        )}
         <FilePicker
           name="imagem"
           accept="image/jpeg,image/png,image/webp"

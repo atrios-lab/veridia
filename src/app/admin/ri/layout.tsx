@@ -14,6 +14,7 @@ import {
   THEME_COOKIE,
 } from "../_components/theme.ts";
 import { ThemeToggle } from "../_components/theme-toggle.tsx";
+import { riNavBadges } from "./_components/nav-badges.ts";
 import { ProtocolReminder } from "./_components/protocol-reminder.tsx";
 import { RiMobileNav, RiSideNav } from "./_components/ri-nav.tsx";
 
@@ -46,10 +47,11 @@ export default async function RiLayout({
   const cns = cnsDigits(tenant.cns) ?? tenant.cns;
   const jar = await cookies();
   const background = parseBackground(jar.get(BACKGROUND_COOKIE)?.value);
+  const badges = await riNavBadges(tenant.slug);
   return (
     <div className="flex min-h-screen flex-col bg-muted/40">
       <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-3 md:px-5">
-        <RiMobileNav />
+        <RiMobileNav badges={badges} />
         <Link href="/admin/ri" className="flex min-w-0 items-center gap-2.5">
           {/* biome-ignore lint/performance/noImgElement: the office's seal, any size */}
           <img
@@ -98,7 +100,7 @@ export default async function RiLayout({
         </Link>
       </header>
       <div className="flex flex-1">
-        <RiSideNav />
+        <RiSideNav badges={badges} />
         <div className="min-w-0 flex-1">
           <div className="mx-auto w-full max-w-7xl px-4 pt-4 md:px-8 empty:hidden">
             <ProtocolReminder />
