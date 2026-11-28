@@ -1,4 +1,5 @@
 import { can } from "@/core/auth/roles.ts";
+import { custasNoteOfUrl } from "@/core/ri/closing-notes.ts";
 import { db } from "@/db/index.ts";
 import { renderingFor } from "@/lib/pdf.ts";
 import { fichaLegalPdfWith } from "@/lib/ri-books.ts";
@@ -32,6 +33,7 @@ async function handle(
   const ficha = await fichaLegalPdfWith(db, tenant, (await params).id, {
     signer: mode !== "digital",
     withImage: mode === "imagem",
+    custas: custasNoteOfUrl(request.url),
   });
   if (!ficha) return new Response("Não encontrado", { status: 404 });
   const pdf = ficha.bytes;

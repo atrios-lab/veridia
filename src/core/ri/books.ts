@@ -487,3 +487,92 @@ export function periodRange(
   }
   return { from: `${year}-01-01`, to: `${year}-12-31` };
 }
+
+/* ----------------------------------------- tomos and signed termos */
+
+export interface TomoRow {
+  id: string;
+  book: number;
+  openedOn: string;
+  firstItem: number | null;
+  closedOn: string | null;
+  deletedAt: Date | null;
+}
+
+export interface Tomo {
+  /** 1 for the first volume of that book, 2 for the next… */
+  tomo: number;
+  /** How many volumes the book has. */
+  of: number;
+  /** The volume in use (not closed). */
+  current: boolean;
+}
+
+/**
+ * The order of the volumes of each book (decision of 28/11/2026): many
+ * volumes may be "Livro 1", with or without a letter, so the screen tells
+ * which came first by the "Tomo": by the date of opening, then the first
+ * número. The one not closed is the one in use.
+ */
+export function tomosOf(rows: readonly TomoRow[]): Map<string, Tomo> {
+  const out = new Map<string, Tomo>();
+  const live = rows.filter((r) => !r.deletedAt);
+  for (const book of new Set(live.map((r) => r.book))) {
+    const list = live
+      .filter((r) => r.book === book)
+      .sort(
+        (a, b) =>
+          a.openedOn.localeCompare(b.openedOn) ||
+          (a.firstItem ?? 0) - (b.firstItem ?? 0),
+      );
+    list.forEach((r, i) => {
+      out.set(r.id, { tomo: i + 1, of: list.length, current: !r.closedOn });
+    });
+  }
+  return out;
+}
+
+/** "Tomo 2 de 3 · em uso". */
+export function tomoLabel(t: Tomo | undefined): string {
+  if (!t) return "";
+  return `Tomo ${t.tomo} de ${t.of}${t.current ? " · em uso" : ""}`;
+}
+
+export type TermKind = "abertura" | "encerramento";
+export type TermSignFormat = "digital" | "manual" | "imagem";
+
+export const TERM_SIGN_FORMATS: Record<TermSignFormat, string> = {
+  digital: "digitalmente, com certificado ICP-Brasil",
+  manual: "à mão, no papel",
+  imagem: "com a imagem da assinatura cadastrada",
+};
+
+export interface TermSignature {
+  at: string;
+  by: string;
+  format: TermSignFormat;
+}
+
+/** Reads what was saved: the termos marked as signed, and how. */
+export function termSignaturesOf(
+  raw: unknown,
+): Partial<Record<TermKind, TermSignature>> {
+  const v = (raw ?? {}) as Record<string, unknown>;
+  const out: Partial<Record<TermKind, TermSignature>> = {};
+  for (const kind of ["abertura", "encerramento"] as const) {
+    const s = v[kind] as Partial<TermSignature> | undefined;
+    if (
+      s &&
+      typeof s.at === "string" &&
+      typeof s.format === "string" &&
+      s.format in TERM_SIGN_FORMATS
+    ) {
+      out[kind] = { at: s.at, by: String(s.by ?? ""), format: s.format };
+    }
+  }
+  return out;
+}
+
+export function isTermSignFormat(v: unknown): v is TermSignFormat {
+  return typeof v === "string" && v in TERM_SIGN_FORMATS;
+}

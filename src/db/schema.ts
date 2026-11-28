@@ -3735,6 +3735,14 @@ export const riBooks = pgTable(
      * each título reserves (core/ri/protocol-sheets.ts).
      */
     paging: jsonb("paging").notNull().default(sql`'{}'::jsonb`),
+    /**
+     * How each termo was signed, as the staff member marked it (decision of
+     * 28/11/2026): { abertura: { at, by, format }, encerramento: … }.
+     * Format: "digital", "manual" or "imagem".
+     */
+    termSignatures: jsonb("term_signatures")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
     history: jsonb("history").notNull().default(sql`'[]'::jsonb`),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true })

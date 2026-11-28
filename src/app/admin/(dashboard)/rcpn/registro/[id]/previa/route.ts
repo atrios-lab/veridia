@@ -1,6 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import { isCertidaoForm, prefillCertidao } from "@/core/rcpn/certidao.ts";
 import { applyFicha, fichaFields } from "@/core/rcpn/ficha.ts";
+import { custasNoteFrom, custasNoteOfUrl } from "@/core/ri/closing-notes.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -40,8 +41,10 @@ async function handle(
   // From the Alterar screen (POST): the ficha as it is typed, not saved,
   // to see how the certidão will come out before saving.
   let record: typeof stored = stored;
+  let custas = custasNoteOfUrl(request.url);
   if (request.method === "POST") {
     const form = await request.formData();
+    custas = custasNoteFrom(form.get("custas")) ?? custas;
     const values: Record<string, string> = {};
     for (const field of fichaFields(stored.kind)) {
       const value = form.get(field.key);
@@ -63,6 +66,7 @@ async function handle(
     signerTitle: signer?.title ?? "",
     issuedOn: toIsoDate(new Date(), OFFICE_TIME_ZONE),
     preview: true,
+    custas,
   });
   return new Response(new Uint8Array(pdf), {
     headers: {

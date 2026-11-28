@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 import { EMPTY_AUX } from "@/core/ri/auxiliary.ts";
+import { termSignaturesOf } from "@/core/ri/books.ts";
 import { EMPTY_CONDO, EMPTY_RURAL } from "@/core/ri/property.ts";
 import type { Database } from "@/db/index.ts";
 import { riProtocols } from "@/db/schema.ts";
@@ -12,6 +13,7 @@ import {
   closeBookWith,
   historyOf,
   listBooksWith,
+  markTermSignedWith,
   openBooksForAcervoWith,
   openBookWith,
   openIndexBooksWith,
@@ -21,6 +23,7 @@ import {
   readBookInput,
   reopenBookWith,
   setBookDeletedWith,
+  unmarkTermSignedWith,
   updateBookWith,
 } from "./ri-books.ts";
 
@@ -326,5 +329,76 @@ test("lote importado: o Livro 2 nunca aberto abre sozinho, uma vez só", async (
   assert.deepEqual(
     await openBooksForAcervoWith(db, T, ACTOR, "2026-11-27"),
     [],
+  );
+});
+
+test("vários Livros 1, com ou sem letra; termo marcado como assinado e desmarcado com histórico", async () => {
+  const T = "cartorio-teste-livro-1-repetido";
+  const input = (volume: string, openedOn: string) =>
+    readBookInput({ book: 1, volume, form: "folhas", openedOn }, "2026-11-28");
+  const a = await openBookWith(db, T, input("1", "10/01/2010"), ACTOR);
+  const b = await openBookWith(db, T, input("1", "20/12/2018"), ACTOR);
+  const c = await openBookWith(db, T, input("1-B", "22/07/2024"), ACTOR);
+  assert.equal((await listBooksWith(db, T)).length, 3);
+  // The Livro 2 still takes each number once.
+  await openBookWith(
+    db,
+    T,
+    readBookInput(
+      { book: 2, volume: "2", openedOn: "01/01/2010" },
+      "2026-11-28",
+    ),
+    ACTOR,
+  );
+  await assert.rejects(
+    openBookWith(
+      db,
+      T,
+      readBookInput(
+        { book: 2, volume: "2", openedOn: "01/01/2011" },
+        "2026-11-28",
+      ),
+      ACTOR,
+    ),
+    RiError,
+  );
+  // A número typed wrong, corrected with the reason.
+  await updateBookWith(
+    db,
+    T,
+    b,
+    input("1-A", "20/12/2018"),
+    ACTOR,
+    "número digitado errado",
+  );
+  const fixed = await bookWith(db, T, b);
+  assert.equal(fixed?.volume, "1-A");
+  assert.match(
+    historyOf(fixed ?? { history: [] }).at(-1)?.what ?? "",
+    /número digitado errado/,
+  );
+
+  await markTermSignedWith(db, T, c, "abertura", "digital", ACTOR);
+  let row = await bookWith(db, T, c);
+  assert.equal(
+    termSignaturesOf(row?.termSignatures).abertura?.format,
+    "digital",
+  );
+  await markTermSignedWith(db, T, c, "abertura", "manual", ACTOR);
+  row = await bookWith(db, T, c);
+  assert.equal(
+    termSignaturesOf(row?.termSignatures).abertura?.format,
+    "manual",
+  );
+  assert.match(
+    historyOf(row ?? { history: [] }).at(-1)?.what ?? "",
+    /assinou de novo/,
+  );
+  await unmarkTermSignedWith(db, T, c, "abertura", "marcado por engano", ACTOR);
+  row = await bookWith(db, T, c);
+  assert.equal(termSignaturesOf(row?.termSignatures).abertura, undefined);
+  await assert.rejects(
+    markTermSignedWith(db, T, a, "encerramento", "digital", ACTOR),
+    RiError,
   );
 });

@@ -6,7 +6,6 @@ import {
   certidaoModel,
 } from "@/core/rcpn/certidao.ts";
 import type { RcpnKind } from "@/core/rcpn/record.ts";
-import { custasNoteFor } from "@/core/ri/closing-notes.ts";
 import { writtenDate } from "@/core/scheduling/attendance.ts";
 import type { IsoDate } from "@/core/scheduling/calendar.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
@@ -46,6 +45,8 @@ export interface CertidaoToDraw {
    * "PRÉVIA", so it never passes for a certidão.
    */
   preview?: boolean;
+  /** The custas note the staff member inserted (none when not clicked). */
+  custas?: string | null;
 }
 
 /**
@@ -483,9 +484,9 @@ export async function renderCertidao(
     pdf.y = sealTop + sealBoxHeight + 6;
   }
 
-  // The custas of the selo digital, in every paid document (decision of
-  // 26/11/2026; Portaria Conjunta nº 10/2022, TJRN).
-  const custas = custasNoteFor(tenant.location.state);
+  // The custas note, only when the staff member inserted it for this act
+  // (decision of 28/11/2026), as they wrote it.
+  const custas = certidao.custas;
   if (custas) {
     pdf
       .font("Helvetica")

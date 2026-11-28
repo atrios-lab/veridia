@@ -2,6 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import PDFDocument from "pdfkit";
 import { volumeLetter, volumeName } from "@/core/ri/books.ts";
+import { notWorkingOf, PHYSICAL_TOO } from "@/core/ri/protocol-days.ts";
 import {
   DEFAULT_PAGING,
   faceLabel,
@@ -14,6 +15,7 @@ import {
   type SheetEntry,
   type Side,
 } from "@/core/ri/protocol-sheets.ts";
+import { officeHolidays } from "@/core/scheduling/calendar.ts";
 import { officialName } from "@/core/tenant/identification.ts";
 import { NEUTRALS } from "@/core/tenant/palette.ts";
 import type { Tenant } from "@/core/tenant/schema.ts";
@@ -23,7 +25,9 @@ import { recordAuditWith } from "./audit.ts";
 import { DIGITAL_SIGNATURE_NOTE, isDigitalSigning } from "./pdf.ts";
 import { type Actor, RiError } from "./ri.ts";
 import {
+  type BookRow,
   BookTooLarge,
+  bookFichasWith,
   bookWith,
   historyOf,
   listBooksWith,
@@ -42,12 +46,25 @@ import type { PrintChoice } from "./ri-signers.ts";
 const brDay = (iso: string) => iso.split("-").reverse().join("/");
 
 /** The termo of the day, as the stamp of the book said it (art. 261). */
-export function dayTermText(day: string, count: number, place: string): string {
+export function dayTermText(
+  day: string,
+  count: number,
+  place: string,
+  physical = false,
+  /** "sábado", "domingo", "feriado de Natal": a day that was not a working day. */
+  notWorking: string | null = null,
+): string {
+  // A day with títulos closes with how many, whatever day it was (decision
+  // of 28/11/2026); without, a non-working day says why.
   const what =
-    count === 0
-      ? "sem movimento"
-      : `protocolando ${count} ${count === 1 ? "título" : "títulos"}`;
-  return `Termo de encerramento. Declaro encerrado o expediente de hoje, ${what}. ${place}, ${brDay(day)}.`;
+    count > 0
+      ? `protocolando ${count} ${count === 1 ? "título" : "títulos"}`
+      : notWorking
+        ? `sem movimento, por não ser dia útil (${notWorking})`
+        : "sem movimento";
+  // A day of the paper book: the same termo, and that it was closed there
+  // at the time too (decision of 28/11/2026).
+  return `Termo de encerramento. Declaro encerrado o expediente de hoje, ${what}. ${place}, ${brDay(day)}.${physical ? ` ${PHYSICAL_TOO}` : ""}`;
 }
 
 export interface BookSheets {
@@ -128,12 +145,22 @@ export async function bookSheetsWith(
     ) ?? book.openedOn;
   const last = book.closedOn ?? officeToday();
   const place = `${tenant.location.city}/${tenant.location.state}`;
+  const holidays = officeHolidays(tenant);
   const closings: SheetClosing[] = [];
   // Every closed day, those of the physical book too: its stamp said the
   // same ("Declaro encerrado o expediente de hoje").
-  for (const [day] of await closedDaysWith(database, tenant.slug)) {
+  for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
     if (day < first || day > last) continue;
-    closings.push({ day, text: dayTermText(day, perDay.get(day) ?? 0, place) });
+    closings.push({
+      day,
+      text: dayTermText(
+        day,
+        perDay.get(day) ?? 0,
+        place,
+        row.kind === "livro-fisico",
+        notWorkingOf(day, holidays),
+      ),
+    });
   }
   return {
     volume: book.volume,
@@ -141,6 +168,64 @@ export async function bookSheetsWith(
     paging: configured.fromItem ? configured : paging,
     pagination: paginate(entries, closings, paging),
   };
+}
+
+export interface SheetFacts {
+  /** Folhas (or fichas) the volume has used so far. */
+  count: number | null;
+  /** The last folha (or ficha) written: "75", "75-v" or the ficha nº. */
+  last: string | null;
+  /** The same, as a number, for the termo de encerramento. */
+  lastNumber: number | null;
+  /** "folha" or "ficha". */
+  unit: "folha" | "ficha";
+}
+
+/**
+ * The folhas or fichas of a volume, counted by the system when the office
+ * did not type them (decision of 28/11/2026: "Folhas ou fichas" and
+ * "Última folha escriturada" never blank). The Livro 1 counts its laid-out
+ * folhas; the Livros 2 and 3, their fichas (one per matrícula or
+ * registro).
+ */
+export async function sheetFactsWith(
+  database: Database,
+  tenant: Tenant,
+  row: BookRow,
+): Promise<SheetFacts> {
+  if (row.book === 1) {
+    const sheets = await bookSheetsWith(database, tenant, row.id);
+    const items = sheets?.pagination.items ?? [];
+    const lastItem = items.reduce<(typeof items)[number] | null>(
+      (best, i) =>
+        !best ||
+        i.sheet * 2 + (i.side === "verso" ? 1 : 0) >
+          best.sheet * 2 + (best.side === "verso" ? 1 : 0)
+          ? i
+          : best,
+      null,
+    );
+    return {
+      count: lastItem ? lastItem.sheet : null,
+      last: lastItem ? faceLabel(lastItem.sheet, lastItem.side) : null,
+      lastNumber: lastItem ? lastItem.sheet : null,
+      unit: "folha",
+    };
+  }
+  if (row.book === 2 || row.book === 3) {
+    const fichas = await bookFichasWith(database, tenant.slug, row);
+    const last = fichas.reduce<number | null>(
+      (n, f) => (n === null || f.number > n ? f.number : n),
+      null,
+    );
+    return {
+      count: fichas.length || null,
+      last: last === null ? null : last.toLocaleString("pt-BR"),
+      lastNumber: last,
+      unit: "ficha",
+    };
+  }
+  return { count: null, last: null, lastNumber: null, unit: "folha" };
 }
 
 /** Saves where the folhas begin; the previous values go to the history. */
@@ -417,7 +502,7 @@ function drawFace(
     .fontSize(6.5)
     .fillColor(SOFT)
     .text(
-      `${volumeName(volume)} (Protocolo) ${sheets.numbered ? ` · folha ${faceLabel(sheet, side)}` : ""} · Lei nº 6.015/1973, arts. 175 e 184 · impresso pelo sistema em ${brDay(officeToday())}`,
+      `${volumeName(volume)} (Protocolo) ${sheets.numbered ? ` · folha ${faceLabel(sheet, side)}` : ""} · Lei nº 6.015/1973, arts. 175 e 184`,
       LEFT,
       bottom + 8,
       { width: RIGHT - LEFT, align: "center", lineBreak: false },
@@ -541,15 +626,19 @@ export async function protocolPeriodPdfFor(
     );
   }
   const place = `${tenant.location.city}/${tenant.location.state}`;
+  const holidays = officeHolidays(tenant);
   const closings: SheetClosing[] = [];
   for (const [day, row] of await closedDaysWith(database, tenant.slug)) {
     if (day < input.from || day > input.to) continue;
     closings.push({
       day,
-      text:
-        row.kind === "livro-fisico"
-          ? `Dia ${brDay(day)} escriturado no livro físico do Protocolo; o termo de encerramento consta do próprio livro.`
-          : dayTermText(day, perDay.get(day) ?? 0, place),
+      text: dayTermText(
+        day,
+        perDay.get(day) ?? 0,
+        place,
+        row.kind === "livro-fisico",
+        notWorkingOf(day, holidays),
+      ),
     });
   }
   const sheets: BookSheets = {

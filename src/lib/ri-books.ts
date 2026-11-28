@@ -20,10 +20,13 @@ import {
   protocolDay,
   readItem,
   shortDate,
+  TERM_SIGN_FORMATS,
+  type TermKind,
   type TermOffice,
+  type TermSignFormat,
   type TermText,
+  termSignaturesOf,
 } from "@/core/ri/books.ts";
-import { custasNoteFor } from "@/core/ri/closing-notes.ts";
 import { formatCnm } from "@/core/ri/cnm.ts";
 import { fichaContent } from "@/core/ri/ficha.ts";
 import { addressLine, isoDate, propertyTitle } from "@/core/ri/property.ts";
@@ -78,7 +81,7 @@ export interface BookHistoryEntry {
   at: string;
   by: string;
   what: string;
-  before: Partial<BookInput>;
+  before: Partial<BookInput> | Record<string, string>;
 }
 
 export interface BookInput {
@@ -184,7 +187,12 @@ async function volumeTaken(
   tenantSlug: string,
   input: Pick<BookInput, "book" | "volume">,
   except?: string,
+  /** The import opening volumes by name: never the same one twice. */
+  byName = false,
 ) {
+  // Many volumes may be "Livro 1", with or without a letter (decision of
+  // 28/11/2026): the Tomo tells them apart.
+  if (input.book === 1 && !byName) return false;
   const rows = await listBooksWith(database, tenantSlug);
   return rows.some(
     (r) =>
@@ -282,6 +290,8 @@ export async function updateBookWith(
   id: string,
   input: BookInput,
   actor: Actor,
+  /** Why it changed (a número typed wrong…), kept in the history. */
+  reason = "",
 ): Promise<void> {
   const row = await ownBook(database, tenantSlug, id);
   if (input.book !== row.book) {
@@ -306,7 +316,7 @@ export async function updateBookWith(
         {
           at: new Date().toISOString(),
           by: actor.id,
-          what: "alterou os dados do livro",
+          what: `alterou os dados do livro${reason.trim() ? `: ${reason.trim().slice(0, 2000)}` : ""}`,
           before: snapshot(row),
         },
       ],
@@ -318,6 +328,99 @@ export async function updateBookWith(
     action: "ri.book-edit",
     targetType: "ri-book",
     targetId: id,
+    reason: reason.trim().slice(0, 2000) || null,
+  });
+}
+
+/**
+ * Marks a termo as signed, and how (decision of 28/11/2026): digitally,
+ * by hand, or printed with the signature image. Signing again replaces
+ * the mark; the previous one goes to the history.
+ */
+export async function markTermSignedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  kind: TermKind,
+  format: TermSignFormat,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  if (kind === "encerramento" && !row.closedOn) {
+    throw new RiError("O livro ainda não foi encerrado.");
+  }
+  const signed = termSignaturesOf(row.termSignatures);
+  const before = signed[kind];
+  await database
+    .update(riBooks)
+    .set({
+      termSignatures: {
+        ...signed,
+        [kind]: { at: new Date().toISOString(), by: actor.id, format },
+      },
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `${before ? "assinou de novo" : "marcou como assinado"} o termo de ${kind}, ${TERM_SIGN_FORMATS[format]}`,
+          before: before
+            ? { [`termo de ${kind}`]: TERM_SIGN_FORMATS[before.format] }
+            : {},
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-term-signed",
+    targetType: "ri-book",
+    targetId: id,
+    reason: `Termo de ${kind} ${TERM_SIGN_FORMATS[format]}`,
+  });
+}
+
+/** Undoes the mark (it was marked by mistake): kept in the history. */
+export async function unmarkTermSignedWith(
+  database: Database,
+  tenantSlug: string,
+  id: string,
+  kind: TermKind,
+  reason: string,
+  actor: Actor,
+): Promise<void> {
+  const row = await ownBook(database, tenantSlug, id);
+  const signed = termSignaturesOf(row.termSignatures);
+  const before = signed[kind];
+  if (!before) throw new RiError("Este termo não está marcado como assinado.");
+  const rest = Object.fromEntries(
+    Object.entries(signed).filter(([k]) => k !== kind),
+  );
+  await database
+    .update(riBooks)
+    .set({
+      termSignatures: rest,
+      updatedAt: new Date(),
+      history: [
+        ...historyOf(row),
+        {
+          at: new Date().toISOString(),
+          by: actor.id,
+          what: `desmarcou a assinatura do termo de ${kind}: ${reason.trim().slice(0, 2000)}`,
+          before: { [`termo de ${kind}`]: TERM_SIGN_FORMATS[before.format] },
+        },
+      ],
+    })
+    .where(eq(riBooks.id, id));
+  await recordAuditWith(database, {
+    tenantSlug,
+    actorId: actor.id,
+    action: "ri.book-term-unsigned",
+    targetType: "ri-book",
+    targetId: id,
+    reason: reason.trim().slice(0, 2000),
   });
 }
 
@@ -457,6 +560,15 @@ export async function setBookDeletedWith(
   });
 }
 
+/**
+ * The remarks the system once wrote on the books it opened from the
+ * import ("Livro aberto pelo sistema…"): kept in the row, never printed on
+ * the termo, which reads as signed at the time (decision of 28/11/2026).
+ */
+export function termNotes(notes: string): string {
+  return /\bpelo sistema\b/i.test(notes) ? "" : notes;
+}
+
 export function recordOf(row: BookRow): BookRecord {
   return {
     book: row.book as BookNumber,
@@ -468,8 +580,8 @@ export function recordOf(row: BookRow): BookRecord {
     openedOn: row.openedOn,
     closedOn: row.closedOn,
     lastSheet: row.lastSheet,
-    openingNotes: row.openingNotes,
-    closingNotes: row.closingNotes,
+    openingNotes: termNotes(row.openingNotes),
+    closingNotes: termNotes(row.closingNotes),
   };
 }
 
@@ -528,6 +640,11 @@ export async function termDocumentFor(
   if (!row) return null;
   if (kind === "encerramento" && !row.closedOn) return null;
   const record = recordOf(row);
+  if (kind === "encerramento" && !record.lastSheet) {
+    // Not typed at the closing: the last folha the system laid out.
+    const { sheetFactsWith } = await import("./ri-protocol-sheets.ts");
+    record.lastSheet = (await sheetFactsWith(database, tenant, row)).lastNumber;
+  }
   const term =
     kind === "abertura"
       ? openingTerm(record, termOffice(tenant))
@@ -597,20 +714,37 @@ export async function protocolDayDocumentFor(
     title: `Protocolo do dia ${shortDate(day)}`,
     subtitle: "Encerramento diário (Lei nº 6.015/1973, art. 184)",
     office: [officialName(tenant), tenant.subtitle],
-    sections: protocolDay(day, days.get(day) ?? [], recordedText(closed)),
+    sections: protocolDay(
+      day,
+      days.get(day) ?? [],
+      recordedText(closed, days.get(day) ?? []),
+    ),
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${shortDate(day)}.`,
     ...(await signerLines(tenant, withImage)),
     footer: `${officialName(tenant)} · Livro nº 1 · Protocolo de ${shortDate(day)} · ${tenant.legalFooter}`,
   };
 }
 
-/** The closing as recorded for the day, in the words of the Livro 1. */
-function recordedText(row: ProtocolDayRow | undefined): string | undefined {
+/**
+ * The closing as recorded for the day, in the words of the Livro 1. A day
+ * of the paper book counts its títulos from the Protocolo imported.
+ */
+function recordedText(
+  row: ProtocolDayRow | undefined,
+  lines: readonly ProtocolLine[] = [],
+): string | undefined {
   if (!row) return undefined;
+  const numbers = lines.map((l) => l.number);
   return closingText(
     row.day,
     { kind: row.kind as ClosingKind, why: row.why },
-    { count: row.count, first: row.firstNumber, last: row.lastNumber },
+    row.kind === "livro-fisico"
+      ? {
+          count: numbers.length,
+          first: numbers.length ? Math.min(...numbers) : null,
+          last: numbers.length ? Math.max(...numbers) : null,
+        }
+      : { count: row.count, first: row.firstNumber, last: row.lastNumber },
   );
 }
 
@@ -677,9 +811,7 @@ export async function bookDocumentsFor(
     }
     // The closed days without títulos go in the book too, on their date.
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day, row] of closed) {
-      // The days of the physical book have no termo of their own here.
-      if (row.kind === "livro-fisico") continue;
+    for (const day of closed.keys()) {
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const ordered = [...days.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -689,7 +821,7 @@ export async function bookDocumentsFor(
         title: `Protocolo do dia ${shortDate(day)}`,
         subtitle: "Lei nº 6.015/1973, arts. 175 e 184",
         office: [officialName(tenant), tenant.subtitle],
-        sections: protocolDay(day, lines, recordedText(closed.get(day))),
+        sections: protocolDay(day, lines, recordedText(closed.get(day), lines)),
         ...signer,
         footer,
       });
@@ -895,9 +1027,7 @@ export async function bookPdfFor(
     const to = isoDate(range.to ?? "") ?? row.closedOn ?? officeToday();
     const days = await protocolDaysWith(database, tenant.slug, from, to);
     const closed = await closedDaysWith(database, tenant.slug);
-    for (const [day, row] of closed) {
-      // The days of the physical book have no termo of their own here.
-      if (row.kind === "livro-fisico") continue;
+    for (const day of closed.keys()) {
       if (day >= from && day <= to && !days.has(day)) days.set(day, []);
     }
     const total = [...days.values()].reduce((n, l) => n + l.length, 0);
@@ -923,7 +1053,7 @@ export async function bookPdfFor(
           ],
         });
       }
-      const text = recordedText(closed.get(day));
+      const text = recordedText(closed.get(day), lines);
       rows.push({
         across:
           text ??
@@ -1235,7 +1365,12 @@ export async function fichaLegalPdfWith(
   database: Database,
   tenant: Tenant,
   propertyId: string,
-  options: { signer?: boolean; withImage?: boolean } = {},
+  options: {
+    signer?: boolean;
+    withImage?: boolean;
+    /** The custas note the staff member inserted (none when not clicked). */
+    custas?: string | null;
+  } = {},
 ): Promise<{ bytes: Buffer; number: number } | null> {
   const acervo = await loadAcervoWith(database, tenant.slug);
   const p = acervo.properties.find((x) => x.id === propertyId);
@@ -1248,7 +1383,7 @@ export async function fichaLegalPdfWith(
   const volume = openBook?.volume ?? String(p.book);
   if (p.book === 3) {
     const bytes = await drawTableBook({
-      closingNote: custasNoteFor(tenant.location.state),
+      closingNote: options.custas ?? null,
       title: "REGISTRO AUXILIAR",
       book: 3,
       volume,
@@ -1300,7 +1435,7 @@ export async function fichaLegalPdfWith(
               : undefined,
         }
       : null,
-    custasNoteFor(tenant.location.state),
+    options.custas ?? null,
   );
   return { bytes, number: p.number };
 }
@@ -1356,7 +1491,7 @@ export async function openProtocolVolumesWith(
       },
       today,
     );
-    if (await volumeTaken(database, tenantSlug, input)) {
+    if (await volumeTaken(database, tenantSlug, input, undefined, true)) {
       kept.push(input.volume);
       continue;
     }
@@ -1371,8 +1506,9 @@ export async function openProtocolVolumesWith(
       {
         ...input,
         openedOn: dates[0] ?? today,
-        openingNotes:
-          "Livro aberto pelo sistema a partir dos números de ordem; a data é a do primeiro título lançado nele. Confira com o termo de abertura do livro.",
+        // The termo reads as the book was opened at the time: no remark
+        // that the system opened it (decision of 28/11/2026).
+        openingNotes: "",
       },
       actor,
     );
@@ -1385,8 +1521,7 @@ export async function openProtocolVolumesWith(
           closedOn: dates.at(-1) ?? dates[0] ?? today,
           lastSheet: null,
           lastItem: v.last,
-          notes:
-            "Encerrado pelo sistema na data do último título lançado no livro. Confira com o termo de encerramento do livro físico.",
+          notes: "",
         },
         actor,
       );
@@ -1448,8 +1583,7 @@ export async function openBooksForAcervoWith(
           },
           today,
         ),
-        openingNotes:
-          "Livro aberto pelo sistema na importação do acervo; confira a data e os dados com o termo de abertura do livro.",
+        openingNotes: "",
       },
       actor,
     );

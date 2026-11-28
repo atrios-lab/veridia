@@ -1,5 +1,6 @@
 import { can } from "@/core/auth/roles.ts";
 import { cleanCertidaoFields, isCertidaoForm } from "@/core/rcpn/certidao.ts";
+import { custasNoteFrom } from "@/core/ri/closing-notes.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { renderingFor } from "@/lib/pdf.ts";
@@ -60,6 +61,7 @@ async function handle(request: Request): Promise<Response> {
     signerTitle: signerTitle.slice(0, 200),
     issuedOn: toIsoDate(new Date(), OFFICE_TIME_ZONE),
     preview: true,
+    custas: custasNoteFrom(formData.get("custas")),
   });
   return new Response(new Uint8Array(pdf), {
     headers: {

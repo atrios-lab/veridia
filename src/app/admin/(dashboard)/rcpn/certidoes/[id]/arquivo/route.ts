@@ -1,6 +1,7 @@
 import { can } from "@/core/auth/roles.ts";
 import { isCertidaoForm } from "@/core/rcpn/certidao.ts";
 import type { RcpnKind } from "@/core/rcpn/record.ts";
+import { custasNoteOfUrl } from "@/core/ri/closing-notes.ts";
 import { toIsoDate } from "@/core/scheduling/calendar.ts";
 import { OFFICE_TIME_ZONE } from "@/core/time/office-time.ts";
 import { db } from "@/db/index.ts";
@@ -14,7 +15,7 @@ export const runtime = "nodejs";
 
 /** The certidão in the national model, to print or to sign digitally. */
 async function handle(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const session = await getSession();
@@ -37,6 +38,7 @@ async function handle(
     signerName: row.signerName,
     signerTitle: row.signerTitle,
     issuedOn: toIsoDate(row.createdAt, OFFICE_TIME_ZONE),
+    custas: custasNoteOfUrl(request.url),
   });
   return new Response(new Uint8Array(pdf), {
     headers: {

@@ -6,15 +6,22 @@ import {
   batches,
   formLabel,
   shortDate,
+  TERM_SIGN_FORMATS,
+  type TermKind,
+  termSignaturesOf,
+  tomoLabel,
+  tomosOf,
 } from "@/core/ri/books.ts";
 import { db } from "@/db/index.ts";
 import {
   bookFichasWith,
   bookWith,
   historyOf,
+  listBooksWith,
   MAX_FICHAS,
 } from "@/lib/ri-books.ts";
 import { currentOf, listOnrImagesWith } from "@/lib/ri-onr-images.ts";
+import { sheetFactsWith } from "@/lib/ri-protocol-sheets.ts";
 import { officeToday } from "@/lib/ri-protocols.ts";
 import { printSignersWith } from "@/lib/ri-signers.ts";
 import {
@@ -30,6 +37,7 @@ import { BookPrintOptions } from "../../_components/book-print-options.tsx";
 import { ConfirmButton } from "../../_components/client.tsx";
 import { ImportSheetForm } from "../../_components/import-sheet.tsx";
 import { Field, Panel, RiPage } from "../../_components/page.tsx";
+import { TermSign } from "../../_components/term-sign.tsx";
 import { requireRi, riCan, stamp } from "../../_lib.ts";
 import {
   importProtocolBookAction,
@@ -58,6 +66,27 @@ export default async function BookPage({
   // Reopening, changing and deleting: the Átrios account only (28/11/2026).
   const isMaster = session.user.role === "superadmin";
   const fichas = await bookFichasWith(db, tenant.slug, row);
+  // Many "Livro 1": the Tomo says which came first and which is in use.
+  const tomo = tomosOf(await listBooksWith(db, tenant.slug)).get(row.id);
+  // "Folhas ou fichas" and the last one written, counted by the system
+  // when they were not typed (decision of 28/11/2026).
+  const facts = await sheetFactsWith(db, tenant, row);
+  const signed = termSignaturesOf(row.termSignatures);
+  const termView = (kind: TermKind) => {
+    const s = signed[kind];
+    return {
+      kind,
+      signed: s
+        ? `${TERM_SIGN_FORMATS[s.format]}, marcado em ${stamp(new Date(s.at))}`
+        : null,
+      pdf: `/admin/ri/livros/${row.id}/termo?tipo=${kind}`,
+    };
+  };
+  // A staff member corrects a book in use; a closed one, the Átrios account.
+  const canEdit = canManage && (isMaster || !row.closedOn);
+  const lastWritten = row.lastSheet
+    ? row.lastSheet.toLocaleString("pt-BR")
+    : facts.last;
   // The Livro 2 is one digital book: the signed fichas are its pages, and
   // a ficha signed again replaces the page; the old one goes to
   // "Alterações".
@@ -87,25 +116,68 @@ export default async function BookPage({
         </p>
       )}
 
+      {!row.deletedAt && (
+        <div className="flex flex-col gap-3">
+          <div
+            className={`flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border px-5 py-4 ${row.closedOn ? "bg-muted" : "border-primary/30 bg-primary/5"}`}
+          >
+            <span className="text-lg font-semibold text-foreground">
+              {row.closedOn ? "Encerrado" : "Vigente"}
+            </span>
+            {tomo && (
+              <span className="text-sm font-medium text-foreground">
+                {tomoLabel(tomo)}
+              </span>
+            )}
+            <span className="text-sm text-muted-foreground">
+              {row.closedOn
+                ? `Encerrado em ${shortDate(row.closedOn)}${lastWritten ? `, na ${facts.unit} ${lastWritten}` : ""}.`
+                : `Aberto em ${shortDate(row.openedOn)}${lastWritten ? `; escriturado até a ${facts.unit} ${lastWritten}` : ""}.`}
+            </span>
+          </div>
+          <TermSign
+            id={row.id}
+            term={termView("abertura")}
+            canManage={canManage}
+          />
+          {row.closedOn && (
+            <TermSign
+              id={row.id}
+              term={termView("encerramento")}
+              canManage={canManage}
+            />
+          )}
+        </div>
+      )}
+
       <Panel title="Dados do livro">
         <dl className="grid gap-3 sm:grid-cols-3">
           <Field label="Livro" value={`${info.name} · ${row.volume}`} />
+          {tomo && <Field label="Ordem" value={tomoLabel(tomo)} />}
           <Field label="Forma de escrituração" value={formLabel(row.form)} />
           <Field
-            label="Folhas ou fichas"
-            value={row.sheetCount ? String(row.sheetCount) : "sem número fixo"}
+            label={facts.unit === "ficha" ? "Fichas" : "Folhas"}
+            value={
+              row.sheetCount
+                ? String(row.sheetCount)
+                : facts.count
+                  ? `${facts.count.toLocaleString("pt-BR")} até agora (contadas pelo sistema)`
+                  : "nenhuma escriturada ainda"
+            }
           />
           <Field label="Aberto em" value={shortDate(row.openedOn)} />
           <Field
-            label="Encerrado em"
-            value={row.closedOn ? shortDate(row.closedOn) : "em uso"}
+            label="Situação"
+            value={
+              row.closedOn
+                ? `Encerrado em ${shortDate(row.closedOn)}`
+                : "Vigente (em uso)"
+            }
           />
-          {row.closedOn && (
-            <Field
-              label="Última folha ou ficha escriturada"
-              value={display(row.lastSheet)}
-            />
-          )}
+          <Field
+            label={`Última ${facts.unit} escriturada`}
+            value={lastWritten ?? `nenhuma ${facts.unit} escriturada ainda`}
+          />
           {row.firstItem !== null && (
             <Field
               label="Abrangência"
@@ -116,6 +188,7 @@ export default async function BookPage({
       </Panel>
 
       <Panel
+        id="termos"
         title="Termos"
         description="O livro é aberto e encerrado pelo oficial (Lei nº 6.015/1973, art. 4º). Assina quem está em Configurações do RI: o oficial, o substituto legal ou o escrevente designado e autorizado pelo juiz (art. 210)."
       >
@@ -442,11 +515,15 @@ export default async function BookPage({
                 id={row.id}
                 book={row.book}
                 lastItem={display(row.lastItem)}
+                lastSheet={display(facts.lastNumber)}
               />
             )}
           </Panel>
-          {isMaster && (
-            <Panel title="Alterar os dados do livro">
+          {canEdit && (
+            <Panel
+              title="Alterar os dados do livro"
+              description="Para corrigir o que foi lançado errado, como o número do livro. Os dados anteriores e a justificativa ficam no histórico."
+            >
               <details>
                 <summary className="cursor-pointer text-sm font-medium text-primary">
                   Mostrar o formulário

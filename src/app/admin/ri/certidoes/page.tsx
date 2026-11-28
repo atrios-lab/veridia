@@ -1,5 +1,7 @@
 import { CERTIDAO_LABELS, CERTIDAO_RULES } from "@/core/ri/certidao.ts";
+import { defaultCustasNote } from "@/core/ri/closing-notes.ts";
 import { loadAcervo } from "@/lib/ri.ts";
+import { CustasNoteField } from "../../_components/custas-note.tsx";
 import { buttonVariants } from "../../_ui/button.tsx";
 import { NativeSelect } from "../../_ui/native-select.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
@@ -144,6 +146,9 @@ export default async function CertidoesPage({
                 </NativeSelect>
               </label>
             </div>
+            <CustasNoteField
+              defaultText={defaultCustasNote(tenant.location.state)}
+            />
             <div>
               <button type="submit" className={buttonVariants()}>
                 Emitir a certidão

@@ -10,6 +10,9 @@ import {
   periodRange,
   protocolDay,
   readItem,
+  termSignaturesOf,
+  tomoLabel,
+  tomosOf,
   volumeLabel,
   volumeLetter,
   volumeLetters,
@@ -175,4 +178,64 @@ test("todos são o Livro 1; a letra antiga fica à parte", () => {
   assert.equal(volumeLetter("1-B"), "B");
   assert.equal(volumeName("1"), "Livro 1");
   assert.equal(volumeName("1-B"), "Livro 1 (letra B)");
+});
+
+test("tomos: o primeiro livro aberto é o tomo 1; o que não foi encerrado está em uso", () => {
+  const rows = [
+    {
+      id: "c",
+      book: 1,
+      openedOn: "2024-07-22",
+      firstItem: 2550,
+      closedOn: null,
+      deletedAt: null,
+    },
+    {
+      id: "a",
+      book: 1,
+      openedOn: "2010-01-04",
+      firstItem: 50,
+      closedOn: "2018-12-19",
+      deletedAt: null,
+    },
+    {
+      id: "b",
+      book: 1,
+      openedOn: "2018-12-20",
+      firstItem: 1689,
+      closedOn: "2024-07-21",
+      deletedAt: null,
+    },
+    {
+      id: "x",
+      book: 1,
+      openedOn: "2011-01-01",
+      firstItem: 1,
+      closedOn: null,
+      deletedAt: new Date(),
+    },
+    {
+      id: "m",
+      book: 2,
+      openedOn: "2010-01-04",
+      firstItem: 1,
+      closedOn: null,
+      deletedAt: null,
+    },
+  ];
+  const t = tomosOf(rows);
+  assert.deepEqual(t.get("a"), { tomo: 1, of: 3, current: false });
+  assert.deepEqual(t.get("c"), { tomo: 3, of: 3, current: true });
+  assert.equal(tomoLabel(t.get("c")), "Tomo 3 de 3 · em uso");
+  assert.equal(t.get("x"), undefined);
+  assert.equal(t.get("m")?.of, 1);
+});
+
+test("termo assinado: guarda como foi assinado e ignora o que não é válido", () => {
+  const s = termSignaturesOf({
+    abertura: { at: "2026-11-28T10:00:00Z", by: "u", format: "digital" },
+    encerramento: { at: "x", format: "carimbo" },
+  });
+  assert.equal(s.abertura?.format, "digital");
+  assert.equal(s.encerramento, undefined);
 });

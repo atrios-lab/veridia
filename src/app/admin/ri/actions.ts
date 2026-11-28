@@ -13,6 +13,7 @@ import {
   readForeignImport,
   readProtocolImport,
 } from "@/core/ri/book-import.ts";
+import { isTermSignFormat, TERM_SIGN_FORMATS } from "@/core/ri/books.ts";
 import {
   ForeignError,
   foreignWarnings,
@@ -60,9 +61,11 @@ import {
   withdrawExportWith,
 } from "@/lib/ri.ts";
 import {
+  bookWith,
   closeBookWith,
   fichaLegalPdfWith,
   listBooksWith,
+  markTermSignedWith,
   openBooksForAcervoWith,
   openBookWith,
   openIndexBooksWith,
@@ -72,6 +75,7 @@ import {
   readBookInput,
   reopenBookWith,
   setBookDeletedWith,
+  unmarkTermSignedWith,
   updateBookWith,
 } from "@/lib/ri-books.ts";
 import {
@@ -1679,12 +1683,28 @@ export async function saveBookAction(
   const ok = await access("ri.books");
   if (!ok) return denied("ri.books");
   const id = text(formData, "id");
-  if (id && !isMaster(ok)) return MASTER_ONLY;
+  if (id) {
+    // A staff member corrects a book in use (a número typed wrong) with
+    // the reason; a closed book only the Átrios account changes (decision
+    // of 28/11/2026).
+    const current = await bookWith(db, ok.tenant.slug, id);
+    if (!current) return { status: "error", message: "Livro não encontrado." };
+    if (current.closedOn && !isMaster(ok)) return MASTER_ONLY;
+    const why = justify(formData);
+    if (why) return { status: "error", message: why };
+  }
   let target = id;
   try {
     const input = readBookInput(rawOf(formData));
     if (id) {
-      await updateBookWith(db, ok.tenant.slug, id, input, ok.actor);
+      await updateBookWith(
+        db,
+        ok.tenant.slug,
+        id,
+        input,
+        ok.actor,
+        text(formData, "justificativa"),
+      );
     } else {
       target = await openBookWith(db, ok.tenant.slug, input, ok.actor);
     }
@@ -1704,6 +1724,68 @@ export async function saveBookAction(
   return {
     status: "success",
     message: "Livro alterado. Os dados anteriores ficaram no histórico.",
+  };
+}
+
+/** "Já assinei": marks the termo as signed, and how. */
+export async function markTermSignedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const kind =
+    text(formData, "tipo") === "encerramento" ? "encerramento" : "abertura";
+  const format = text(formData, "formato");
+  if (!isTermSignFormat(format)) {
+    return { status: "error", message: "Escolha como o termo foi assinado." };
+  }
+  try {
+    await markTermSignedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      kind,
+      format,
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.book.term-signed");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: `Termo de ${kind} marcado como assinado ${TERM_SIGN_FORMATS[format]}.`,
+  };
+}
+
+/** Undoes "Já assinei" (marked by mistake), with the reason. */
+export async function unmarkTermSignedAction(
+  _previous: RiState,
+  formData: FormData,
+): Promise<RiState> {
+  const why = justify(formData);
+  if (why) return { status: "error", message: why };
+  const ok = await access("ri.books");
+  if (!ok) return denied("ri.books");
+  const kind =
+    text(formData, "tipo") === "encerramento" ? "encerramento" : "abertura";
+  try {
+    await unmarkTermSignedWith(
+      db,
+      ok.tenant.slug,
+      text(formData, "id"),
+      kind,
+      text(formData, "justificativa"),
+      ok.actor,
+    );
+  } catch (error) {
+    return failure(error, "ri.book.term-signed");
+  }
+  revalidatePath("/admin/ri", "layout");
+  return {
+    status: "success",
+    message: "Marcação desfeita. Ela fica no histórico do livro.",
   };
 }
 

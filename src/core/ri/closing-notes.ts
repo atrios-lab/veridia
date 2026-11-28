@@ -19,3 +19,35 @@ export const LGPD_ATTENTION =
 export function custasNoteFor(state: string): string | null {
   return state.toUpperCase() === "RN" ? CUSTAS_NOTE_RN : null;
 }
+
+/** For the offices outside the RN: a plain note, to adjust as the office likes. */
+export const CUSTAS_NOTE_GENERIC =
+  "Foram recolhidos para o presente ato os emolumentos e as demais parcelas legais constantes do selo de fiscalização e da tabela de emolumentos vigente.";
+
+/**
+ * The text that comes ready when the staff member clicks "Inserir nota de
+ * custas" (decision of 28/11/2026): the TJRN note in the RN, a plain one
+ * elsewhere. The staff member may edit it before printing.
+ */
+export function defaultCustasNote(state: string): string {
+  return custasNoteFor(state) ?? CUSTAS_NOTE_GENERIC;
+}
+
+/** Longest custas note a document takes. */
+export const CUSTAS_NOTE_MAX = 3000;
+
+/**
+ * The note chosen for this act, as it came in the link or the form
+ * (`custas`): none when the staff member did not insert it (decision of
+ * 28/11/2026: the note is a button, never automatic).
+ */
+export function custasNoteFrom(raw: unknown): string | null {
+  if (typeof raw !== "string") return null;
+  const text = raw.replace(/\r\n?/g, "\n").trim().slice(0, CUSTAS_NOTE_MAX);
+  return text || null;
+}
+
+/** The custas note of a request (GET link or POST form). */
+export function custasNoteOfUrl(url: string): string | null {
+  return custasNoteFrom(new URL(url).searchParams.get("custas"));
+}

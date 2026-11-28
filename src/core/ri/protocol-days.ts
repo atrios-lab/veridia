@@ -67,6 +67,33 @@ export function closingReason(
 const br = (iso: string) =>
   `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 
+/**
+ * Why a day without títulos was not a working day: "sábado", "domingo" or
+ * "feriado de Natal" (decision of 28/11/2026). A day of those with títulos
+ * (protocolados by mistake) closes as any other, with how many.
+ */
+export function notWorkingLabel(day: string, reason: ClosingReason): string {
+  if (reason.kind === "feriado") return reason.why;
+  return weekdayName(day);
+}
+
+/**
+ * The same for a day as it is: null for a working day. Used for the days
+ * of the paper book and for the stamps of the folhas.
+ */
+export function notWorkingOf(
+  day: string,
+  holidays: OfficeHolidays = {},
+): string | null {
+  const reason = closingReason(day, 0, holidays);
+  return reason.kind === "feriado" || reason.kind === "fim-de-semana"
+    ? notWorkingLabel(day, reason)
+    : null;
+}
+
+/** Said of the days of the paper book, after their termo. */
+export const PHYSICAL_TOO = "Encerrado também no livro físico à época.";
+
 /** The sentence that closes the day in the Livro 1. */
 export function closingText(
   day: string,
@@ -74,7 +101,14 @@ export function closingText(
   numbers: { count: number; first: number | null; last: number | null },
 ): string {
   if (reason.kind === "livro-fisico") {
-    return `Dia ${br(day)} escriturado no livro físico do Protocolo; o encerramento consta do próprio livro (dados importados).`;
+    // The day as it really closed, with its títulos or without movement,
+    // and that it was closed on paper at the time too (decision of
+    // 28/11/2026).
+    const base =
+      numbers.count > 0
+        ? closingText(day, { kind: "movimento", why: "" }, numbers)
+        : closingText(day, closingReason(day, 0), numbers);
+    return `${base} ${PHYSICAL_TOO}`;
   }
   const when = `${br(day)} (${weekdayName(day)})`;
   if (reason.kind === "movimento" && numbers.first !== null) {
@@ -85,7 +119,7 @@ export function closingText(
     return `Encerra-se o Protocolo do dia ${when} com ${numbers.count} ${numbers.count === 1 ? "título apontado" : "títulos apontados"}, ${span}.`;
   }
   if (reason.kind === "feriado" || reason.kind === "fim-de-semana") {
-    return `Encerra-se o Protocolo do dia ${when} sem movimento, em virtude do ${reason.why}.`;
+    return `Encerra-se o Protocolo do dia ${when} sem movimento, por não ser dia útil (${notWorkingLabel(day, reason)}).`;
   }
   return `Encerra-se o Protocolo do dia ${when} sem movimento: não houve apresentação de títulos.`;
 }

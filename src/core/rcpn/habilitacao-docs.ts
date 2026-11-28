@@ -2,7 +2,6 @@ import type {
   RequerimentoDocument,
   RequerimentoSection,
 } from "../request/requerimento.ts";
-import { custasNoteFor } from "../ri/closing-notes.ts";
 import { writtenDate } from "../scheduling/attendance.ts";
 import { officialName } from "../tenant/identification.ts";
 import type { Tenant } from "../tenant/schema.ts";
@@ -51,6 +50,8 @@ export interface HabilitacaoForDocument {
   values: HabilitacaoValues;
   /** The day the document is dated (ISO). */
   today: string;
+  /** The custas note the staff member inserted (none when not clicked). */
+  custas?: string | null;
 }
 
 type DocumentTenant = Pick<
@@ -177,9 +178,7 @@ function base(
     dateLine: `${tenant.location.city}/${tenant.location.state}, ${writtenDate(h.today)}.`,
     signature: [],
     footer: `${officialName(tenant)} · ${tenant.legalFooter}`,
-    closingNotes: custasNoteFor(tenant.location.state)
-      ? [{ text: custasNoteFor(tenant.location.state) as string }]
-      : undefined,
+    closingNotes: h.custas ? [{ text: h.custas }] : undefined,
   };
 }
 
