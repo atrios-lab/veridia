@@ -4,6 +4,7 @@ import { db } from "@/db/index.ts";
 import { riSettingsWith } from "@/lib/ri.ts";
 import { riSignerFor } from "@/lib/ri-docs.ts";
 import { listLearnedActsWith } from "@/lib/ri-learning.ts";
+import { printSignersWith } from "@/lib/ri-signers.ts";
 import { ConfirmButton } from "../_components/client.tsx";
 import { Field, Panel, RiPage } from "../_components/page.tsx";
 import { SettingsForm } from "../_components/settings-form.tsx";
@@ -18,10 +19,14 @@ export const metadata = { title: "Configurações do Registro de Imóveis" };
 
 export default async function RiSettingsPage() {
   const { session, tenant } = await requireRi();
-  const [settings, signing] = await Promise.all([
+  const [settings, signing, people] = await Promise.all([
     riSettingsWith(db, tenant.slug),
     riSignerFor(tenant),
+    printSignersWith(db, tenant),
   ]);
+  const team = people.signers.filter((p) => p.staffId);
+  const dataUrl = (img: Uint8Array | null) =>
+    img ? `data:image/png;base64,${Buffer.from(img).toString("base64")}` : null;
   const image = signing.settings.signatureImage;
   const learned = await listLearnedActsWith(db, tenant.slug);
   return (
@@ -69,6 +74,58 @@ export default async function RiSettingsPage() {
           />
         )}
       </Panel>
+      {team.length > 0 && (
+        <Panel
+          title="Assinaturas e rubricas de quem assina"
+          description="Cada pessoa de Quem assina (Configurações › Equipe) com a sua assinatura e a sua rubrica. Na hora de imprimir o livro, os termos ou o índice, escolha quem consta e se vai a rubrica em todas as folhas, a assinatura nos termos e nas linhas de encerramento, a assinatura digital, ou tudo junto. A imagem não substitui a assinatura: o ato vale assinado à mão ou digitalmente com certificado ICP-Brasil."
+        >
+          <div className="flex flex-col gap-6">
+            {team.map((p) => (
+              <div
+                key={p.index}
+                className="flex flex-col gap-3 rounded-lg border bg-background p-4"
+              >
+                <p className="text-sm font-semibold">
+                  {p.name}
+                  <span className="font-normal text-muted-foreground">
+                    {p.title ? ` · ${p.title}` : ""}
+                  </span>
+                </p>
+                {riCan(session, "certificates.manage") && p.staffId ? (
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Assinatura
+                      </p>
+                      <SignatureImageForm
+                        staffId={p.staffId}
+                        preview={dataUrl(p.signatureImage)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Rubrica
+                      </p>
+                      <SignatureImageForm
+                        kind="rubrica"
+                        staffId={p.staffId}
+                        canCopySignature={Boolean(p.signatureImage)}
+                        preview={dataUrl(p.rubricImage)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Assinatura:{" "}
+                    {p.signatureImage ? "cadastrada" : "não cadastrada"}.
+                    Rubrica: {p.rubricImage ? "cadastrada" : "não cadastrada"}.
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
       <section id="assinatura">
         <Panel
           title="Imagem da assinatura"

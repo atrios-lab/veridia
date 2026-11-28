@@ -803,6 +803,21 @@ export async function importProtocolsWith(
   let skipped = 0;
   for (const item of items) {
     if (taken.has(item.number)) {
+      // The folha of the physical book is the one field a new import adds
+      // to a título already in (never replacing one already there).
+      if (item.sheet) {
+        await database
+          .update(riProtocols)
+          .set({ sheetLabel: item.sheet })
+          .where(
+            and(
+              eq(riProtocols.tenantSlug, tenantSlug),
+              eq(riProtocols.kind, "prenotacao"),
+              eq(riProtocols.number, item.number),
+              isNull(riProtocols.sheetLabel),
+            ),
+          );
+      }
       skipped++;
       continue;
     }
@@ -813,6 +828,7 @@ export async function importProtocolsWith(
       number: item.number,
       presentedAt: new Date(`${item.presentedOn}T12:00:00-03:00`),
       presentedOn: item.presentedOn,
+      sheetLabel: item.sheet ?? null,
       presenterName: item.presenter,
       titleKind: item.titleKind,
       actsSummary: item.acts,

@@ -130,6 +130,20 @@ export interface SheetEntry {
   titleKind: string;
   acts: string;
   voided: boolean;
+  /**
+   * The folha it is on in the physical book ("74-v"), when known: the
+   * layout jumps to it, so the book reprinted keeps the folhas as they were.
+   */
+  sheet?: string | null;
+}
+
+/** "74" → folha 74, anverso; "74-v" → its verso. */
+export function faceOfLabel(
+  label: string | null | undefined,
+): { sheet: number; side: Side } | null {
+  const m = /^(\d{1,5})(-v)?$/.exec(label ?? "");
+  if (!m?.[1]) return null;
+  return { sheet: Number(m[1]), side: m[2] ? "verso" : "frente" };
 }
 
 export interface SheetClosing {
@@ -257,6 +271,20 @@ export function paginate(
   for (const [i, day] of days.entries()) {
     if (i > 0 && paging.dayBreak === "dia" && line > 0) turn();
     for (const entry of byDay.get(day) ?? []) {
+      // The folha the physical book gives: move on to it (never back).
+      const label = faceOfLabel(entry.sheet);
+      const target =
+        label && !paging.bothSides
+          ? { ...label, side: "frente" as const }
+          : label;
+      if (target) {
+        const order = (f: { sheet: number; side: Side }) =>
+          f.sheet * 2 + (f.side === "verso" ? 1 : 0);
+        let guard = 0;
+        while (order(target) > order({ sheet, side }) && guard++ < 10_000) {
+          turn();
+        }
+      }
       const cells = cellsOf(entry);
       for (const at of place(entryLinesOf(entry, paging))) {
         items.push({ kind: "entry", entry, cells, ...at });

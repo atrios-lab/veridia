@@ -736,6 +736,20 @@
       "when": 1795806690638,
       "tag": "0104_folhas_do_protocolo",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1795865374202,
+      "tag": "0105_assinatura_e_rubrica_na_equipe",
+      "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1795865688249,
+      "tag": "0106_folha_do_livro_fisico",
+      "breakpoints": true
     }
   ]
 }

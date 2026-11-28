@@ -54,8 +54,8 @@ test("folhas do Livro 1: onde cai cada protocolo e o PDF das faces", async () =>
     ),
     ACTOR,
   );
-  // Not set yet: no folhas.
-  assert.equal(await bookSheetsWith(db, tenant, id), null);
+  // Not set yet: the volume is numbered all the same, from folha 1.
+  assert.ok(await bookSheetsWith(db, tenant, id));
   const item = (number: number, presentedOn: string) => ({
     number,
     presentedOn,
@@ -93,8 +93,9 @@ test("folhas do Livro 1: onde cai cada protocolo e o PDF das faces", async () =>
   );
   const sheets = await bookSheetsWith(db, tenant, id);
   assert.ok(sheets);
-  // The one before, on paper, is not laid out.
-  assert.equal(placeOf(sheets.pagination, 2549), null);
+  // The one before, on paper, from folha 1 of the volume; the part the
+  // system writes starts on the folha set (75).
+  assert.equal(placeOf(sheets.pagination, 2549)?.sheet, 1);
   // 2550 and 2551 on the 4th, the termo of the 4th (2 títulos), then the
   // termos of the 5th, 6th and 7th (sem movimento), then 2552 on the 8th.
   const at = (n: number) => {
@@ -154,4 +155,53 @@ test("Protocolo do dia no modelo da Lei 6.015, mesmo sem folhas definidas", asyn
     to: "2025-03-11",
   });
   assert.ok(empty.length > 1000);
+});
+
+test("a folha do livro de papel vinda da importação é respeitada", async () => {
+  const other = { ...tenant, slug: "cartorio-teste-folha-papel" };
+  const id = await openBookWith(
+    db,
+    other.slug,
+    readBookInput(
+      {
+        book: 1,
+        volume: "1",
+        form: "folhas",
+        sheetCount: "200",
+        firstItem: "1",
+        openedOn: "1976-09-10",
+      },
+      "2026-11-27",
+    ),
+    ACTOR,
+  );
+  const item = (number: number, sheet?: string) => ({
+    number,
+    presentedOn: "1976-09-10",
+    presenter: `Pessoa Fictícia ${number}`,
+    titleKind: "Escritura",
+    acts: "",
+    status: "registrado" as const,
+    voided: false,
+    sheet,
+  });
+  await importProtocolsWith(
+    db,
+    other.slug,
+    [item(1), item(2, "3-v"), item(3)],
+    ACTOR,
+  );
+  const sheets = await bookSheetsWith(db, other, id);
+  assert.ok(sheets);
+  assert.deepEqual(
+    [1, 2, 3].map((n) => {
+      const p = placeOf(sheets.pagination, n);
+      return [p?.sheet, p?.side];
+    }),
+    [
+      [1, "frente"],
+      [3, "verso"],
+      [3, "verso"],
+    ],
+  );
 });

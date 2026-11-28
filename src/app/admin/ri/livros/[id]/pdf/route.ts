@@ -3,6 +3,7 @@ import { db } from "@/db/index.ts";
 import { renderingFor } from "@/lib/pdf.ts";
 import { BookTooLarge, bookPdfFor } from "@/lib/ri-books.ts";
 import { protocolPeriodPdfFor } from "@/lib/ri-protocol-sheets.ts";
+import { printChoiceWith, signerLinesOf } from "@/lib/ri-signers.ts";
 import { getSession } from "@/lib/session.ts";
 import { getTenant } from "@/lib/tenant.ts";
 
@@ -29,6 +30,7 @@ async function handle(
   const tenant = await getTenant();
   const query = new URL(request.url).searchParams;
   const id = (await params).id;
+  const choice = await printChoiceWith(db, tenant, query);
   try {
     const book = await bookPdfFor(
       db,
@@ -38,7 +40,7 @@ async function handle(
         from: query.get("de") ?? undefined,
         to: query.get("ate") ?? undefined,
       },
-      query.get("assinatura") === "imagem",
+      choice.signature,
       {
         seal:
           query.get("selo") === "nenhum"
@@ -49,7 +51,9 @@ async function handle(
         word: query.get("formato") === "word",
         // The Livro 1 in the model of the book.
         protocolSheets: (from, to) =>
-          protocolPeriodPdfFor(db, tenant, { bookId: id, from, to }),
+          protocolPeriodPdfFor(db, tenant, { bookId: id, from, to }, choice),
+        signer: signerLinesOf(choice),
+        rubric: choice.rubric ? (choice.signer?.rubricImage ?? null) : null,
       },
     );
     if (!book) return new Response("Não encontrado", { status: 404 });

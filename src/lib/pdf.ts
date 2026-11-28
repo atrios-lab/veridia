@@ -659,7 +659,11 @@ function drawDocumentBody(
     drawPartySignatures(pdf, document.signatures, brand);
   }
 
-  if (digital) {
+  // Signed digitally with the signature image too (decision of 28/11/2026:
+  // the book in the cloud keeps the signature drawn and the certificate):
+  // the image and the name, then the note of the digital signature.
+  const imageToo = digital && Boolean(document.signatureImage);
+  if (digital && !imageToo) {
     drawDigitalSignatureNote(pdf, brand);
     drawClosingNotes(pdf, document);
     return;
@@ -669,7 +673,8 @@ function drawDocumentBody(
     // The signature is anchored at the foot of the page: everything between
     // the last section and the rule is room to sign by hand, which is the
     // point. Too little of it, and the block gets a page (mostly) to itself.
-    if (document.compactSignature) {
+    // With the digital note after it, right under the text, so both fit.
+    if (document.compactSignature || imageToo) {
       // Right under the date, as the office's certidões (decision of
       // 26/11/2026): the notes after it stay on the same page.
       if (bottom(pdf) - blockHeight - pdf.y < 70) pdf.addPage();
@@ -716,6 +721,7 @@ function drawDocumentBody(
       align: "center",
     });
   }
+  if (imageToo) drawDigitalSignatureNote(pdf, brand);
   drawClosingNotes(pdf, document);
 }
 

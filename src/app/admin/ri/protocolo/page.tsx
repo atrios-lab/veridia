@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { SignOrPrint } from "@/app/admin/_components/sign-or-print.tsx";
 import { volumeLetter, volumeName, volumeOfNumber } from "@/core/ri/books.ts";
 import { brDate } from "@/core/ri/property.ts";
@@ -18,12 +19,13 @@ import {
   listProtocolsWith,
   officeToday,
 } from "@/lib/ri-protocols.ts";
+import { printSignersWith } from "@/lib/ri-signers.ts";
 import { buttonVariants } from "../../_ui/button.tsx";
+import { BookPrintOptions } from "../_components/book-print-options.tsx";
 import { ActionButton } from "../_components/client.tsx";
 import { ImportSheetForm } from "../_components/import-sheet.tsx";
 import { Panel, RiPage } from "../_components/page.tsx";
 import { ProtocolPagingForm } from "../_components/protocol-paging-form.tsx";
-import { ProtocolPeriodPrint } from "../_components/protocol-period-print.tsx";
 import { ProtocolVolumesForm } from "../_components/protocol-volumes-form.tsx";
 import { requireRi, riCan } from "../_lib.ts";
 import {
@@ -69,28 +71,44 @@ export default async function ProtocolListPage({
   const paged =
     book1 && ["folhas", "hibrido"].includes(book1.form) ? book1 : null;
   const sheets = paged ? await bookSheetsWith(db, tenant, paged.id) : null;
+  const printSigners = await printSignersWith(db, tenant);
   const prenotations = all.filter((r) => r.kind === "prenotacao");
   const firstNumber = prenotations.reduce(
     (n, r) => Math.min(n, r.number),
     Number.MAX_SAFE_INTEGER,
   );
   const lastNumber = prenotations.reduce((n, r) => Math.max(n, r.number), 0);
+  // A search looks at every título, whatever the tab (decision of
+  // 28/11/2026: "2.694" was not found in "Em andamento"), and a number is
+  // compared by its digits, with or without the dot.
+  const digits = q.replace(/\D/g, "");
+  const byNumber = /^[\d.\s]+$/.test(q) && digits ? Number(digits) : null;
+  if (byNumber !== null && view !== "apagados") {
+    const exact = all.filter((r) => r.number === byNumber);
+    if (exact.length === 1 && exact[0]) {
+      redirect(`/admin/ri/protocolo/${exact[0].id}`);
+    }
+  }
   const rows = all
     .filter((r) =>
-      view === "exame"
-        ? r.kind === "exame"
-        : view === "abertos"
-          ? r.kind === "prenotacao" &&
-            ["prenotado", "exigencia", "duvida"].includes(r.status)
-          : true,
+      q
+        ? true
+        : view === "exame"
+          ? r.kind === "exame"
+          : view === "abertos"
+            ? r.kind === "prenotacao" &&
+              ["prenotado", "exigencia", "duvida"].includes(r.status)
+            : true,
     )
     .filter(
       (r) =>
         !q ||
-        [r.number, r.presenterName, r.presenterDocument, r.titleKind]
-          .join(" ")
-          .toLowerCase()
-          .includes(q),
+        (byNumber !== null
+          ? r.number === byNumber
+          : [r.number, r.presenterName, r.presenterDocument, r.titleKind]
+              .join(" ")
+              .toLowerCase()
+              .includes(q)),
     );
   return (
     <RiPage
@@ -104,6 +122,12 @@ export default async function ProtocolListPage({
             className={buttonVariants({ size: "sm", variant: "outline" })}
           >
             Encerramento dos dias
+          </Link>
+          <Link
+            href="/admin/ri/protocolo/indice"
+            className={buttonVariants({ size: "sm", variant: "outline" })}
+          >
+            Índice do Protocolo
           </Link>
           {riCan(session, "ri.edit") && (
             <Link
@@ -136,48 +160,43 @@ export default async function ProtocolListPage({
                       : " · em uso"}
                   </span>
                 </p>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Imprimir o livro (assinar digitalmente ou à mão)
-                  </p>
-                  <SignOrPrint
-                    pdfHref={`/admin/ri/livros/${book1.id}/pdf`}
-                    title={`${volumeName(book1.volume)} (Protocolo)`}
-                    size="sm"
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Imprimir por período (diário, mensal, semestral ou anual)
-                  </p>
-                  <ProtocolPeriodPrint
-                    bookId={book1.id}
-                    volume={book1.volume}
-                    today={today}
-                  />
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Termo de abertura
-                  </p>
-                  <SignOrPrint
-                    pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=abertura`}
-                    title={`Termo de abertura do ${volumeName(book1.volume)}`}
-                    size="sm"
-                  />
-                </div>
-                {book1.closedOn ? (
-                  <div className="flex flex-col gap-1.5">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Termo de encerramento
-                    </p>
-                    <SignOrPrint
-                      pdfHref={`/admin/ri/livros/${book1.id}/termo?tipo=encerramento`}
-                      title={`Termo de encerramento do ${volumeName(book1.volume)}`}
-                      size="sm"
-                    />
-                  </div>
-                ) : (
+                <BookPrintOptions
+                  signers={printSigners.signers.map((p) => ({
+                    index: p.index,
+                    label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
+                    hasSignature: Boolean(p.signatureImage),
+                    hasRubric: Boolean(p.rubricImage),
+                  }))}
+                  defaultIndex={printSigners.defaultIndex}
+                  today={today}
+                  targets={[
+                    {
+                      label: `${volumeName(book1.volume)} inteiro (termos e folhas)`,
+                      href: `/admin/ri/livros/${book1.id}/pdf`,
+                      word: `/admin/ri/livros/${book1.id}/pdf?formato=word`,
+                    },
+                    {
+                      label: `Termo de abertura do ${volumeName(book1.volume)}`,
+                      href: `/admin/ri/livros/${book1.id}/termo?tipo=abertura`,
+                      word: `/admin/ri/livros/${book1.id}/termo?tipo=abertura&formato=word`,
+                    },
+                    ...(book1.closedOn
+                      ? [
+                          {
+                            label: `Termo de encerramento do ${volumeName(book1.volume)}`,
+                            href: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento`,
+                            word: `/admin/ri/livros/${book1.id}/termo?tipo=encerramento&formato=word`,
+                          },
+                        ]
+                      : []),
+                  ]}
+                  period={{
+                    href: `/admin/ri/livros/${book1.id}/pdf`,
+                    label:
+                      "Imprimir por período (diário, mensal, semestral ou anual)",
+                  }}
+                />
+                {!book1.closedOn && (
                   <Link
                     href={`/admin/ri/livros/${book1.id}#encerrar`}
                     className={buttonVariants({
@@ -322,44 +341,38 @@ export default async function ProtocolListPage({
                       </p>
                     </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Folhas completas (prontas para o livro)
-                      </p>
-                      {lastFull ? (
-                        <SignOrPrint
-                          pdfHref={`/admin/ri/livros/${paged.id}/folhas?ate_folha=${lastFull.side === "verso" || !sheets.paging.bothSides ? lastFull.sheet : lastFull.sheet - 1}`}
-                          title="Livro 1 (Protocolo), folhas completas"
-                          size="sm"
-                        />
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          Nenhuma folha completa ainda.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Folha em andamento ({faceLabel(next.sheet, next.side)})
-                      </p>
-                      <SignOrPrint
-                        pdfHref={`/admin/ri/livros/${paged.id}/folhas?folha=${next.sheet}&ate_folha=${next.sheet}`}
-                        title={`Livro 1 (Protocolo), folha ${next.sheet}`}
-                        size="sm"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Folhas de hoje
-                      </p>
-                      <SignOrPrint
-                        pdfHref={`/admin/ri/livros/${paged.id}/folhas?de=${today}&ate=${today}`}
-                        title="Livro 1 (Protocolo), folhas de hoje"
-                        size="sm"
-                      />
-                    </div>
-                  </div>
+                  <BookPrintOptions
+                    signers={printSigners.signers.map((p) => ({
+                      index: p.index,
+                      label: `${p.name}${p.title ? ` · ${p.title}` : ""}`,
+                      hasSignature: Boolean(p.signatureImage),
+                      hasRubric: Boolean(p.rubricImage),
+                    }))}
+                    defaultIndex={printSigners.defaultIndex}
+                    today={today}
+                    targets={[
+                      ...(lastFull
+                        ? [
+                            {
+                              label: "Folhas completas (prontas para o livro)",
+                              href: `/admin/ri/livros/${paged.id}/folhas?ate_folha=${lastFull.side === "verso" || !sheets.paging.bothSides ? lastFull.sheet : lastFull.sheet - 1}`,
+                            },
+                          ]
+                        : []),
+                      {
+                        label: `Folha em andamento (${faceLabel(next.sheet, next.side)})`,
+                        href: `/admin/ri/livros/${paged.id}/folhas?folha=${next.sheet}&ate_folha=${next.sheet}`,
+                      },
+                      {
+                        label: "Folhas de hoje",
+                        href: `/admin/ri/livros/${paged.id}/folhas?de=${today}&ate=${today}`,
+                      },
+                      {
+                        label: "Todas as folhas do livro",
+                        href: `/admin/ri/livros/${paged.id}/folhas`,
+                      },
+                    ]}
+                  />
                   <p className="text-xs text-muted-foreground">
                     O termo de cada dia é lavrado no sistema ao encerrar o dia e
                     pode ser assinado digitalmente (Provimento nº

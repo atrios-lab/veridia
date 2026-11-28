@@ -50,11 +50,14 @@ export function SignatureImageForm({
   preview,
   kind = "assinatura",
   canCopySignature = false,
+  staffId,
 }: {
   preview: string | null;
   kind?: "assinatura" | "rubrica";
   /** Rubrica: offer "usar a mesma assinatura". */
   canCopySignature?: boolean;
+  /** The person of the Equipe the image is of; absent: the office's default. */
+  staffId?: string;
 }) {
   const [state, action, pending] = useActionState(
     saveSignatureImageAction,
@@ -74,6 +77,7 @@ export function SignatureImageForm({
           <form action={action}>
             <input type="hidden" name="op" value="remove" />
             <input type="hidden" name="tipo" value={kind} />
+            {staffId && <input type="hidden" name="pessoa" value={staffId} />}
             <Button
               type="submit"
               size="sm"
@@ -88,6 +92,7 @@ export function SignatureImageForm({
       {kind === "rubrica" && canCopySignature && (
         <form action={action}>
           <input type="hidden" name="tipo" value="rubrica" />
+          {staffId && <input type="hidden" name="pessoa" value={staffId} />}
           <input type="hidden" name="op" value="copy" />
           <Button type="submit" variant="outline" disabled={pending}>
             Usar a mesma assinatura como rubrica
@@ -99,6 +104,7 @@ export function SignatureImageForm({
       )}
       <form action={action} className="flex flex-col gap-3">
         <input type="hidden" name="tipo" value={kind} />
+        {staffId && <input type="hidden" name="pessoa" value={staffId} />}
         <FilePicker
           name="imagem"
           accept="image/jpeg,image/png,image/webp"
